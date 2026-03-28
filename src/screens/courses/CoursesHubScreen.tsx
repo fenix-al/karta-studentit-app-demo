@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, FlatList,
+  View, Text, ScrollView, FlatList, ActivityIndicator,
   TouchableOpacity, Image, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,27 @@ import { ChevronLeft, Search, Calendar, MapPin } from 'lucide-react';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { CourseItem } from '../../types';
-import { COURSE_CATEGORIES, HOW_IT_WORKS, ALL_COURSES } from '../../data/mockData';
+import { COURSE_CATEGORIES, HOW_IT_WORKS } from '../../data/mockData';
+import { useFetch } from '../../hooks/useFetch';
+import { fetchKurset } from '../../services/api';
+
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800';
+
+function apiToCourseItem(k: any): CourseItem {
+  return {
+    id:        String(k.id),
+    title:     k.title      ?? '',
+    category:  k.categories?.[0] ?? 'Kurs',
+    badgeColor: '#0891b2',
+    date:      k.start_date ?? '',
+    location:  k.location   ?? 'Shkodër',
+    duration:  k.duration   ?? '',
+    cert:      '',
+    seats:     k.total_spots ? `${k.total_spots} vende` : '',
+    img:       k.image       || PLACEHOLDER,
+    desc:      k.excerpt     ?? '',
+  };
+}
 
 interface Props {
   onBack:      () => void;
@@ -20,6 +40,9 @@ interface Props {
 export default function CoursesHubScreen({ onBack, onList, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
   const [activeCat, setActiveCat] = useState('all');
+
+  const { data, loading, error, reload } = useFetch(() => fetchKurset() as Promise<any>);
+  const courses: CourseItem[] = (data?.items ?? []).map(apiToCourseItem);
 
   return (
     <View style={styles.root}>
@@ -111,15 +134,30 @@ export default function CoursesHubScreen({ onBack, onList, onProfile, bottomInse
             </TouchableOpacity>
           </View>
 
-          <View style={styles.courseListWrap}>
-            {ALL_COURSES.map(course => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                onPress={() => onProfile(course)}
-              />
-            ))}
-          </View>
+          {loading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color="#e30613" />
+            </View>
+          ) : error ? (
+            <View style={styles.centered}>
+              <Text style={styles.errorText}>
+                ⚠️ {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+              </Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={reload}>
+                <Text style={styles.retryText}>Provo Përsëri</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.courseListWrap}>
+              {courses.map(course => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  onPress={() => onProfile(course)}
+                />
+              ))}
+            </View>
+          )}
         </View>
 
       </ScrollView>
@@ -160,8 +198,12 @@ export function CourseCard({ course, onPress }: { course: CourseItem; onPress: (
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root:  { flex: 1, backgroundColor: Colors.surfaceBg },
-  scroll: { flex: 1 },
+  root:    { flex: 1, backgroundColor: Colors.surfaceBg },
+  scroll:  { flex: 1 },
+  centered: { paddingVertical: 40, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
+  retryBtn:  { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
+  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
   // Header
   header: {

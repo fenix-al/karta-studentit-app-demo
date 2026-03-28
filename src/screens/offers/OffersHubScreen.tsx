@@ -24,12 +24,12 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   const insets = useSafeAreaInsets();
   const [activePill, setActivePill] = useState('all');
 
-  const { data, loading, error } = useFetch(() => fetchOffers());
-  const { data: catData }        = useFetch(() => fetchBusinessCategories());
+  const { data, loading, error, reload } = useFetch(() => fetchOffers());
+  const { data: catData }               = useFetch(() => fetchBusinessCategories());
 
   // API already returns sorted by scan_count DESC — no client re-sort needed
-  const allBiz: Business[]  = (data as any)?.items?.map(apiBizToBusiness) ?? [];
-  const rawItems: any[]     = (data as any)?.items ?? [];
+  const rawItems: any[]    = (data as any)?.items || [];
+  const allBiz: Business[] = rawItems.map(apiBizToBusiness);
 
   const topRated = allBiz.slice(0, 6);   // highest scan_count first (server-sorted)
 
@@ -137,8 +137,13 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
 
         {/* ── Error ─────────────────────────────────────────────────── */}
         {!loading && !!error && (
-          <View style={styles.emptyWrap}>
-            <Text style={styles.errorText}>⚠️ {error}</Text>
+          <View style={styles.errorWrap}>
+            <Text style={styles.errorText}>
+              ⚠️ {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+            </Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={reload}>
+              <Text style={styles.retryText}>Provo Përsëri</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -261,7 +266,10 @@ const styles = StyleSheet.create({
   loadingText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textMuted },
   emptyWrap:   { paddingVertical: 48, alignItems: 'center', paddingHorizontal: Spacing.xxl },
   emptyText:   { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textMuted, textAlign: 'center' },
+  errorWrap:   { paddingVertical: 40, alignItems: 'center', paddingHorizontal: Spacing.xxl, gap: 16 },
   errorText:   { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.danger, textAlign: 'center' },
+  retryBtn:    { backgroundColor: '#e30613', paddingHorizontal: 24, paddingVertical: 11, borderRadius: Radius.full },
+  retryText:   { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
   // ── Header ──────────────────────────────────────────────────────────────────
   header: {

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, FlatList,
+  View, Text, ScrollView, FlatList, ActivityIndicator,
   TouchableOpacity, Image, TextInput, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,8 +12,28 @@ import {
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { ActActivity } from '../../types';
-import { ACT_ACTIVITIES } from '../../data/mockData';
+import { useFetch } from '../../hooks/useFetch';
+import { fetchAct4 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800';
+
+function apiToActActivity(a: any): ActActivity {
+  return {
+    id:        String(a.id),
+    title:     a.title    ?? '',
+    category:  a.category ?? '',
+    catId:     a.cat_id   ?? '',
+    badgeColor: '#0aa8a7',
+    dateStr:   a.date     ?? '',
+    fullDate:  a.date_raw ?? a.date ?? '',
+    time:      '',
+    location:  a.location ?? 'Shkodër',
+    img:       a.image    || PLACEHOLDER,
+    desc:      a.excerpt  ?? '',
+    fullDesc:  a.excerpt  ?? '',
+  };
+}
 
 const TEAL  = '#0aa8a7';
 const NAVY  = '#003366';
@@ -41,6 +61,9 @@ export default function ActHubScreen({ onBack, onList, onProfile, bottomInset }:
   const [selected, setSelected] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const { data, loading, error, reload } = useFetch(() => fetchAct4() as Promise<any>);
+  const activities: ActActivity[] = (data?.items ?? []).map(apiToActActivity);
 
   const toggle = (interest: string) => {
     setSelected(prev =>
@@ -154,15 +177,30 @@ export default function ActHubScreen({ onBack, onList, onProfile, bottomInset }:
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.hList}
-          >
-            {ACT_ACTIVITIES.map(item => (
-              <ActivityCard key={item.id} activity={item} onPress={() => onProfile(item)} />
-            ))}
-          </ScrollView>
+          {loading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color="#e30613" />
+            </View>
+          ) : error ? (
+            <View style={styles.centered}>
+              <Text style={styles.errorText}>
+                ⚠️ {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+              </Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={reload}>
+                <Text style={styles.retryText}>Provo Përsëri</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.hList}
+            >
+              {activities.map(item => (
+                <ActivityCard key={item.id} activity={item} onPress={() => onProfile(item)} />
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* ── Forma e Vullnetarit ───────────────────────────────────────── */}
@@ -298,8 +336,12 @@ export function ActivityCard({ activity, onPress }: { activity: ActActivity; onP
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: Colors.surfaceBg },
-  scroll: { flex: 1 },
+  root:     { flex: 1, backgroundColor: Colors.surfaceBg },
+  scroll:   { flex: 1 },
+  centered:  { paddingVertical: 40, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
+  retryBtn:  { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
+  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
   // Header
   header: {

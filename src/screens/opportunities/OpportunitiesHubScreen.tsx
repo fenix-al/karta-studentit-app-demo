@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, FlatList,
+  View, Text, ScrollView, ActivityIndicator,
   TouchableOpacity, Image, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,37 @@ import { ChevronLeft, Search, MapPin, Clock, Building } from 'lucide-react';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { JobItem } from '../../types';
-import { JOB_CATEGORIES, JOBS } from '../../data/mockData';
+import { JOB_CATEGORIES } from '../../data/mockData';
+import { useFetch } from '../../hooks/useFetch';
+import { fetchJobs } from '../../services/api';
+
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800';
+
+function badgeStyle(types: string[]): { badgeBg: string; badgeText: string; badgeBorder: string } {
+  const t = (types?.[0] ?? '').toLowerCase();
+  if (t.includes('praktik')) return { badgeBg: '#f3e8ff', badgeText: '#7e22ce', badgeBorder: '#e9d5ff' };
+  if (t.includes('part'))    return { badgeBg: '#fef9c3', badgeText: '#854d0e', badgeBorder: '#fde047' };
+  if (t.includes('full'))    return { badgeBg: '#dcfce7', badgeText: '#166534', badgeBorder: '#86efac' };
+  if (t.includes('vull'))    return { badgeBg: '#fff1f2', badgeText: '#be123c', badgeBorder: '#fecdd3' };
+  return { badgeBg: '#e0f2fe', badgeText: '#0369a1', badgeBorder: '#bae6fd' };
+}
+
+function apiToJobItem(o: any): JobItem {
+  const badge = badgeStyle(o.types ?? []);
+  return {
+    id:       String(o.id),
+    title:    o.title    ?? '',
+    company:  o.company  ?? '',
+    type:     (o.types?.[0] ?? 'Mundësi').toUpperCase(),
+    ...badge,
+    date:     o.deadline || o.date || '',
+    location: o.location || 'Shkodër',
+    salary:   o.salary   ?? '',
+    duration: '',
+    img:      o.image    || PLACEHOLDER,
+    desc:     o.excerpt  ?? '',
+  };
+}
 
 interface Props {
   onBack:      () => void;
@@ -20,6 +50,10 @@ interface Props {
 export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
   const [activeCat, setActiveCat] = useState('all');
+
+  const { data, loading, error, reload } = useFetch(() => fetchJobs() as Promise<any>);
+  const rawItems: any[] = data?.items ?? [];
+  const jobs = rawItems.map(apiToJobItem);
 
   return (
     <View style={styles.root}>
@@ -67,35 +101,50 @@ export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bott
         </ScrollView>
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: bottomInset + 24 }}
-      >
-
-        {/* ── Më të fundit ─────────────────────────────────────────────── */}
-        <View style={styles.sectionMb}>
-          <View style={[styles.sectionHeader, styles.sectionPadH]}>
-            <View>
-              <Text style={styles.sectionTitle}>Më të fundit</Text>
-              <Text style={styles.sectionSubtitle}>Gjej mundësi për punësim dhe praktika.</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.seeAllBtn}
-              onPress={() => onList('Të gjitha Mundësitë')}
-            >
-              <Text style={styles.seeAllText}>Shiko të gjitha</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.jobListWrap}>
-            {JOBS.map(job => (
-              <JobCard key={job.id} job={job} onPress={() => onProfile(job)} />
-            ))}
-          </View>
+      {/* ── Content ─────────────────────────────────────────────────────── */}
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#e30613" />
         </View>
+      ) : error ? (
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>
+            ⚠️ {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+          </Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={reload}>
+            <Text style={styles.retryText}>Provo Përsëri</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: bottomInset + 24 }}
+        >
+          <View style={styles.sectionMb}>
+            <View style={[styles.sectionHeader, styles.sectionPadH]}>
+              <View>
+                <Text style={styles.sectionTitle}>Më të fundit</Text>
+                <Text style={styles.sectionSubtitle}>
+                  {jobs.length} mundësi pune dhe praktikash.
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.seeAllBtn}
+                onPress={() => onList('Të gjitha Mundësitë')}
+              >
+                <Text style={styles.seeAllText}>Shiko të gjitha</Text>
+              </TouchableOpacity>
+            </View>
 
-      </ScrollView>
+            <View style={styles.jobListWrap}>
+              {jobs.map(job => (
+                <JobCard key={job.id} job={job} onPress={() => onProfile(job)} />
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -118,25 +167,31 @@ export function JobCard({ job, onPress }: { job: JobItem; onPress: () => void })
       {/* Title + company */}
       <View style={styles.jobCardMid}>
         <Text style={styles.jobTitle}>{job.title}</Text>
-        <View style={styles.jobCompanyRow}>
-          <Building size={13} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.jobCompany}>{job.company}</Text>
-        </View>
+        {job.company ? (
+          <View style={styles.jobCompanyRow}>
+            <Building size={13} color={Colors.textMuted} strokeWidth={2} />
+            <Text style={styles.jobCompany}>{job.company}</Text>
+          </View>
+        ) : null}
       </View>
 
       {/* Description */}
-      <Text style={styles.jobDesc} numberOfLines={2}>{job.desc}</Text>
+      {job.desc ? (
+        <Text style={styles.jobDesc} numberOfLines={2}>{job.desc}</Text>
+      ) : null}
 
       {/* Footer: location + deadline */}
       <View style={styles.jobFooter}>
         <View style={styles.jobLocation}>
           <MapPin size={12} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.jobLocationText}>{job.location}</Text>
+          <Text style={styles.jobLocationText}>{job.location || 'Shkodër'}</Text>
         </View>
-        <View style={styles.jobDeadline}>
-          <Clock size={12} color="#be123c" strokeWidth={2} />
-          <Text style={styles.jobDeadlineText}>Afati: {job.date}</Text>
-        </View>
+        {job.date ? (
+          <View style={styles.jobDeadline}>
+            <Clock size={12} color="#be123c" strokeWidth={2} />
+            <Text style={styles.jobDeadlineText}>Afati: {job.date}</Text>
+          </View>
+        ) : null}
       </View>
 
     </TouchableOpacity>
@@ -145,8 +200,17 @@ export function JobCard({ job, onPress }: { job: JobItem; onPress: () => void })
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: Colors.surfaceBg },
-  scroll: { flex: 1 },
+  root:    { flex: 1, backgroundColor: Colors.surfaceBg },
+  scroll:  { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: {
+    fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary,
+  },
+  retryBtn: {
+    backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10,
+    borderRadius: Radius.full,
+  },
+  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
   // Header
   header: {

@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity, ActivityIndicator,
   Image, ImageBackground, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +11,25 @@ import {
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { KvrGroup, KvrActivity } from '../../types';
-import { KVR_GROUPS, KVR_ACTIVITIES } from '../../data/mockData';
+import { KVR_GROUPS } from '../../data/mockData';
+import { useFetch } from '../../hooks/useFetch';
+import { fetchKvr } from '../../services/api';
+
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=800';
+
+function apiToKvrActivity(k: any): KvrActivity {
+  return {
+    id:       String(k.id),
+    title:    k.title    ?? '',
+    category: k.category ?? '',
+    catId:    k.cat_id   ?? '',
+    date:     k.date     ?? '',
+    img:      k.image    || PLACEHOLDER,
+    desc:     k.excerpt  ?? '',
+    fullDesc: k.excerpt  ?? '',
+    location: k.location ?? 'Bashkia Shkodër',
+  };
+}
 
 const NAVY = '#003366';
 const RED  = '#e30613';
@@ -35,6 +53,9 @@ function GroupIcon({ name, color, size = 22 }: { name: string; color: string; si
 
 export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
+
+  const { data, loading, error, reload } = useFetch(() => fetchKvr() as Promise<any>);
+  const activities: KvrActivity[] = (data?.items ?? []).map(apiToKvrActivity);
 
   return (
     <View style={styles.root}>
@@ -130,15 +151,30 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
             </TouchableOpacity>
           </View>
 
+          {loading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color="#e30613" />
+            </View>
+          ) : error ? (
+            <View style={styles.centered}>
+              <Text style={styles.errorText}>
+                ⚠️ {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+              </Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={reload}>
+                <Text style={styles.retryText}>Provo Përsëri</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.hList}
           >
-            {KVR_ACTIVITIES.map(item => (
+            {activities.map(item => (
               <KVRActivityCard key={item.id} activity={item} onPress={() => onProfile(item)} />
             ))}
           </ScrollView>
+          )}
         </View>
 
       </ScrollView>
@@ -176,8 +212,12 @@ export function KVRActivityCard({ activity, onPress }: { activity: KvrActivity; 
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: Colors.surfaceBg },
-  scroll: { flex: 1 },
+  root:     { flex: 1, backgroundColor: Colors.surfaceBg },
+  scroll:   { flex: 1 },
+  centered:  { paddingVertical: 40, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
+  retryBtn:  { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
+  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
   // Header
   header: {

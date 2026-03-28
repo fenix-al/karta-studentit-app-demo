@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   Modal,
+  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,10 +22,10 @@ import {
 
 import { Colors, Typography, Spacing, Radius, Gradients } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
-import { CATEGORIES, BUSINESSES, COURSES, OPPORTUNITIES, STARTUPS, ACT4, KVR } from '../data/mockData';
+import { CATEGORIES, COURSES, OPPORTUNITIES, STARTUPS, ACT4, KVR } from '../data/mockData';
 import { useFetch } from '../hooks/useFetch';
 import { fetchOffers, fetchKurset, fetchJobs, fetchStartups, fetchAct4, fetchKvr } from '../services/api';
-import { businessToCard, kursToCard, opportunityToCard, startupToCard, act4ToCard, kvrToCard } from '../services/mappers';
+import { apiBizToBusiness, businessToCard, kursToCard, opportunityToCard, startupToCard, act4ToCard, kvrToCard } from '../services/mappers';
 import { CardItem, Category } from '../types';
 import SmartModal from '../components/SmartModal';
 import FloatingChat from '../components/FloatingChat';
@@ -47,14 +48,17 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { onLogout, card } = useAuth();
 
-  const { data: bizData }      = useFetch(() => fetchOffers());
+  const { data: offersData, loading: offersLoading } = useFetch(() => fetchOffers());
   const { data: coursesData }  = useFetch(() => fetchKurset());
   const { data: jobsData }     = useFetch(() => fetchJobs());
   const { data: startupsData } = useFetch(() => fetchStartups());
   const { data: act4Data }     = useFetch(() => fetchAct4());
   const { data: kvrData }      = useFetch(() => fetchKvr());
 
-  const businesses    = (bizData as any)?.items?.map(businessToCard)       ?? BUSINESSES;
+  // rawOffers kept alongside realBusinesses so we can produce a CardItem for SmartModal on tap
+  const rawOffers: any[]  = (offersData as any)?.items ?? [];
+  const realBusinesses    = rawOffers.map(apiBizToBusiness);
+
   const courses       = (coursesData as any)?.items?.map(kursToCard)       ?? COURSES;
   const opportunities = (jobsData as any)?.items?.map(opportunityToCard)   ?? OPPORTUNITIES;
   const startups      = (startupsData as any)?.items?.map(startupToCard)   ?? STARTUPS;
@@ -223,41 +227,47 @@ export default function HomeScreen() {
 
         {/* ── Oferta pranë teje (Businesses) ───────────────────────────── */}
         <SectionHeader title="Oferta pranë teje" onSeeAll={() => openOffers()} />
-        <FlatList
-          data={businesses}
-          horizontal
-          keyExtractor={item => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.hList}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.bizCard}
-              onPress={() => setActiveItem(item)}
-              activeOpacity={0.92}
-            >
-              {/* Image */}
-              <View style={styles.bizImageWrap}>
-                <Image source={{ uri: item.img }} style={styles.bizImage} resizeMode="cover" />
-                {/* Top-left badge */}
-                <View style={[styles.bizBadge, { backgroundColor: item.badgeColor }]}>
-                  <Text style={styles.bizBadgeText}>{item.discount}</Text>
-                </View>
-                {/* Bottom-right rating */}
-                {item.rating && (
-                  <View style={styles.ratingChip}>
-                    <Star size={10} color="#facc15" fill="#facc15" strokeWidth={0} />
-                    <Text style={styles.ratingText}>{item.rating}</Text>
+        {offersLoading ? (
+          <View style={styles.offerLoader}>
+            <ActivityIndicator size="small" color={Colors.textMuted} />
+          </View>
+        ) : (
+          <FlatList
+            data={realBusinesses}
+            horizontal
+            keyExtractor={biz => biz.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.hList}
+            renderItem={({ item: biz, index }) => (
+              <TouchableOpacity
+                style={styles.bizCard}
+                onPress={() => setActiveItem(businessToCard(rawOffers[index]))}
+                activeOpacity={0.92}
+              >
+                {/* Image */}
+                <View style={styles.bizImageWrap}>
+                  <Image source={{ uri: biz.img }} style={styles.bizImage} resizeMode="cover" />
+                  {/* Top-left badge */}
+                  <View style={[styles.bizBadge, { backgroundColor: biz.badgeColor }]}>
+                    <Text style={styles.bizBadgeText}>{biz.discount}</Text>
                   </View>
-                )}
-              </View>
-              {/* Body */}
-              <View style={styles.bizBody}>
-                <Text style={styles.bizTitle}>{item.title}</Text>
-                <Text style={styles.bizMeta}>{item.meta}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        />
+                  {/* Bottom-right rating */}
+                  {biz.rating && (
+                    <View style={styles.ratingChip}>
+                      <Star size={10} color="#facc15" fill="#facc15" strokeWidth={0} />
+                      <Text style={styles.ratingText}>{biz.rating}</Text>
+                    </View>
+                  )}
+                </View>
+                {/* Body */}
+                <View style={styles.bizBody}>
+                  <Text style={styles.bizTitle}>{biz.title}</Text>
+                  <Text style={styles.bizMeta}>{biz.address || biz.category}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
 
         {/* ── Kurse & Trajnime (Bento Box) ─────────────────────────────── */}
         <SectionHeader title="Kurse & Trajnime" onSeeAll={() => openCourses('Të gjitha Kurset')} />
@@ -889,6 +899,10 @@ const styles = StyleSheet.create({
     gap:               16,
     paddingBottom:     Spacing.xxl,
     paddingTop:        4,
+  },
+  offerLoader: {
+    height: 180, justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: Spacing.xxl,
   },
   bizCard: {
     width:           280,

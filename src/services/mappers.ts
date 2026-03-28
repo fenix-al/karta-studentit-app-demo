@@ -1,5 +1,7 @@
 import { CardItem, Business } from '../types';
 
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=400';
+
 // ── Business (Perfitimet) ─────────────────────────────────────────────────────
 
 // Pick a badge colour based on the discount text
@@ -13,26 +15,29 @@ function discountColor(discount: string): string {
 }
 
 export function apiBizToBusiness(b: any): Business {
-  const scans = b.scan_count ?? b.votes ?? 0;
+  const votes      = Number(b.votes      ?? 0);
+  const scan_count = Number(b.scan_count ?? 0);
   return {
-    id:              String(b.id),
-    title:           b.title ?? '',
+    id:              String(b.id ?? ''),
+    title:           b.title      ?? '',
     category:        b.categories?.[0] ?? 'Shërbime',
-    discount:        b.discount || 'Zbritje Speciale',
+    discount:        b.discount   || 'Zbritje Speciale',
     badgeColor:      discountColor(b.discount ?? ''),
-    rating:          scans > 0 ? (4.5 + Math.min(scans, 200) * 0.002).toFixed(1) : '4.5',
-    scans,
-    time:            b.loyalty ? `${b.loyalty.min_threshold} skan → çmim` : 'Hapur',
-    img:             b.image || b.logo || 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=400',
+    // Star rating derived from votes (0 votes → default 4.5, caps at 5.0 for 50+ votes)
+    rating:          votes > 0 ? (4.0 + Math.min(votes, 50) * 0.02).toFixed(1) : '4.5',
+    scans:           scan_count,
+    time:            b.loyalty?.min_threshold > 0
+                       ? `${b.loyalty.min_threshold} skan → çmim`
+                       : 'Hapur',
+    // logo is the primary image field in the API; image is the WP featured image fallback
+    img:             b.logo || b.image || PLACEHOLDER,
     desc:            b.description ?? '',
     rules:           b.description ?? '',
-    address:         b.address ?? '',
-    phone:           b.phone   ?? '',
-    recommendations: scans,
+    address:         b.address  ?? '',
+    phone:           b.phone    ?? '',
+    recommendations: scan_count,
   };
 }
-
-const PLACEHOLDER = 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=400';
 
 export function businessToCard(b: any): CardItem {
   return {
@@ -59,7 +64,7 @@ export function kursToCard(k: any): CardItem {
     discount:      k.categories?.[0] ?? 'Kurs',
     badgeColor:    '#0891b2',
     img:           k.image || PLACEHOLDER,
-    meta:          [k.start_date, k.location].filter(Boolean).join(' · '),
+    meta:          [k.start_date, k.location, k.total_spots ? `${k.total_spots} vende` : ''].filter(Boolean).join(' · '),
     fullDesc:      k.excerpt || '',
     actionText:    'Regjistrohu',
     actionIconName:'GraduationCap',
@@ -68,14 +73,15 @@ export function kursToCard(k: any): CardItem {
 }
 
 export function opportunityToCard(o: any): CardItem {
+  const metaParts = [o.company, o.location, o.deadline].filter(Boolean);
   return {
     id:            String(o.id),
     type:          o.types?.[0] ?? 'punë',
     title:         o.title,
-    discount:      o.types?.[0] ?? 'Punë',
+    discount:      o.salary || o.types?.[0] || 'Punë',
     badgeColor:    '#0d9488',
     img:           o.image || PLACEHOLDER,
-    meta:          o.date || '',
+    meta:          metaParts.length ? metaParts.join(' · ') : (o.date || ''),
     fullDesc:      o.excerpt || '',
     actionText:    'Apliko Tani',
     actionIconName:'Briefcase',

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, FlatList,
+  View, Text, ScrollView, FlatList, ActivityIndicator,
   TouchableOpacity, Image, TextInput, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,30 @@ import { ChevronLeft, Search, Calendar, ArrowUpRight, Lightbulb, Send } from 'lu
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { StartupItem } from '../../types';
-import { STARTUP_CATEGORIES, STARTUP_STEPS, STARTUP_ITEMS } from '../../data/mockData';
+import { STARTUP_CATEGORIES, STARTUP_STEPS } from '../../data/mockData';
+import { useFetch } from '../../hooks/useFetch';
+import { fetchStartups } from '../../services/api';
+
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800';
+
+function apiToStartupItem(s: any): StartupItem {
+  const isCall = !!s.is_call;
+  return {
+    id:          String(s.id),
+    title:       s.title ?? '',
+    type:        s.type_label ?? 'Startup',
+    category:    isCall ? 'thirrje' : 'udhezues',
+    badgeBg:     isCall ? '#fdf4ff' : '#eff6ff',
+    badgeText:   isCall ? '#7e22ce' : '#1d4ed8',
+    badgeBorder: isCall ? '#e9d5ff' : '#bfdbfe',
+    date:        s.deadline || s.date || '',
+    img:         s.image    || PLACEHOLDER,
+    desc:        s.excerpt  ?? '',
+    fullDesc:    s.excerpt  ?? '',
+    criteria:    [],
+    actionText:  isCall ? 'Apliko Tani' : 'Shiko Detajet',
+  };
+}
 
 interface Props {
   onBack:      () => void;
@@ -23,6 +46,9 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
   const [ideaTitle, setIdeaTitle] = useState('');
   const [ideaDesc, setIdeaDesc] = useState('');
   const [ideaSent, setIdeaSent] = useState(false);
+
+  const { data, loading, error, reload } = useFetch(() => fetchStartups() as Promise<any>);
+  const items: StartupItem[] = (data?.items ?? []).map(apiToStartupItem);
 
   return (
     <View style={styles.root}>
@@ -170,15 +196,30 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
             </TouchableOpacity>
           </View>
 
-          <View style={styles.itemListWrap}>
-            {STARTUP_ITEMS.map(item => (
-              <StartupCard
-                key={item.id}
-                item={item}
-                onPress={() => onProfile(item)}
-              />
-            ))}
-          </View>
+          {loading ? (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color="#e30613" />
+            </View>
+          ) : error ? (
+            <View style={styles.centered}>
+              <Text style={styles.errorText}>
+                ⚠️ {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+              </Text>
+              <TouchableOpacity style={styles.retryBtn} onPress={reload}>
+                <Text style={styles.retryText}>Provo Përsëri</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.itemListWrap}>
+              {items.map(item => (
+                <StartupCard
+                  key={item.id}
+                  item={item}
+                  onPress={() => onProfile(item)}
+                />
+              ))}
+            </View>
+          )}
         </View>
 
       </ScrollView>
@@ -234,8 +275,12 @@ export function StartupCard({ item, onPress }: { item: StartupItem; onPress: () 
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: Colors.surfaceBg },
-  scroll: { flex: 1 },
+  root:     { flex: 1, backgroundColor: Colors.surfaceBg },
+  scroll:   { flex: 1 },
+  centered:  { paddingVertical: 40, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
+  retryBtn:  { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
+  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
   // Header
   header: {
