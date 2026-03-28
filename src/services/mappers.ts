@@ -13,21 +13,22 @@ function discountColor(discount: string): string {
 }
 
 export function apiBizToBusiness(b: any): Business {
+  const scans = b.scan_count ?? b.votes ?? 0;
   return {
     id:              String(b.id),
     title:           b.title ?? '',
     category:        b.categories?.[0] ?? 'Shërbime',
     discount:        b.discount || 'Zbritje Speciale',
     badgeColor:      discountColor(b.discount ?? ''),
-    rating:          b.votes > 0 ? (4.5 + Math.min(b.votes, 100) * 0.004).toFixed(1) : '4.5',
-    scans:           b.votes ?? 0,
+    rating:          scans > 0 ? (4.5 + Math.min(scans, 200) * 0.002).toFixed(1) : '4.5',
+    scans,
     time:            b.loyalty ? `${b.loyalty.min_threshold} skan → çmim` : 'Hapur',
-    img:             b.logo || 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=400',
+    img:             b.image || b.logo || 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=400',
     desc:            b.description ?? '',
     rules:           b.description ?? '',
     address:         b.address ?? '',
-    phone:           b.phone ?? '',
-    recommendations: b.votes ?? 0,
+    phone:           b.phone   ?? '',
+    recommendations: scans,
   };
 }
 
@@ -40,8 +41,8 @@ export function businessToCard(b: any): CardItem {
     title:         b.title,
     discount:      b.discount || '-10%',
     badgeColor:    '#0284c7',
-    img:           b.logo || PLACEHOLDER,
-    meta:          b.address || '',
+    img:           b.image || b.logo || PLACEHOLDER,
+    meta:          b.address || b.sk_adresa || '',
     fullDesc:      b.description || '',
     actionText:    'Shiko Zbritjen',
     actionIconName:'QrCode',

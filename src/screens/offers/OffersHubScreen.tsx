@@ -27,11 +27,31 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   const { data, loading, error } = useFetch(() => fetchOffers());
   const { data: catData }        = useFetch(() => fetchBusinessCategories());
 
-  const allBiz: Business[] = (data as any)?.items?.map(apiBizToBusiness) ?? [];
+  // API already returns sorted by scan_count DESC — no client re-sort needed
+  const allBiz: Business[]  = (data as any)?.items?.map(apiBizToBusiness) ?? [];
+  const rawItems: any[]     = (data as any)?.items ?? [];
 
-  const sorted   = [...allBiz].sort((a, b) => b.scans - a.scans);
-  const topRated = sorted.slice(0, 6);
-  const theRest  = sorted.slice(6);
+  const topRated = allBiz.slice(0, 6);   // highest scan_count first (server-sorted)
+
+  // Priority: Private first, then Publike, then Other — no duplicates
+  const isPrivate = (slugs: string[]) =>
+    slugs.some(s => s === 'sherbime-private' || s.includes('-private'));
+  const isPublic  = (slugs: string[]) =>
+    slugs.some(s =>
+      s === 'sherbime-publike' || s.includes('-publike') ||
+      s === 'transport' || s === 'histori-muze' ||
+      s.includes('teatr') || s.includes('muzeu')
+    );
+
+  const privBiz: Business[] = [];
+  const pubBiz:  Business[] = [];
+  const otherBiz: Business[] = [];
+  allBiz.forEach((biz, i) => {
+    const slugs: string[] = rawItems[i]?.cat_slugs ?? [];
+    if (isPrivate(slugs))      privBiz.push(biz);
+    else if (isPublic(slugs))  pubBiz.push(biz);
+    else                       otherBiz.push(biz);
+  });
 
   // Categories from WordPress — "Të gjitha" pill prepended
   const wpcats: Array<{ id: string; slug: string; name: string; icon?: string }> =
@@ -122,28 +142,49 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           </View>
         )}
 
-        {/* ── Top Rated Section ─────────────────────────────────────── */}
+        {/* ── Më të rekomanduara (top by real scan count) ───────────── */}
         {!loading && topRated.length > 0 && (
           <HSection
             title="Më të rekomanduara 🔥"
+            subtitle={topRated[0]?.scans > 0 ? `Bazuar në ${topRated.reduce((s, b) => s + b.scans, 0)} skanime reale` : undefined}
             data={topRated}
             onSeeAll={() => onList('Të gjitha bizneset')}
             onCard={onProfile}
           />
         )}
 
-        {/* ── Rest of businesses ────────────────────────────────────── */}
-        {!loading && theRest.length > 0 && (
+        {/* ── Biznese Private ───────────────────────────────────────── */}
+        {!loading && privBiz.length > 0 && (
           <HSection
-            title="Bizneset partnere"
-            data={theRest}
+            title="Biznese Private 🏪"
+            data={privBiz}
+            onSeeAll={() => onList('Biznese Private', 'sherbime-private')}
+            onCard={onProfile}
+          />
+        )}
+
+        {/* ── Biznese Publike ───────────────────────────────────────── */}
+        {!loading && pubBiz.length > 0 && (
+          <HSection
+            title="Biznese Publike 🏛️"
+            data={pubBiz}
+            onSeeAll={() => onList('Biznese Publike', 'sherbime-publike')}
+            onCard={onProfile}
+          />
+        )}
+
+        {/* ── Të tjera ──────────────────────────────────────────────── */}
+        {!loading && otherBiz.length > 0 && (
+          <HSection
+            title="Partnerë të tjerë"
+            data={otherBiz}
             onSeeAll={() => onList('Të gjitha bizneset')}
             onCard={onProfile}
           />
         )}
 
         {/* ── Empty state ───────────────────────────────────────────── */}
-        {!loading && allBiz.length === 0 && (
+        {!loading && allBiz.length === 0 && !error && (
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyText}>Nuk ka biznese për momentin.</Text>
           </View>
@@ -164,14 +205,17 @@ function PillBtn({ id, name, active, onPress }: { id: string; name: string; acti
 }
 
 // ─── Horizontal Section ───────────────────────────────────────────────────────
-function HSection({ title, data, onSeeAll, onCard }: {
-  title: string; data: Business[];
+function HSection({ title, subtitle, data, onSeeAll, onCard }: {
+  title: string; subtitle?: string; data: Business[];
   onSeeAll: () => void; onCard: (b: Business) => void;
 }) {
   return (
     <View style={styles.hSection}>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          {subtitle ? <Text style={styles.sectionSub}>{subtitle}</Text> : null}
+        </View>
         <TouchableOpacity style={styles.seeAllBtn} onPress={onSeeAll}>
           <Text style={styles.seeAllText}>Shiko të gjitha</Text>
         </TouchableOpacity>
@@ -297,6 +341,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xxl, marginBottom: Spacing.md,
   },
   sectionTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xxl, color: Colors.textPrimary },
+  sectionSub:   { fontFamily: Typography.fontMedium, fontSize: Typography.xs, color: Colors.textMuted, marginTop: 2 },
   seeAllBtn: { backgroundColor: '#f0f9ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full },
   seeAllText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#0ea5e9' },
   cardList: { paddingHorizontal: Spacing.xxl, gap: 14, paddingBottom: 4, paddingTop: 2 },

@@ -361,7 +361,7 @@ export default function HomeScreen() {
         {/* ── KVR Lajme (vertical stack — horizontal card row) ─────── */}
         <SectionHeader title="KVR — Zëri i Rinisë" onSeeAll={() => openKVR()} />
         <View style={styles.kvrList}>
-          {kvr.map(item => (
+          {kvr.map((item: CardItem) => (
             <TouchableOpacity
               key={item.id}
               style={styles.kvrCard}

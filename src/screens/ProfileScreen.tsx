@@ -167,12 +167,9 @@ export default function ProfileScreen({ bottomInset, onBack, onSettings }: Props
               <Text style={[s.pickerBtnText, !topic && { color: Colors.textMuted }]}>
                 {topicLabel}
               </Text>
-              <ChevronLeft
-                size={15}
-                color={Colors.textMuted}
-                strokeWidth={2}
-                style={{ transform: [{ rotate: '-90deg' }] }}
-              />
+              <View style={{ transform: [{ rotate: '-90deg' }] }}>
+                <ChevronLeft size={15} color={Colors.textMuted} strokeWidth={2} />
+              </View>
             </TouchableOpacity>
 
             <TextInput
