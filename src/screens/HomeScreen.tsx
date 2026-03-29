@@ -26,7 +26,7 @@ import { Colors, Typography, Spacing, Radius, Gradients } from '../constants/The
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES, COURSES, OPPORTUNITIES, STARTUPS, ACT4, KVR } from '../data/mockData';
 import { useFetch } from '../hooks/useFetch';
-import { fetchOffers, fetchKurset, fetchJobs, fetchStartups, fetchAct4, fetchKvr } from '../services/api';
+import { fetchOffers, fetchKurset, fetchJobs, fetchStartups, fetchAct4, fetchKvr, recommendBusiness, fetchLoyalty } from '../services/api';
 import { apiBizToBusiness, kursToCard, opportunityToCard, startupToCard, act4ToCard, kvrToCard } from '../services/mappers';
 import { Business, CardItem, Category } from '../types';
 import SmartModal from '../components/SmartModal';
@@ -63,12 +63,46 @@ export default function HomeScreen() {
   const { data: startupsData } = useFetch(() => fetchStartups());
   const { data: act4Data }     = useFetch(() => fetchAct4());
   const { data: kvrData }      = useFetch(() => fetchKvr());
+  const { data: loyaltyData }  = useFetch(() => fetchLoyalty());
+
+  const totalScans = Array.isArray(loyaltyData)
+    ? (loyaltyData as any[]).reduce((sum, b) => sum + (b.scan_count ?? 0), 0)
+    : 0;
 
   const rawOffers: any[]  = (offersData as any)?.items ?? [];
-  const realBusinesses    = rawOffers.map(apiBizToBusiness);
+
+  // voteOverrides: id → { votes, recommended } — patched optimistically on inline vote
+  const [voteOverrides, setVoteOverrides] = useState<Record<string, { votes: number; recommended: boolean }>>({});
+
+  const realBusinesses = rawOffers.map(apiBizToBusiness).map(biz => {
+    const ov = voteOverrides[biz.id];
+    return ov ? { ...biz, votes: ov.votes, has_recommended: ov.recommended } : biz;
+  });
+
   const topRecommended    = [...realBusinesses]
+    .filter(biz => (biz.votes ?? 0) > 0)
     .sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0))
     .slice(0, 10);
+
+  async function handleInlineVote(biz: Business) {
+    const current = voteOverrides[biz.id] ?? { votes: biz.votes ?? 0, recommended: biz.has_recommended ?? false };
+    const wasRec  = current.recommended;
+    // Optimistic update
+    setVoteOverrides(prev => ({
+      ...prev,
+      [biz.id]: { votes: current.votes + (wasRec ? -1 : 1), recommended: !wasRec },
+    }));
+    try {
+      const res = await recommendBusiness(biz.id);
+      setVoteOverrides(prev => ({
+        ...prev,
+        [biz.id]: { votes: res.votes, recommended: res.recommended },
+      }));
+    } catch {
+      // Revert on failure
+      setVoteOverrides(prev => ({ ...prev, [biz.id]: current }));
+    }
+  }
 
   const courses       = (coursesData as any)?.items?.map(kursToCard)       ?? COURSES;
   const opportunities = (jobsData as any)?.items?.map(opportunityToCard)   ?? OPPORTUNITIES;
@@ -225,7 +259,7 @@ export default function HomeScreen() {
               <LinearGradient colors={Gradients.gold} style={styles.loyaltyIconWrap}>
                 <Star size={22} color="#fff" fill="#fff" strokeWidth={0} />
               </LinearGradient>
-              <Text style={styles.loyaltyCount}>{'—'}</Text>
+              <Text style={styles.loyaltyCount}>{totalScans > 0 ? totalScans : '—'}</Text>
               <Text style={styles.loyaltyText}>{'KLIENT\nBESNIK'}</Text>
             </View>
 
@@ -349,9 +383,13 @@ export default function HomeScreen() {
                   ) : null}
 
                   {/* Rekomando — pinned to bottom via marginTop: 'auto' */}
-                  <TouchableOpacity style={styles.rekoBtn} onPress={() => {}} activeOpacity={0.8}>
-                    <Heart size={12} color="#0ea5e9" strokeWidth={2.5} />
-                    <Text style={styles.rekoBtnText}>
+                  <TouchableOpacity
+                    style={[styles.rekoBtn, biz.has_recommended && styles.rekoBtnActive]}
+                    onPress={() => handleInlineVote(biz)}
+                    activeOpacity={0.8}
+                  >
+                    <Heart size={12} color={biz.has_recommended ? '#fff' : '#0ea5e9'} fill={biz.has_recommended ? '#fff' : 'none'} strokeWidth={2.5} />
+                    <Text style={[styles.rekoBtnText, biz.has_recommended && styles.rekoBtnTextActive]}>
                       {biz.votes > 0 ? `${biz.votes} Rekomandime` : 'Rekomando'}
                     </Text>
                   </TouchableOpacity>
@@ -407,10 +445,13 @@ export default function HomeScreen() {
                         {biz.address || '—'}
                       </Text>
                     </View>
-                    <TouchableOpacity style={styles.rekoBtn} activeOpacity={0.8}
-                      onPress={() => { setOffersInitialBusiness(biz); setActiveTab('perfitimet'); }}>
-                      <Heart size={12} color="#0ea5e9" strokeWidth={2.5} />
-                      <Text style={styles.rekoBtnText}>
+                    <TouchableOpacity
+                      style={[styles.rekoBtn, biz.has_recommended && styles.rekoBtnActive]}
+                      onPress={() => handleInlineVote(biz)}
+                      activeOpacity={0.8}
+                    >
+                      <Heart size={12} color={biz.has_recommended ? '#fff' : '#0ea5e9'} fill={biz.has_recommended ? '#fff' : 'none'} strokeWidth={2.5} />
+                      <Text style={[styles.rekoBtnText, biz.has_recommended && styles.rekoBtnTextActive]}>
                         {biz.votes > 0 ? `${biz.votes} Rekomandime` : 'Rekomando'}
                       </Text>
                     </TouchableOpacity>
@@ -1199,6 +1240,12 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontBold,
     fontSize:   12,
     color:      '#0ea5e9',
+  },
+  rekoBtnActive: {
+    backgroundColor: '#0ea5e9',
+  },
+  rekoBtnTextActive: {
+    color: '#fff',
   },
 
   // ── Bento Box ─────────────────────────────────────────────────────────────────

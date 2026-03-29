@@ -155,7 +155,7 @@ export async function fetchOffers(params?: {
         )
       ).toString()
     : '';
-  return publicFetch(`/businesses${qs ? `?${qs}` : ''}`);
+  return apiFetch(`/businesses${qs ? `?${qs}` : ''}`);
 }
 
 export async function fetchOffer(id: number) {

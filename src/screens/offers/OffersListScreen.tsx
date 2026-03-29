@@ -35,13 +35,15 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
   );
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return allBiz;
-    const q = search.toLowerCase();
-    return allBiz.filter(b =>
-      b.title.toLowerCase().includes(q) ||
-      b.category.toLowerCase().includes(q) ||
-      b.discount.toLowerCase().includes(q),
-    );
+    const list = search.trim()
+      ? allBiz.filter(b => {
+          const q = search.toLowerCase();
+          return b.title.toLowerCase().includes(q) ||
+                 b.category.toLowerCase().includes(q) ||
+                 b.discount.toLowerCase().includes(q);
+        })
+      : allBiz;
+    return [...list].sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0));
   }, [allBiz, search]);
 
   return (

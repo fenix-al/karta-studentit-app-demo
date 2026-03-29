@@ -31,7 +31,10 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   const rawItems: any[]    = (data as any)?.items || [];
   const allBiz: Business[] = rawItems.map(apiBizToBusiness);
 
-  const topRated = allBiz.slice(0, 6);   // highest scan_count first (server-sorted)
+  const topRated = [...allBiz]
+    .filter(biz => (biz.votes ?? 0) > 0)
+    .sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0))
+    .slice(0, 10);
 
   // Priority: Private first, then Publike, then Other — no duplicates
   const isPrivate = (slugs: string[]) =>

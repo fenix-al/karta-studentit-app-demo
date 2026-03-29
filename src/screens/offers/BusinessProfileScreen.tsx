@@ -24,9 +24,10 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
   const [voteCount,   setVoteCount]   = useState(biz.votes ?? 0);
   const [mapUrl,      setMapUrl]      = useState(biz.map_url      ?? '');
   const [reviewUrl,   setReviewUrl]   = useState(biz.review_url   ?? '');
+  const [rules,       setRules]       = useState(biz.rules        ?? '');
   const [recLoading,  setRecLoading]  = useState(false);
 
-  // ── Fetch full business details (list endpoint omits map/review/has_recommended)
+  // ── Fetch full business details (list endpoint omits map/review/has_recommended/content)
   useEffect(() => {
     fetchOffer(parseInt(biz.id, 10))
       .then((data: any) => {
@@ -34,6 +35,7 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
         setReviewUrl(data.review_url   ?? '');
         setRecommended(data.has_recommended ?? false);
         setVoteCount(data.votes        ?? voteCount);
+        if (data.content)  setRules(data.content);
       })
       .catch(() => { /* keep list-endpoint values on error */ });
   }, [biz.id]);
@@ -143,7 +145,7 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
           <Text style={styles.sectionTitle}>Rregullat dhe Detajet</Text>
           <View style={styles.divider} />
           <View style={styles.rulesBox}>
-            <Text style={styles.rulesText}>{biz.rules}</Text>
+            <Text style={styles.rulesText}>{rules}</Text>
           </View>
         </View>
 
