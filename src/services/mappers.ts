@@ -37,7 +37,10 @@ export function apiBizToBusiness(b: any): Business {
     phone:           b.phone    ?? '',
     recommendations: scan_count,
     votes:           votes,
-    distance:        b.distance ?? null,
+    distance:        b.distance        ?? null,
+    map_url:         b.map_url         ?? '',
+    review_url:      b.review_url      ?? '',
+    has_recommended: b.has_recommended ?? false,
   };
 }
 

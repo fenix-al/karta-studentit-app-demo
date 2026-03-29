@@ -175,6 +175,9 @@ export interface Business {
   recommendations: number;
   votes:           number;
   distance?:       number | null;  // km from user — present only in location mode
+  map_url?:        string;         // sk_google_maps post meta
+  review_url?:     string;         // sk_review_link on linked user, falls back to map_url
+  has_recommended?:boolean;        // whether current student has already voted
 }
 
 export interface CategoryPill {

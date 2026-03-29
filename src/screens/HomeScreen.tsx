@@ -54,7 +54,7 @@ export default function HomeScreen() {
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locLoading, setLocLoading] = useState(false);
 
-  const { data: offersData, loading: offersLoading } = useFetch(
+  const { data: offersData, loading: offersLoading, reload: refetchOffers } = useFetch(
     () => fetchOffers(userCoords ? { lat: userCoords.lat, lng: userCoords.lng } : undefined),
     [userCoords],
   );
@@ -66,6 +66,9 @@ export default function HomeScreen() {
 
   const rawOffers: any[]  = (offersData as any)?.items ?? [];
   const realBusinesses    = rawOffers.map(apiBizToBusiness);
+  const topRecommended    = [...realBusinesses]
+    .sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0))
+    .slice(0, 10);
 
   const courses       = (coursesData as any)?.items?.map(kursToCard)       ?? COURSES;
   const opportunities = (jobsData as any)?.items?.map(opportunityToCard)   ?? OPPORTUNITIES;
@@ -309,11 +312,11 @@ export default function HomeScreen() {
                   <View style={[styles.bizBadge, { backgroundColor: biz.badgeColor }]}>
                     <Text style={styles.bizBadgeText}>{biz.discount}</Text>
                   </View>
-                  {/* Bottom-right rating */}
-                  {biz.rating && (
+                  {/* Bottom-right votes chip — only shown when votes > 0 */}
+                  {biz.votes > 0 && (
                     <View style={styles.ratingChip}>
-                      <Star size={10} color="#facc15" fill="#facc15" strokeWidth={0} />
-                      <Text style={styles.ratingText}>{biz.rating}</Text>
+                      <Heart size={10} color="#ef4444" fill="#ef4444" strokeWidth={0} />
+                      <Text style={styles.ratingText}>{biz.votes}</Text>
                     </View>
                   )}
                 </View>
@@ -356,6 +359,66 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )}
           />
+        )}
+
+        {/* ── Më të rekomanduarat ──────────────────────────────────────── */}
+        {topRecommended.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Më të rekomanduarat</Text>
+              <TouchableOpacity onPress={() => openOffers()}>
+                <Text style={styles.seeAll}>Shiko të gjitha</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={topRecommended}
+              horizontal
+              keyExtractor={biz => `top-${biz.id}`}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.hList}
+              renderItem={({ item: biz }) => (
+                <TouchableOpacity
+                  style={styles.bizCard}
+                  onPress={() => { setOffersInitialBusiness(biz); setActiveTab('perfitimet'); }}
+                  activeOpacity={0.92}
+                >
+                  <View style={styles.bizImageWrap}>
+                    <Image source={{ uri: biz.img }} style={styles.bizImage} resizeMode="cover" />
+                    <View style={[styles.bizBadge, { backgroundColor: biz.badgeColor }]}>
+                      <Text style={styles.bizBadgeText}>{biz.discount}</Text>
+                    </View>
+                    {biz.votes > 0 && (
+                      <View style={styles.ratingChip}>
+                        <Heart size={10} color="#ef4444" fill="#ef4444" strokeWidth={0} />
+                        <Text style={styles.ratingText}>{biz.votes}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.bizBody}>
+                    <Text style={styles.bizTitle} numberOfLines={1} ellipsizeMode="tail">
+                      {biz.title}
+                    </Text>
+                    <View style={styles.bizCategoryChip}>
+                      <Text style={styles.bizCategoryText}>{biz.category}</Text>
+                    </View>
+                    <View style={styles.bizAddressRow}>
+                      <MapPin size={11} color="#f43f5e" strokeWidth={2.5} />
+                      <Text style={styles.bizMeta} numberOfLines={1} ellipsizeMode="tail">
+                        {biz.address || '—'}
+                      </Text>
+                    </View>
+                    <TouchableOpacity style={styles.rekoBtn} activeOpacity={0.8}
+                      onPress={() => { setOffersInitialBusiness(biz); setActiveTab('perfitimet'); }}>
+                      <Heart size={12} color="#0ea5e9" strokeWidth={2.5} />
+                      <Text style={styles.rekoBtnText}>
+                        {biz.votes > 0 ? `${biz.votes} Rekomandime` : 'Rekomando'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          </>
         )}
 
         {/* ── Kurse & Trajnime (Bento Box) ─────────────────────────────── */}
@@ -497,7 +560,7 @@ export default function HomeScreen() {
 
       {activeTab === 'perfitimet' && (
         <OffersNavigator
-          onExit={() => { setActiveTab('home'); setOffersInitialBusiness(undefined); }}
+          onExit={() => { setActiveTab('home'); setOffersInitialBusiness(undefined); refetchOffers(); }}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialList={offersInitialList}
           initialBusiness={offersInitialBusiness}
@@ -714,12 +777,6 @@ function GenericCard({ item, onPress }: { item: CardItem; onPress: () => void })
         <View style={[styles.bizBadge, { backgroundColor: item.badgeColor }]}>
           <Text style={styles.bizBadgeText}>{item.discount}</Text>
         </View>
-        {item.rating && (
-          <View style={styles.ratingChip}>
-            <Star size={10} color="#facc15" fill="#facc15" strokeWidth={0} />
-            <Text style={styles.ratingText}>{item.rating}</Text>
-          </View>
-        )}
       </View>
       <View style={styles.bizBody}>
         <Text style={styles.bizTitle}>{item.title}</Text>

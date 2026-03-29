@@ -159,7 +159,12 @@ export async function fetchOffers(params?: {
 }
 
 export async function fetchOffer(id: number) {
-  return publicFetch(`/businesses/${id}`);
+  // Use apiFetch (sends JWT if logged in) so the API can return has_recommended
+  return apiFetch(`/businesses/${id}`);
+}
+
+export async function recommendBusiness(id: string): Promise<{ recommended: boolean; votes: number }> {
+  return apiFetch(`/businesses/${id}/recommend`, { method: 'POST' });
 }
 
 export async function fetchBusinessCategories(): Promise<Array<{ id: number; slug: string; name: string; count: number }>> {

@@ -4,7 +4,7 @@ import {
   Image, TextInput, ActivityIndicator, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Search, Star, Heart, ArrowDownUp } from 'lucide-react-native';
+import { ChevronLeft, Search, Heart, ArrowDownUp } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
@@ -122,14 +122,14 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
                     <Text style={styles.cardDesc} numberOfLines={1}>{biz.desc}</Text>
                   </View>
                   <View style={styles.ratingBox}>
-                    <Star size={12} color="#f59e0b" fill="#f59e0b" strokeWidth={0} />
-                    <Text style={styles.ratingText}>{biz.rating}</Text>
+                    <Heart size={12} color="#ef4444" fill="#ef4444" strokeWidth={0} />
+                    <Text style={styles.ratingText}>{biz.votes ?? 0}</Text>
                   </View>
                 </View>
                 <View style={styles.footer}>
                   <Text style={styles.footerText}>{biz.category}</Text>
                   <View style={styles.footerDot} />
-                  <Text style={styles.footerText}>{biz.scans} vota</Text>
+                  <Text style={styles.footerText}>{biz.votes ?? 0} rekomandime</Text>
                   {biz.address ? (
                     <>
                       <View style={styles.footerDot} />
@@ -225,11 +225,11 @@ const styles = StyleSheet.create({
   cardTitle: { fontFamily: Typography.fontExtraBold, fontSize: 20, color: Colors.textPrimary, marginBottom: 4 },
   cardDesc:  { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
   ratingBox: {
-    backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fef3c7',
+    backgroundColor: '#fff1f2', borderWidth: 1, borderColor: '#fecdd3',
     paddingHorizontal: 8, paddingVertical: 6, borderRadius: Radius.sm,
     flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0,
   },
-  ratingText: { fontFamily: Typography.fontBold, fontSize: Typography.sm, color: '#92400e' },
+  ratingText: { fontFamily: Typography.fontBold, fontSize: Typography.sm, color: '#be123c' },
   footer: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.borderLight, flexWrap: 'wrap',

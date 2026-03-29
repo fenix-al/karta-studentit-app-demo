@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Search, Clock, Star } from 'lucide-react-native';
+import { ChevronLeft, Search, Clock, Heart } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
@@ -246,8 +246,8 @@ function HSection({ title, subtitle, data, onSeeAll, onCard }: {
             <View style={styles.bizBody}>
               <Text style={styles.bizTitle} numberOfLines={1}>{biz.title}</Text>
               <View style={styles.bizMeta}>
-                <Star size={11} color="#f59e0b" fill="#f59e0b" strokeWidth={0} />
-                <Text style={styles.bizRating}>{biz.rating}</Text>
+                <Heart size={11} color="#ef4444" fill="#ef4444" strokeWidth={0} />
+                <Text style={styles.bizRating}>{biz.votes ?? 0}</Text>
                 <Text style={styles.bizDot}>•</Text>
                 <Text style={styles.bizCategory} numberOfLines={1}>{biz.category}</Text>
               </View>
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   bizBody:     { padding: Spacing.lg },
   bizTitle:    { fontFamily: Typography.fontBold, fontSize: Typography.lg, color: Colors.textPrimary, marginBottom: 4 },
   bizMeta:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  bizRating:   { fontFamily: Typography.fontBold, fontSize: Typography.sm, color: '#f59e0b' },
+  bizRating:   { fontFamily: Typography.fontBold, fontSize: Typography.sm, color: '#be123c' },
   bizDot:      { fontSize: Typography.sm, color: Colors.textMuted },
   bizCategory: { fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textSecondary, flex: 1 },
 });

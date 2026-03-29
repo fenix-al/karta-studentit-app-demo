@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Image, StyleSheet,
+  Image, StyleSheet, Linking, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Share2, Heart, Star, Gift, MapPin, Phone, Navigation, ThumbsUp } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
+import { recommendBusiness, fetchOffer } from '../../services/api';
 
 interface Props {
   business:    Business;
@@ -17,6 +18,73 @@ interface Props {
 
 export default function BusinessProfileScreen({ business: biz, onBack, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
+
+  // ── Local state — seeded from list data, enriched by single-business fetch ──
+  const [recommended, setRecommended] = useState(biz.has_recommended ?? false);
+  const [voteCount,   setVoteCount]   = useState(biz.votes ?? 0);
+  const [mapUrl,      setMapUrl]      = useState(biz.map_url      ?? '');
+  const [reviewUrl,   setReviewUrl]   = useState(biz.review_url   ?? '');
+  const [recLoading,  setRecLoading]  = useState(false);
+
+  // ── Fetch full business details (list endpoint omits map/review/has_recommended)
+  useEffect(() => {
+    fetchOffer(parseInt(biz.id, 10))
+      .then((data: any) => {
+        setMapUrl(data.map_url         ?? '');
+        setReviewUrl(data.review_url   ?? '');
+        setRecommended(data.has_recommended ?? false);
+        setVoteCount(data.votes        ?? voteCount);
+      })
+      .catch(() => { /* keep list-endpoint values on error */ });
+  }, [biz.id]);
+
+  async function handleRecommend() {
+    if (recLoading) return;
+    // Optimistic update
+    const wasRecommended = recommended;
+    setRecommended(!wasRecommended);
+    setVoteCount(c => c + (wasRecommended ? -1 : 1));
+    setRecLoading(true);
+    try {
+      const res = await recommendBusiness(biz.id);
+      // Sync with server truth in case of drift
+      setRecommended(res.recommended);
+      setVoteCount(res.votes);
+    } catch {
+      // Revert on failure
+      setRecommended(wasRecommended);
+      setVoteCount(c => c + (wasRecommended ? 1 : -1));
+      Alert.alert('Gabim', 'Nuk mund të regjistrohet rekomandimi. Provo përsëri.');
+    } finally {
+      setRecLoading(false);
+    }
+  }
+
+  async function handleMapPress() {
+    if (!mapUrl) {
+      Alert.alert('Nuk disponohet', 'Ky biznes nuk ka ende hartën të konfiguruar.');
+      return;
+    }
+    const canOpen = await Linking.canOpenURL(mapUrl);
+    if (canOpen) {
+      Linking.openURL(mapUrl);
+    } else {
+      Alert.alert('Gabim', 'Nuk mund të hapet aplikacioni i hartës.');
+    }
+  }
+
+  async function handleReviewPress() {
+    if (!reviewUrl) {
+      Alert.alert('Nuk disponohet', 'Ky biznes nuk ka ende lidhjen e reviews të konfiguruar.');
+      return;
+    }
+    const canOpen = await Linking.canOpenURL(reviewUrl);
+    if (canOpen) {
+      Linking.openURL(reviewUrl);
+    } else {
+      Alert.alert('Gabim', 'Nuk mund të hapet Google Reviews.');
+    }
+  }
 
   return (
     <View style={styles.root}>
@@ -82,9 +150,21 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
         {/* ── Recommend ────────────────────────────────────────────── */}
         <View style={styles.recommendRow}>
           <Text style={styles.recommendLabel}>A keni mbetur të kënaqur?</Text>
-          <TouchableOpacity style={styles.recommendBtn} activeOpacity={0.85}>
-            <ThumbsUp size={15} color="#fff" strokeWidth={2} />
-            <Text style={styles.recommendText}>Rekomando ({biz.recommendations})</Text>
+          <TouchableOpacity
+            style={[styles.recommendBtn, recommended && styles.recommendBtnActive]}
+            activeOpacity={0.85}
+            onPress={handleRecommend}
+            disabled={recLoading}
+          >
+            <ThumbsUp
+              size={15}
+              color="#fff"
+              strokeWidth={2}
+              fill={recommended ? '#fff' : 'none'}
+            />
+            <Text style={styles.recommendText}>
+              {recommended ? `Rekomanduar (${voteCount})` : `Rekomando (${voteCount})`}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -111,12 +191,12 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
             </View>
           </View>
 
-          <TouchableOpacity style={styles.mapBtn} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.mapBtn} activeOpacity={0.85} onPress={handleMapPress}>
             <Navigation size={18} color="#fff" strokeWidth={2} />
             <Text style={styles.actionBtnText}>Udhëzime në Hartë</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.reviewBtn} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.reviewBtn} activeOpacity={0.85} onPress={handleReviewPress}>
             <Star size={18} color="#f59e0b" fill="#f59e0b" strokeWidth={0} />
             <Text style={styles.actionBtnText}>Lër Review në Google</Text>
           </TouchableOpacity>
@@ -211,6 +291,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     shadowColor: '#dc2626', shadowOpacity: 0.3, shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
+  },
+  recommendBtnActive: {
+    backgroundColor: '#16a34a',
+    shadowColor: '#16a34a',
   },
   recommendText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
