@@ -26,7 +26,7 @@ import { Colors, Typography, Spacing, Radius, Gradients } from '../constants/The
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES, COURSES, OPPORTUNITIES, STARTUPS, ACT4, KVR } from '../data/mockData';
 import { useFetch } from '../hooks/useFetch';
-import { fetchOffers, fetchKurset, fetchJobs, fetchStartups, fetchAct4, fetchKvr, recommendBusiness, fetchLoyalty } from '../services/api';
+import { fetchOffers, fetchKurset, fetchJobs, fetchStartups, fetchAct4, fetchKvr, recommendBusiness } from '../services/api';
 import { apiBizToBusiness, kursToCard, opportunityToCard, startupToCard, act4ToCard, kvrToCard } from '../services/mappers';
 import { Business, CardItem, Category } from '../types';
 import SmartModal from '../components/SmartModal';
@@ -63,11 +63,6 @@ export default function HomeScreen() {
   const { data: startupsData } = useFetch(() => fetchStartups());
   const { data: act4Data }     = useFetch(() => fetchAct4());
   const { data: kvrData }      = useFetch(() => fetchKvr());
-  const { data: loyaltyData }  = useFetch(() => fetchLoyalty());
-
-  const totalScans = Array.isArray(loyaltyData)
-    ? (loyaltyData as any[]).reduce((sum, b) => sum + (b.scan_count ?? 0), 0)
-    : 0;
 
   const rawOffers: any[]  = (offersData as any)?.items ?? [];
 
@@ -259,7 +254,7 @@ export default function HomeScreen() {
               <LinearGradient colors={Gradients.gold} style={styles.loyaltyIconWrap}>
                 <Star size={22} color="#fff" fill="#fff" strokeWidth={0} />
               </LinearGradient>
-              <Text style={styles.loyaltyCount}>{totalScans > 0 ? totalScans : '—'}</Text>
+              <Text style={styles.loyaltyCount}>{card?.loyal_businesses_count || '—'}</Text>
               <Text style={styles.loyaltyText}>{'KLIENT\nBESNIK'}</Text>
             </View>
 

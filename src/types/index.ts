@@ -45,7 +45,8 @@ export interface StudentCard {
   datelindja?: string;
   telefoni?:   string;
   email?:      string;
-  points:      number;
+  points:                 number;
+  loyal_businesses_count: number;
 }
 
 // ── Points log entry (from API /sk/v1/points) ─────────────────────────────────
