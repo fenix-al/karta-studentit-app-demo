@@ -36,6 +36,8 @@ export function apiBizToBusiness(b: any): Business {
     address:         b.address  ?? '',
     phone:           b.phone    ?? '',
     recommendations: scan_count,
+    votes:           votes,
+    distance:        b.distance ?? null,
   };
 }
 

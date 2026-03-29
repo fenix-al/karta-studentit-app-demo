@@ -8,8 +8,10 @@ import {
   Image,
   Modal,
   ActivityIndicator,
+  Alert,
   StyleSheet,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -17,17 +19,18 @@ import {
   Bell, Search, Star, Home, Gift, QrCode,
   Tag, User, ArrowRight, Globe, Briefcase, Rocket,
   GraduationCap, HandHeart, Landmark, FileText, Heart,
-  MessageCircle, LogOut, X,
-} from 'lucide-react';
+  MessageCircle, LogOut, X, MapPin, Navigation,
+} from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius, Gradients } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES, COURSES, OPPORTUNITIES, STARTUPS, ACT4, KVR } from '../data/mockData';
 import { useFetch } from '../hooks/useFetch';
 import { fetchOffers, fetchKurset, fetchJobs, fetchStartups, fetchAct4, fetchKvr } from '../services/api';
-import { apiBizToBusiness, businessToCard, kursToCard, opportunityToCard, startupToCard, act4ToCard, kvrToCard } from '../services/mappers';
-import { CardItem, Category } from '../types';
+import { apiBizToBusiness, kursToCard, opportunityToCard, startupToCard, act4ToCard, kvrToCard } from '../services/mappers';
+import { Business, CardItem, Category } from '../types';
 import SmartModal from '../components/SmartModal';
+import StoryModal from '../components/StoryModal';
 import FloatingChat from '../components/FloatingChat';
 import OffersNavigator from './offers/OffersNavigator';
 import CoursesNavigator from './courses/CoursesNavigator';
@@ -48,14 +51,19 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { onLogout, card } = useAuth();
 
-  const { data: offersData, loading: offersLoading } = useFetch(() => fetchOffers());
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locLoading, setLocLoading] = useState(false);
+
+  const { data: offersData, loading: offersLoading } = useFetch(
+    () => fetchOffers(userCoords ? { lat: userCoords.lat, lng: userCoords.lng } : undefined),
+    [userCoords],
+  );
   const { data: coursesData }  = useFetch(() => fetchKurset());
   const { data: jobsData }     = useFetch(() => fetchJobs());
   const { data: startupsData } = useFetch(() => fetchStartups());
   const { data: act4Data }     = useFetch(() => fetchAct4());
   const { data: kvrData }      = useFetch(() => fetchKvr());
 
-  // rawOffers kept alongside realBusinesses so we can produce a CardItem for SmartModal on tap
   const rawOffers: any[]  = (offersData as any)?.items ?? [];
   const realBusinesses    = rawOffers.map(apiBizToBusiness);
 
@@ -68,12 +76,41 @@ export default function HomeScreen() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings]           = useState(false);
   const [activeItem, setActiveItem] = useState<CardItem | null>(null);
+  const [storyVisible, setStoryVisible] = useState(false);
+  const [storyIndex,   setStoryIndex]   = useState(0);
   const [cardVisible, setCardVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'perfitimet' | 'dhurata' | 'profil' | 'kurset' | 'mundesit' | 'startupet' | 'act4' | 'kvr'>('home');
-  const [offersInitialList, setOffersInitialList] = useState<string | undefined>(undefined);
+  const [offersInitialList,     setOffersInitialList]     = useState<string | undefined>(undefined);
+  const [offersInitialBusiness, setOffersInitialBusiness] = useState<Business | undefined>(undefined);
   const [coursesInitialList, setCoursesInitialList] = useState<string | undefined>(undefined);
   const [jobsInitialList, setJobsInitialList] = useState<string | undefined>(undefined);
   const [startupsInitialList, setStartupsInitialList] = useState<string | undefined>(undefined);
+
+  const handleFindNearMe = async () => {
+    if (userCoords) {
+      // Already active — tapping again resets to default sort
+      setUserCoords(null);
+      return;
+    }
+    setLocLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Vendndodhja e bllokuar',
+          'Lejo qasjen te vendndodhja në Cilësimet e telefonit për të gjetur ofertat afër teje.',
+          [{ text: 'OK' }],
+        );
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    } catch {
+      Alert.alert('Gabim', 'Nuk mund të merrej vendndodhja. Provo përsëri.');
+    } finally {
+      setLocLoading(false);
+    }
+  };
 
   const openOffers = (list?: string) => {
     setOffersInitialList(list);
@@ -226,7 +263,28 @@ export default function HomeScreen() {
         </View>
 
         {/* ── Oferta pranë teje (Businesses) ───────────────────────────── */}
-        <SectionHeader title="Oferta pranë teje" onSeeAll={() => openOffers()} />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Oferta pranë teje</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              onPress={handleFindNearMe}
+              activeOpacity={0.8}
+              style={[styles.nearMePill, userCoords ? styles.nearMePillActive : null]}
+            >
+              {locLoading ? (
+                <ActivityIndicator size={11} color={userCoords ? '#fff' : Colors.brandGreenText} />
+              ) : (
+                <Navigation size={11} color={userCoords ? '#fff' : Colors.brandGreenText} strokeWidth={2.5} />
+              )}
+              <Text style={[styles.nearMeText, userCoords ? styles.nearMeTextActive : null]}>
+                {locLoading ? 'Duke kërkuar...' : userCoords ? 'Pranë Teje ✓' : 'Gjej Afër Meje'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => openOffers()}>
+              <Text style={styles.seeAll}>Shiko të gjitha</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         {offersLoading ? (
           <View style={styles.offerLoader}>
             <ActivityIndicator size="small" color={Colors.textMuted} />
@@ -241,7 +299,7 @@ export default function HomeScreen() {
             renderItem={({ item: biz, index }) => (
               <TouchableOpacity
                 style={styles.bizCard}
-                onPress={() => setActiveItem(businessToCard(rawOffers[index]))}
+                onPress={() => { setStoryIndex(index); setStoryVisible(true); }}
                 activeOpacity={0.92}
               >
                 {/* Image */}
@@ -261,8 +319,39 @@ export default function HomeScreen() {
                 </View>
                 {/* Body */}
                 <View style={styles.bizBody}>
-                  <Text style={styles.bizTitle}>{biz.title}</Text>
-                  <Text style={styles.bizMeta}>{biz.address || biz.category}</Text>
+                  {/* Title — single line with ellipsis */}
+                  <Text style={styles.bizTitle} numberOfLines={1} ellipsizeMode="tail">
+                    {biz.title}
+                  </Text>
+
+                  {/* Category chip */}
+                  <View style={styles.bizCategoryChip}>
+                    <Text style={styles.bizCategoryText}>{biz.category}</Text>
+                  </View>
+
+                  {/* Address row with pin icon */}
+                  <View style={styles.bizAddressRow}>
+                    <MapPin size={11} color="#f43f5e" strokeWidth={2.5} />
+                    <Text style={styles.bizMeta} numberOfLines={1} ellipsizeMode="tail">
+                      {biz.address || '—'}
+                    </Text>
+                  </View>
+
+                  {/* Distance (location mode only) */}
+                  {formatDistance(biz.distance) ? (
+                    <View style={styles.distanceRow}>
+                      <MapPin size={11} color={Colors.brandGreenText} strokeWidth={2.5} />
+                      <Text style={styles.distanceText}>{formatDistance(biz.distance)}</Text>
+                    </View>
+                  ) : null}
+
+                  {/* Rekomando — pinned to bottom via marginTop: 'auto' */}
+                  <TouchableOpacity style={styles.rekoBtn} onPress={() => {}} activeOpacity={0.8}>
+                    <Heart size={12} color="#0ea5e9" strokeWidth={2.5} />
+                    <Text style={styles.rekoBtnText}>
+                      {biz.votes > 0 ? `${biz.votes} Rekomandime` : 'Rekomando'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </TouchableOpacity>
             )}
@@ -408,9 +497,10 @@ export default function HomeScreen() {
 
       {activeTab === 'perfitimet' && (
         <OffersNavigator
-          onExit={() => setActiveTab('home')}
+          onExit={() => { setActiveTab('home'); setOffersInitialBusiness(undefined); }}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialList={offersInitialList}
+          initialBusiness={offersInitialBusiness}
         />
       )}
 
@@ -483,7 +573,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Center FAB — QR code, breaks out of tab bar */}
-        <TouchableOpacity style={styles.fabWrapper} activeOpacity={0.85} onPress={() => setCardVisible(true)}>
+        <TouchableOpacity style={styles.fabWrapper} activeOpacity={0.85} onPress={() => setCardVisible(v => !v)}>
           <View style={[styles.fab, { borderColor: Colors.surfaceBg }]}>
             <QrCode size={28} color={Colors.brandGreenDeep} strokeWidth={2.5} />
           </View>
@@ -507,6 +597,7 @@ export default function HomeScreen() {
           SMART MODAL — full screen story overlay
       ════════════════════════════════════════════════════════════════ */}
       <SmartModal item={activeItem} onClose={() => setActiveItem(null)} />
+      <StoryModal visible={storyVisible} stories={realBusinesses} initialIndex={storyIndex} onClose={() => setStoryVisible(false)} onViewProfile={(biz) => { setOffersInitialBusiness(biz); setActiveTab('perfitimet'); }} />
       <DigitalCardModal visible={cardVisible} onClose={() => setCardVisible(false)} />
 
       {/* ════════════════════════════════════════════════════════════════
@@ -593,6 +684,13 @@ export default function HomeScreen() {
 
     </View>
   );
+}
+
+// ── Distance formatter ────────────────────────────────────────────────────────
+function formatDistance(km: number | null | undefined): string | null {
+  if (km == null) return null;
+  if (km < 1) return `${Math.round(km * 1000)}m larg`;
+  return `${km.toFixed(1)}km larg`;
 }
 
 // ── Small reusable components ─────────────────────────────────────────────────
@@ -874,6 +972,31 @@ const styles = StyleSheet.create({
     color:      Colors.textPrimary,
   },
 
+  // ── "Gjej Afër Meje" location pill ──────────────────────────────────────────
+  nearMePill: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               5,
+    paddingHorizontal: 10,
+    paddingVertical:   5,
+    borderRadius:      20,
+    borderWidth:       1,
+    borderColor:       Colors.brandGreenBorder,
+    backgroundColor:   Colors.brandGreenBg,
+  },
+  nearMePillActive: {
+    backgroundColor: Colors.brandGreen,
+    borderColor:     Colors.brandGreen,
+  },
+  nearMeText: {
+    fontFamily: Typography.fontBold,
+    fontSize:   11,
+    color:      Colors.brandGreenText,
+  },
+  nearMeTextActive: {
+    color: '#fff',
+  },
+
   // ── Section header ───────────────────────────────────────────────────────────
   sectionHeader: {
     flexDirection:    'row',
@@ -957,18 +1080,68 @@ const styles = StyleSheet.create({
     fontSize:   11,
   },
   bizBody: {
-    padding: 20,
+    padding:        20,
+    flex:           1,
+    flexDirection:  'column',
   },
   bizTitle: {
     fontFamily:   Typography.fontBold,
     fontSize:     Typography.xl,
     color:        Colors.textPrimary,
-    marginBottom: 4,
+    marginBottom: 8,
+  },
+  bizCategoryChip: {
+    alignSelf:         'flex-start',
+    backgroundColor:   Colors.brandGreenBg,
+    borderRadius:      6,
+    paddingHorizontal: 8,
+    paddingVertical:   3,
+    marginBottom:      8,
+  },
+  bizCategoryText: {
+    fontFamily:    Typography.fontBold,
+    fontSize:      10,
+    color:         Colors.brandGreenText,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  bizAddressRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           5,
+    marginBottom:  8,
   },
   bizMeta: {
     fontFamily: Typography.fontMedium,
     fontSize:   Typography.xs,
     color:      Colors.textSecondary,
+    flex:       1,
+  },
+  distanceRow: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    gap:           4,
+    marginTop:     5,
+  },
+  distanceText: {
+    fontFamily: Typography.fontBold,
+    fontSize:   Typography.xs,
+    color:      Colors.brandGreenText,
+  },
+  rekoBtn: {
+    marginTop:      'auto',
+    backgroundColor:'#f0f9ff',
+    paddingVertical: 8,
+    borderRadius:   8,
+    flexDirection:  'row',
+    justifyContent: 'center',
+    alignItems:     'center',
+    gap:            5,
+  },
+  rekoBtnText: {
+    fontFamily: Typography.fontBold,
+    fontSize:   12,
+    color:      '#0ea5e9',
   },
 
   // ── Bento Box ─────────────────────────────────────────────────────────────────

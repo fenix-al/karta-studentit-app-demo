@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight,
   User, Lock, Bell,
   HelpCircle, FileText, Shield, LogOut,
-} from 'lucide-react';
+} from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../constants/Theme';
 

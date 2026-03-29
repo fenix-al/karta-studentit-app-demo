@@ -6,7 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft, Share2, Heart, Calendar, MapPin, HandHeart, CheckCircle,
-} from 'lucide-react';
+} from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { ActActivity } from '../../types';

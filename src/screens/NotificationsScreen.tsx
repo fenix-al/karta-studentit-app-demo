@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft, CheckCheck, Gift, Briefcase, Calendar,
   Tag, Heart, Trash2, BellOff,
-} from 'lucide-react';
+} from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../constants/Theme';
 import { AppNotification } from '../types';

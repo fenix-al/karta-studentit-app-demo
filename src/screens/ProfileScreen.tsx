@@ -9,7 +9,7 @@ import {
   Settings, ChevronLeft, Award, MessageSquare, Send,
   Briefcase, BookOpen, History,
   CheckCircle, Clock, Gift, MapPin,
-} from 'lucide-react';
+} from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../constants/Theme';
 import { APPLICATIONS, COURSE_ACTIVITIES, SCAN_HISTORY } from '../data/mockData';

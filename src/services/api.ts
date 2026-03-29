@@ -140,8 +140,21 @@ export async function fetchLoyalty() {
 
 // ── Offers / Businesses ───────────────────────────────────────────────────────
 
-export async function fetchOffers(params?: { category?: string; search?: string }) {
-  const qs = new URLSearchParams(params as Record<string, string>).toString();
+export async function fetchOffers(params?: {
+  category?: string;
+  search?:   string;
+  lat?:      number;
+  lng?:      number;
+}) {
+  const qs = params
+    ? new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params)
+            .filter(([, v]) => v != null)
+            .map(([k, v]) => [k, String(v)])
+        )
+      ).toString()
+    : '';
   return publicFetch(`/businesses${qs ? `?${qs}` : ''}`);
 }
 

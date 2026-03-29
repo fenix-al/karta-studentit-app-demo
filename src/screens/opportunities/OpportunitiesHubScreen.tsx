@@ -4,7 +4,7 @@ import {
   TouchableOpacity, Image, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Search, MapPin, Clock, Building } from 'lucide-react';
+import { ChevronLeft, Search, MapPin, Clock, Building } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { JobItem } from '../../types';

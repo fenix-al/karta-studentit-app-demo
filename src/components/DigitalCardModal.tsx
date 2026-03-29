@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, Modal, TouchableOpacity, Animated,
-  StyleSheet, Image,
+  StyleSheet, Image, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, RefreshCw } from 'lucide-react';
+import { X, RefreshCw } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { Typography, Spacing, Radius } from '../constants/Theme';
@@ -20,9 +20,13 @@ interface Props {
 const TIMER_START = 45;
 
 export default function DigitalCardModal({ visible, onClose }: Props) {
-  const insets   = useSafeAreaInsets();
-  const { card } = useAuth();
-  const QR_VALUE = `STUDENT:${card?.qr_token ?? card?.nr_karte ?? ''}`;
+  const insets                = useSafeAreaInsets();
+  const { card, refreshCard } = useAuth();
+  // Prefer student_hash (pretty URL) — fall back to qr_token if hash not yet generated
+  const _hash    = card?.student_hash ?? card?.qr_token ?? '';
+  const QR_VALUE = _hash
+    ? `https://kartaestudentitshkoder.al/karta/${_hash}`
+    : '';
   const scanAnim = useRef(new Animated.Value(0)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
   const [timer, setTimer] = useState(TIMER_START);
@@ -53,6 +57,13 @@ export default function DigitalCardModal({ visible, onClose }: Props) {
     return () => loop.stop();
   }, [visible]);
 
+  // ── If modal opens and hash is missing, refresh card data from API ───────
+  useEffect(() => {
+    if (visible && card && !_hash) {
+      refreshCard();
+    }
+  }, [visible]);
+
   // ── Countdown timer (resets every 45s) ───────────────────────────────────
   useEffect(() => {
     if (!visible) { setTimer(TIMER_START); return; }
@@ -71,10 +82,10 @@ export default function DigitalCardModal({ visible, onClose }: Props) {
   });
 
   return (
-    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={onClose}>
 
       {/* ── Dark frosted glass backdrop ─────────────────────────────────── */}
-      <BlurView intensity={85} tint="dark" style={StyleSheet.absoluteFillObject} />
+      <BlurView intensity={85} tint="dark" style={StyleSheet.absoluteFillObject} pointerEvents="none" />
 
       <View style={[styles.root, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 }]}>
 
@@ -84,7 +95,7 @@ export default function DigitalCardModal({ visible, onClose }: Props) {
         </TouchableOpacity>
 
         {/* ── Card glow halo (animated) ──────────────────────────────────── */}
-        <Animated.View style={[styles.cardGlow, { opacity: glowOpacity }]} />
+        <Animated.View style={[styles.cardGlow, { opacity: glowOpacity }]} pointerEvents="none" />
 
         {/* ── The Digital Card ──────────────────────────────────────────── */}
         <LinearGradient
@@ -103,13 +114,28 @@ export default function DigitalCardModal({ visible, onClose }: Props) {
 
           {/* QR box */}
           <View style={styles.qrBox}>
-            <Animated.View style={[styles.scanLine, { transform: [{ translateY: scanLineY }] }]} />
-            <QRCode
-              value={QR_VALUE}
-              size={190}
-              color="#0f172a"
-              backgroundColor="#ffffff"
-            />
+            {!card ? (
+              /* Not logged in */
+              <View style={styles.qrPlaceholder}>
+                <Text style={styles.qrErrorText}>
+                  Ju lutem identifikohuni{'\n'}për të parë kartën tuaj.
+                </Text>
+              </View>
+            ) : !QR_VALUE ? (
+              /* Logged in but hash not yet loaded */
+              <ActivityIndicator size="large" color="#0f172a" />
+            ) : (
+              /* All good — render QR */
+              <>
+                <Animated.View style={[styles.scanLine, { transform: [{ translateY: scanLineY }] }]} />
+                <QRCode
+                  value={QR_VALUE}
+                  size={190}
+                  color="#0f172a"
+                  backgroundColor="#ffffff"
+                />
+              </>
+            )}
           </View>
 
           {/* User info strip */}
@@ -223,6 +249,19 @@ const styles = StyleSheet.create({
     shadowRadius:    12,
     shadowOffset:    { width: 0, height: 6 },
     elevation:       6,
+  },
+  qrPlaceholder: {
+    flex:            1,
+    alignItems:      'center',
+    justifyContent:  'center',
+    paddingHorizontal: 12,
+  },
+  qrErrorText: {
+    fontFamily:  Typography.fontMedium,
+    fontSize:    Typography.sm,
+    color:       '#64748b',
+    textAlign:   'center',
+    lineHeight:  20,
   },
   scanLine: {
     position:        'absolute',

@@ -4,7 +4,7 @@ import {
   Image, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Share2, Heart, Star, Gift, MapPin, Phone, Navigation, ThumbsUp } from 'lucide-react';
+import { ChevronLeft, Share2, Heart, Star, Gift, MapPin, Phone, Navigation, ThumbsUp } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
@@ -95,7 +95,7 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
             <View style={styles.contactIconRed}>
               <MapPin size={16} color="#f43f5e" strokeWidth={2} />
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.contactLabel}>Adresa</Text>
               <Text style={styles.contactValue}>{biz.address}</Text>
             </View>
@@ -105,7 +105,7 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
             <View style={styles.contactIconGray}>
               <Phone size={16} color={Colors.textSecondary} strokeWidth={2} />
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.contactLabel}>Kontakti</Text>
               <Text style={styles.contactValue}>{biz.phone}</Text>
             </View>

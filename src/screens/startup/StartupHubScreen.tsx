@@ -4,7 +4,7 @@ import {
   TouchableOpacity, Image, TextInput, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Search, Calendar, ArrowUpRight, Lightbulb, Send } from 'lucide-react';
+import { ChevronLeft, Search, Calendar, ArrowUpRight, Lightbulb, Send } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { StartupItem } from '../../types';

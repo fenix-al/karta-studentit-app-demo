@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MessageCircle, X } from 'lucide-react';
+import { MessageCircle, X } from 'lucide-react-native';
 
 import { Colors, Typography, Radius } from '../constants/Theme';
 

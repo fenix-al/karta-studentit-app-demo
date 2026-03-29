@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Slider from '@react-native-community/slider';
-import { X, Ticket, Trophy, Crown, ChevronRight, Gift, Filter, ChevronLeft } from 'lucide-react';
+import { X, Ticket, Trophy, Crown, ChevronRight, Gift, Filter, ChevronLeft } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../constants/Theme';
 import { Raffle, DirectReward } from '../types';

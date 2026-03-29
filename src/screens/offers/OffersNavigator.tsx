@@ -10,16 +10,19 @@ type Screen =
   | { name: 'profile'; business: Business };
 
 interface Props {
-  onExit:       () => void;
-  bottomInset:  number;
-  initialList?: string;  // if set, open directly on the list screen
+  onExit:            () => void;
+  bottomInset:       number;
+  initialList?:      string;    // open directly on the list screen
+  initialBusiness?:  Business;  // open directly on the profile screen
 }
 
-export default function OffersNavigator({ onExit, bottomInset, initialList }: Props) {
+export default function OffersNavigator({ onExit, bottomInset, initialList, initialBusiness }: Props) {
   const [stack, setStack] = useState<Screen[]>(
-    initialList
-      ? [{ name: 'hub' }, { name: 'list', title: initialList }]
-      : [{ name: 'hub' }]
+    initialBusiness
+      ? [{ name: 'hub' }, { name: 'profile', business: initialBusiness }]
+      : initialList
+        ? [{ name: 'hub' }, { name: 'list', title: initialList }]
+        : [{ name: 'hub' }]
   );
   const current = stack[stack.length - 1];
 

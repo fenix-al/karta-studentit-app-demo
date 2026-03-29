@@ -4,7 +4,7 @@ import {
   Image, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Share2, Heart, Calendar, MapPin, Clock, Award, Users } from 'lucide-react';
+import { ChevronLeft, Share2, Heart, Calendar, MapPin, Clock, Award, Users } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { CourseItem } from '../../types';

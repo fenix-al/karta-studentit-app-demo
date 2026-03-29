@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   X, QrCode, Briefcase, Rocket, Globe,
   Heart, FileText, Star, ArrowRight, ExternalLink,
-} from 'lucide-react';
+} from 'lucide-react-native';
 
 import { CardItem } from '../types';
 import { Colors, Typography, Radius } from '../constants/Theme';

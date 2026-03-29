@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   ChevronLeft, ArrowRight, Leaf, Users, Shield,
   Calendar, MapPin, HandHeart,
-} from 'lucide-react';
+} from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { ActActivity } from '../../types';

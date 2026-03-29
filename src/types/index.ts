@@ -38,6 +38,7 @@ export interface StudentCard {
   valid_until: string;
   statusi:     'active' | 'inactive' | 'pending' | 'expired';
   qr_token:    string;
+  student_hash?: string;
   fakulteti:   string;
   programi:    string;
   cikli?:      string;
@@ -172,6 +173,8 @@ export interface Business {
   address:         string;
   phone:           string;
   recommendations: number;
+  votes:           number;
+  distance?:       number | null;  // km from user — present only in location mode
 }
 
 export interface CategoryPill {

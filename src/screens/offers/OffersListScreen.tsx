@@ -4,7 +4,7 @@ import {
   Image, TextInput, ActivityIndicator, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Search, Star, Heart, ArrowDownUp } from 'lucide-react';
+import { ChevronLeft, Search, Star, Heart, ArrowDownUp } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
