@@ -8,7 +8,7 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { SK_API, JWT_ENDPOINT } from '../constants/config';
-import { StudentCard } from '../types';
+import { ProfileApplicationApiItem, ProfileCourseApiItem, ProfileHistoryApiItem, StudentCard } from '../types';
 
 export const TOKEN_KEY = 'sk_jwt_token';
 
@@ -233,17 +233,24 @@ export async function fetchStartups() {
 
 // ── Me: history, applications, suggestion ─────────────────────────────────────
 
-export async function fetchMyHistory() {
-  return apiFetch('/me/history');
+export async function fetchMyHistory(): Promise<ProfileHistoryApiItem[]> {
+  return apiFetch<ProfileHistoryApiItem[]>('/me/history');
 }
 
-export async function fetchMyApplications() {
-  return apiFetch('/me/applications');
+export async function fetchMyApplications(): Promise<ProfileApplicationApiItem[]> {
+  return apiFetch<ProfileApplicationApiItem[]>('/me/applications');
 }
 
-export async function postSuggestion(text: string): Promise<{ success: boolean }> {
+export async function fetchMyCourses(): Promise<ProfileCourseApiItem[]> {
+  return apiFetch<ProfileCourseApiItem[]>('/me/courses');
+}
+
+export async function postSuggestion(
+  topic: string,
+  message: string,
+): Promise<{ success: boolean; msg: string }> {
   return apiFetch('/me/suggestion', {
     method: 'POST',
-    body: JSON.stringify({ message: text }),
+    body: JSON.stringify({ topic, message }),
   });
 }

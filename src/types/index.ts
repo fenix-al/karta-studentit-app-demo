@@ -47,6 +47,8 @@ export interface StudentCard {
   email?:      string;
   points:                 number;
   loyal_businesses_count: number;
+  total_scans?:           number;
+  act4_activities_count?: number;
 }
 
 // ── Points log entry (from API /sk/v1/points) ─────────────────────────────────
@@ -156,6 +158,30 @@ export interface ScanHistoryEntry {
   place:  string;
   date:   string;
   icon:   string;
+}
+
+export interface ProfileApplicationApiItem {
+  job_id:   number;
+  title:    string;
+  company:  string;
+  date:     string;
+  status:   string;
+}
+
+export interface ProfileHistoryApiItem {
+  business: string;
+  logo:     string | null;
+  date:     string;
+}
+
+export interface ProfileCourseApiItem {
+  course_id:   number;
+  title:       string;
+  location:    string;
+  date:        string;
+  session:     number;
+  status:      string;
+  start_date?: string;
 }
 
 // ── Offers module ─────────────────────────────────────────────────────────────
