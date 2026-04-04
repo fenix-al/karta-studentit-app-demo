@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
   View, Text, ScrollView, FlatList, ActivityIndicator,
-  TouchableOpacity, Image, TextInput, StyleSheet,
+  TouchableOpacity, Image, TextInput, StyleSheet, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,7 +13,7 @@ import {
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { ActActivity } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
-import { fetchAct4 } from '../../services/api';
+import { fetchAct4, volunteerAct4 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800';
@@ -42,7 +42,7 @@ const RED   = '#e30613';
 interface Props {
   onBack:    () => void;
   onList:    (title: string, catId: string) => void;
-  onProfile: (activity: ActActivity) => void;
+  onProfile: (activityId: string) => void;
   bottomInset: number;
 }
 
@@ -71,10 +71,24 @@ export default function ActHubScreen({ onBack, onList, onProfile, bottomInset }:
     );
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (selected.length === 0) return;
-    setSubmitting(true);
-    setTimeout(() => { setSubmitting(false); setSubmitted(true); }, 1200);
+
+    if (!activities.length) {
+      Alert.alert('Nuk ka aktivitete', 'Sapo te publikohet nje aktivitet i ri, mund te regjistroheni edhe nga ky formular.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await volunteerAct4(Number(activities[0].id), selected.join(', '));
+      setSubmitted(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Regjistrimi deshtoi. Provo perseri.';
+      Alert.alert('Regjistrimi nuk u krye', message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -197,7 +211,7 @@ export default function ActHubScreen({ onBack, onList, onProfile, bottomInset }:
               contentContainerStyle={styles.hList}
             >
               {activities.map(item => (
-                <ActivityCard key={item.id} activity={item} onPress={() => onProfile(item)} />
+                <ActivityCard key={item.id} activity={item} onPress={() => onProfile(item.id)} />
               ))}
             </ScrollView>
           )}

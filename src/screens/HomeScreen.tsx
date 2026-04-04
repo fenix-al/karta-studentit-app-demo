@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   StyleSheet,
+  TextInput,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,11 +25,11 @@ import {
 
 import { Colors, Typography, Spacing, Radius, Gradients } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
-import { CATEGORIES, COURSES, OPPORTUNITIES, STARTUPS, ACT4, KVR } from '../data/mockData';
+import { CATEGORIES } from '../data/mockData';
 import { useFetch } from '../hooks/useFetch';
 import { fetchOffers, fetchKurset, fetchJobs, fetchStartups, fetchAct4, fetchKvr, recommendBusiness } from '../services/api';
 import { apiBizToBusiness, kursToCard, opportunityToCard, startupToCard, act4ToCard, kvrToCard } from '../services/mappers';
-import { Business, CardItem, Category } from '../types';
+import { AppNotification, Business, CardItem, Category, CourseItem, JobItem } from '../types';
 import SmartModal from '../components/SmartModal';
 import StoryModal from '../components/StoryModal';
 import FloatingChat from '../components/FloatingChat';
@@ -46,6 +47,74 @@ import SettingsScreen from './SettingsScreen';
 
 // ── TAB BAR HEIGHT constant (used for ScrollView bottom padding) ──────────────
 const TAB_BAR_HEIGHT = 72;
+const COURSE_PLACEHOLDER = 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800';
+
+function apiToCourseItem(k: any): CourseItem {
+  return {
+    id: String(k.id),
+    title: k.title ?? '',
+    category: k.categories?.[0] ?? 'Kurs',
+    categories: k.categories ?? [],
+    categorySlugs: k.category_slugs ?? [],
+    badgeColor: '#0891b2',
+    date: k.start_date ?? '',
+    location: k.location ?? 'Shkoder',
+    duration: k.duration ?? '-',
+    cert: k.certification_text ?? 'Po, pas perfundimit',
+    seats:
+      typeof k.free_spots === 'number' && k.total_spots
+        ? `${k.free_spots} / ${k.total_spots} vende`
+        : (k.total_spots ? `${k.total_spots} vende` : ''),
+    totalSpots: k.total_spots ?? 0,
+    freeSpots: typeof k.free_spots === 'number' ? k.free_spots : null,
+    img: k.image || COURSE_PLACEHOLDER,
+    desc: k.excerpt ?? '',
+    isEnrolled: !!k.is_enrolled,
+    enrollStatus: k.enroll_status ?? null,
+    canEnroll: !!k.can_enroll,
+    content: k.content ?? '',
+  };
+}
+
+function apiToJobItem(o: any): JobItem {
+  const typeSlug = o.type_slugs?.[0] ?? 'all';
+  const type = (o.types?.[0] ?? 'Mundesi').toUpperCase();
+  let badgeBg = '#e0f2fe';
+  let badgeText = '#0369a1';
+  let badgeBorder = '#bae6fd';
+
+  if (typeSlug.includes('prakt')) {
+    badgeBg = '#f3e8ff'; badgeText = '#7e22ce'; badgeBorder = '#e9d5ff';
+  } else if (typeSlug.includes('part')) {
+    badgeBg = '#fef9c3'; badgeText = '#854d0e'; badgeBorder = '#fde047';
+  } else if (typeSlug.includes('full')) {
+    badgeBg = '#dcfce7'; badgeText = '#166534'; badgeBorder = '#86efac';
+  } else if (typeSlug.includes('vull')) {
+    badgeBg = '#fff1f2'; badgeText = '#be123c'; badgeBorder = '#fecdd3';
+  }
+
+  return {
+    id: String(o.id),
+    title: o.title ?? '',
+    company: o.company ?? '',
+    type,
+    typeSlug,
+    typeSlugs: o.type_slugs ?? [],
+    badgeBg,
+    badgeText,
+    badgeBorder,
+    date: o.deadline || o.date || '',
+    location: o.location || 'Shkoder',
+    salary: o.salary ?? '',
+    duration: '',
+    img: o.image || 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800',
+    desc: o.excerpt ?? '',
+    applied: !!o.is_applied,
+    applyStatus: o.apply_status ?? null,
+    canApply: !!o.can_apply,
+    content: o.content ?? '',
+  };
+}
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -53,6 +122,7 @@ export default function HomeScreen() {
 
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locLoading, setLocLoading] = useState(false);
+  const [homeSearch, setHomeSearch] = useState('');
 
   const { data: offersData, loading: offersLoading, reload: refetchOffers } = useFetch(
     () => fetchOffers(userCoords ? { lat: userCoords.lat, lng: userCoords.lng } : undefined),
@@ -99,11 +169,13 @@ export default function HomeScreen() {
     }
   }
 
-  const courses       = (coursesData as any)?.items?.map(kursToCard)       ?? COURSES;
-  const opportunities = (jobsData as any)?.items?.map(opportunityToCard)   ?? OPPORTUNITIES;
-  const startups      = (startupsData as any)?.items?.map(startupToCard)   ?? STARTUPS;
-  const act4          = (act4Data as any)?.items?.map(act4ToCard)          ?? ACT4;
-  const kvr           = (kvrData as any)?.items?.map(kvrToCard)            ?? KVR;
+  const courses       = (coursesData as any)?.items?.map(kursToCard)       ?? [];
+  const opportunities = (jobsData as any)?.items?.map(opportunityToCard)   ?? [];
+  const startups      = (startupsData as any)?.items?.map(startupToCard)   ?? [];
+  const act4          = (act4Data as any)?.items?.map(act4ToCard)          ?? [];
+  const kvr           = (kvrData as any)?.items?.map(kvrToCard)            ?? [];
+  const courseItems: CourseItem[] = ((coursesData as any)?.items ?? []).map(apiToCourseItem);
+  const jobItems: JobItem[] = (((jobsData as any)?.items ?? []) as any[]).map(apiToJobItem);
   const [isUserMenuOpen, setIsUserMenuOpen]       = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings]           = useState(false);
@@ -115,8 +187,15 @@ export default function HomeScreen() {
   const [offersInitialList,     setOffersInitialList]     = useState<string | undefined>(undefined);
   const [offersInitialBusiness, setOffersInitialBusiness] = useState<Business | undefined>(undefined);
   const [coursesInitialList, setCoursesInitialList] = useState<string | undefined>(undefined);
+  const [coursesInitialCourse, setCoursesInitialCourse] = useState<CourseItem | undefined>(undefined);
   const [jobsInitialList, setJobsInitialList] = useState<string | undefined>(undefined);
+  const [jobsInitialTypeSlug, setJobsInitialTypeSlug] = useState<string | undefined>(undefined);
+  const [jobsInitialJob, setJobsInitialJob] = useState<JobItem | undefined>(undefined);
   const [startupsInitialList, setStartupsInitialList] = useState<string | undefined>(undefined);
+  const [startupsInitialItemId, setStartupsInitialItemId] = useState<string | undefined>(undefined);
+  const [kvrInitialList, setKvrInitialList] = useState<{ title: string; catId: string } | undefined>(undefined);
+  const [kvrInitialArticleId, setKvrInitialArticleId] = useState<string | undefined>(undefined);
+  const [act4InitialActivityId, setAct4InitialActivityId] = useState<string | undefined>(undefined);
 
   const handleFindNearMe = async () => {
     if (userCoords) {
@@ -149,23 +228,268 @@ export default function HomeScreen() {
     setActiveTab('perfitimet');
   };
 
+  const openOfferProfile = (business: Business) => {
+    setActiveItem(null);
+    setOffersInitialList(undefined);
+    setOffersInitialBusiness(business);
+    setActiveTab('perfitimet');
+  };
+
   const openCourses = (list?: string) => {
     setCoursesInitialList(list);
+    setCoursesInitialCourse(undefined);
+    setActiveTab('kurset');
+  };
+
+  const openCourseProfile = (courseId: string) => {
+    const selectedCourse = courseItems.find((course) => course.id === courseId);
+    if (!selectedCourse) {
+      openCourses('Te gjitha Kurset');
+      return;
+    }
+    setActiveItem(null);
+    setCoursesInitialList(undefined);
+    setCoursesInitialCourse(selectedCourse);
     setActiveTab('kurset');
   };
 
   const openJobs = (list?: string) => {
     setJobsInitialList(list);
+    setJobsInitialTypeSlug(undefined);
+    setJobsInitialJob(undefined);
+    setActiveTab('mundesit');
+  };
+
+  const openJobProfile = (jobId: string) => {
+    const selectedJob = (((jobsData as any)?.items ?? []) as any[]).map(apiToJobItem).find((job) => job.id === jobId);
+    if (!selectedJob) {
+      openJobs('Te gjitha Mundesite');
+      return;
+    }
+    setActiveItem(null);
+    setJobsInitialList(undefined);
+    setJobsInitialTypeSlug(undefined);
+    setJobsInitialJob(selectedJob);
     setActiveTab('mundesit');
   };
 
   const openStartups = (list?: string) => {
     setStartupsInitialList(list);
+    setStartupsInitialItemId(undefined);
+    setActiveTab('startupet');
+  };
+  const openStartupProfile = (startupId: string) => {
+    const exists = (((startupsData as any)?.items ?? []) as any[]).some((startup) => String(startup.id) === startupId);
+    if (!exists) {
+      openStartups();
+      return;
+    }
+    setActiveItem(null);
+    setStartupsInitialList(undefined);
+    setStartupsInitialItemId(startupId);
     setActiveTab('startupet');
   };
 
-  const openAct4 = () => setActiveTab('act4');
-  const openKVR  = () => setActiveTab('kvr');
+  const openAct4 = () => {
+    setAct4InitialActivityId(undefined);
+    setActiveTab('act4');
+  };
+  const openAct4Profile = (activityId: string) => {
+    const exists = (((act4Data as any)?.items ?? []) as any[]).some((activity) => String(activity.id) === activityId);
+    if (!exists) {
+      openAct4();
+      return;
+    }
+    setActiveItem(null);
+    setAct4InitialActivityId(activityId);
+    setActiveTab('act4');
+  };
+  const openKVR = (list?: { title: string; catId: string }) => {
+    setKvrInitialList(list);
+    setKvrInitialArticleId(undefined);
+    setActiveTab('kvr');
+  };
+
+  const openKvrArticle = (articleId: string) => {
+    const exists = (((kvrData as any)?.items ?? []) as any[]).some((article) => String(article.id) === articleId);
+    if (!exists) {
+      openKVR();
+      return;
+    }
+    setActiveItem(null);
+    setKvrInitialList(undefined);
+    setKvrInitialArticleId(articleId);
+    setActiveTab('kvr');
+  };
+
+  const handleOpenNotification = (notification: AppNotification) => {
+    const targetId = notification.postId ? String(notification.postId) : '';
+
+    setShowNotifications(false);
+
+    switch (notification.type) {
+      case 'offer': {
+        const business = realBusinesses.find((item) => item.id === targetId);
+        if (business) {
+          openOfferProfile(business);
+        } else {
+          openOffers('Te Gjitha Ofertat');
+        }
+        return;
+      }
+      case 'course':
+        if (targetId) openCourseProfile(targetId);
+        else openCourses('Te Gjitha Kurset');
+        return;
+      case 'job':
+        if (targetId) openJobProfile(targetId);
+        else openJobs('Te Gjitha Mundesite');
+        return;
+      case 'startup':
+        if (targetId) openStartupProfile(targetId);
+        else openStartups();
+        return;
+      case 'act4':
+        if (targetId) openAct4Profile(targetId);
+        else openAct4();
+        return;
+      case 'kvr':
+        if (targetId) openKvrArticle(targetId);
+        else openKVR();
+        return;
+      case 'raffle':
+      case 'points':
+        setActiveTab('dhurata');
+        return;
+      default:
+        return;
+    }
+  };
+
+  const homeSearchResults = useMemo(() => {
+    const query = homeSearch.trim().toLowerCase();
+    if (!query) return [];
+
+    const results: Array<{ key: string; title: string; subtitle: string; onPress: () => void }> = [];
+
+    realBusinesses.forEach((business) => {
+      if (
+        business.title.toLowerCase().includes(query) ||
+        business.category.toLowerCase().includes(query) ||
+        business.discount.toLowerCase().includes(query) ||
+        business.desc.toLowerCase().includes(query) ||
+        business.address.toLowerCase().includes(query)
+      ) {
+        results.push({
+          key: `biz-${business.id}`,
+          title: business.title,
+          subtitle: `Përfitime • ${business.category}${business.discount ? ` • ${business.discount}` : ''}`,
+          onPress: () => {
+            setHomeSearch('');
+            openOfferProfile(business);
+          },
+        });
+      }
+    });
+
+    courseItems.forEach((course) => {
+      if (
+        course.title.toLowerCase().includes(query) ||
+        course.category.toLowerCase().includes(query) ||
+        course.location.toLowerCase().includes(query) ||
+        course.desc.toLowerCase().includes(query)
+      ) {
+        results.push({
+          key: `course-${course.id}`,
+          title: course.title,
+          subtitle: `Kurse • ${course.location}${course.date ? ` • ${course.date}` : ''}`,
+          onPress: () => {
+            setHomeSearch('');
+            openCourseProfile(course.id);
+          },
+        });
+      }
+    });
+
+    jobItems.forEach((job) => {
+      if (
+        job.title.toLowerCase().includes(query) ||
+        job.company.toLowerCase().includes(query) ||
+        job.location.toLowerCase().includes(query) ||
+        job.desc.toLowerCase().includes(query) ||
+        job.type.toLowerCase().includes(query)
+      ) {
+        results.push({
+          key: `job-${job.id}`,
+          title: job.title,
+          subtitle: `Mundësi • ${job.company || job.type}${job.location ? ` • ${job.location}` : ''}`,
+          onPress: () => {
+            setHomeSearch('');
+            openJobProfile(job.id);
+          },
+        });
+      }
+    });
+
+    startups.forEach((item: CardItem) => {
+      if (
+        item.title.toLowerCase().includes(query) ||
+        item.type.toLowerCase().includes(query) ||
+        item.fullDesc.toLowerCase().includes(query) ||
+        item.meta.toLowerCase().includes(query)
+      ) {
+        results.push({
+          key: `startup-${item.id}`,
+          title: item.title,
+          subtitle: `Startup • ${item.type}${item.meta ? ` • ${item.meta}` : ''}`,
+          onPress: () => {
+            setHomeSearch('');
+            openStartupProfile(item.id);
+          },
+        });
+      }
+    });
+
+    act4.forEach((item: CardItem) => {
+      if (
+        item.title.toLowerCase().includes(query) ||
+        item.discount.toLowerCase().includes(query) ||
+        item.fullDesc.toLowerCase().includes(query) ||
+        item.meta.toLowerCase().includes(query)
+      ) {
+        results.push({
+          key: `act4-${item.id}`,
+          title: item.title,
+          subtitle: `ACT4 • ${item.meta || item.discount}`,
+          onPress: () => {
+            setHomeSearch('');
+            openAct4Profile(item.id);
+          },
+        });
+      }
+    });
+
+    kvr.forEach((item: CardItem) => {
+      if (
+        item.title.toLowerCase().includes(query) ||
+        item.discount.toLowerCase().includes(query) ||
+        item.fullDesc.toLowerCase().includes(query) ||
+        item.meta.toLowerCase().includes(query)
+      ) {
+        results.push({
+          key: `kvr-${item.id}`,
+          title: item.title,
+          subtitle: `KVR • ${item.meta || item.discount}`,
+          onPress: () => {
+            setHomeSearch('');
+            openKvrArticle(item.id);
+          },
+        });
+      }
+    });
+
+    return results.slice(0, 12);
+  }, [homeSearch, realBusinesses, courseItems, jobItems, startups, act4, kvr]);
 
   // Bottom of tab bar = its own height + device safe area
   const tabBarBottom = insets.bottom;
@@ -173,7 +497,10 @@ export default function HomeScreen() {
   if (showNotifications) {
     return (
       <View style={styles.root}>
-        <NotificationsScreen onBack={() => setShowNotifications(false)} />
+        <NotificationsScreen
+          onBack={() => setShowNotifications(false)}
+          onOpenNotification={handleOpenNotification}
+        />
       </View>
     );
   }
@@ -219,6 +546,14 @@ export default function HomeScreen() {
       <View style={styles.searchWrap}>
         <View style={styles.searchBar}>
           <Search size={15} color={Colors.textMuted} strokeWidth={2} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Kërko oferta, kurse, startup..."
+            placeholderTextColor={Colors.textMuted}
+            value={homeSearch}
+            onChangeText={setHomeSearch}
+            autoCorrect={false}
+          />
           <Text style={styles.searchPlaceholder}>Kërko oferta, kurse...</Text>
         </View>
       </View>
@@ -231,6 +566,29 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + tabBarBottom + 24 }}
       >
+        {homeSearch.trim() ? (
+          <View style={styles.sectionPad}>
+            <View style={styles.searchResultsCard}>
+              <Text style={styles.searchResultsTitle}>Rezultatet e kërkimit</Text>
+              {homeSearchResults.length > 0 ? (
+                homeSearchResults.map((result) => (
+                  <TouchableOpacity key={result.key} style={styles.searchResultRow} activeOpacity={0.8} onPress={result.onPress}>
+                    <View style={styles.searchResultIcon}>
+                      <Search size={14} color={Colors.brandGreenDeep} strokeWidth={2} />
+                    </View>
+                    <View style={styles.searchResultBody}>
+                      <Text style={styles.searchResultTitle}>{result.title}</Text>
+                      <Text style={styles.searchResultSubtitle}>{result.subtitle}</Text>
+                    </View>
+                    <ArrowRight size={16} color={Colors.textMuted} strokeWidth={2.2} />
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={styles.searchEmpty}>Nuk u gjet asnjë rezultat për këtë kërkim.</Text>
+              )}
+            </View>
+          </View>
+        ) : null}
 
         {/* ── SCoins Balance Card ──────────────────────────────────────── */}
         <View style={styles.sectionPad}>
@@ -475,7 +833,7 @@ export default function HomeScreen() {
               <Text style={[styles.bentoTitleLg, { color: '#0c4a6e' }]}>{courses[0].title}</Text>
               <Text style={[styles.bentoMeta, { color: '#075985', flex: 1 }]}>{courses[0].meta}</Text>
               <View style={styles.bentoRegBtn}>
-                <Text style={styles.bentoRegBtnText}>Regjistrohu</Text>
+                <Text style={styles.bentoRegBtnText}>{courses[0].actionText}</Text>
               </View>
             </TouchableOpacity>
             )}
@@ -608,6 +966,7 @@ export default function HomeScreen() {
           onExit={() => setActiveTab('home')}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialList={coursesInitialList}
+          initialCourse={coursesInitialCourse}
         />
       )}
 
@@ -616,6 +975,8 @@ export default function HomeScreen() {
           onExit={() => setActiveTab('home')}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialList={jobsInitialList}
+          initialTypeSlug={jobsInitialTypeSlug}
+          initialJob={jobsInitialJob}
         />
       )}
 
@@ -623,6 +984,8 @@ export default function HomeScreen() {
         <KVRNavigator
           onExit={() => setActiveTab('home')}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
+          initialList={kvrInitialList}
+          initialActivityId={kvrInitialArticleId}
         />
       )}
 
@@ -630,6 +993,7 @@ export default function HomeScreen() {
         <ActNavigator
           onExit={() => setActiveTab('home')}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
+          initialActivityId={act4InitialActivityId}
         />
       )}
 
@@ -638,6 +1002,7 @@ export default function HomeScreen() {
           onExit={() => setActiveTab('home')}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialList={startupsInitialList}
+          initialItemId={startupsInitialItemId}
         />
       )}
 
@@ -695,7 +1060,27 @@ export default function HomeScreen() {
       {/* ════════════════════════════════════════════════════════════════
           SMART MODAL — full screen story overlay
       ════════════════════════════════════════════════════════════════ */}
-      <SmartModal item={activeItem} onClose={() => setActiveItem(null)} />
+      <SmartModal
+        item={activeItem}
+        onClose={() => setActiveItem(null)}
+        onAction={(item) => {
+          if (item.type === 'kurs') {
+            openCourseProfile(item.id);
+          }
+          if (item.type !== 'kurs' && (((jobsData as any)?.items ?? []) as any[]).some((job) => String(job.id) === item.id)) {
+            openJobProfile(item.id);
+          }
+          if ((((kvrData as any)?.items ?? []) as any[]).some((article) => String(article.id) === item.id)) {
+            openKvrArticle(item.id);
+          }
+          if ((((act4Data as any)?.items ?? []) as any[]).some((activity) => String(activity.id) === item.id)) {
+            openAct4Profile(item.id);
+          }
+          if ((((startupsData as any)?.items ?? []) as any[]).some((startup) => String(startup.id) === item.id)) {
+            openStartupProfile(item.id);
+          }
+        }}
+      />
       <StoryModal visible={storyVisible} stories={realBusinesses} initialIndex={storyIndex} onClose={() => setStoryVisible(false)} onViewProfile={(biz) => { setOffersInitialBusiness(biz); setActiveTab('perfitimet'); }} />
       <DigitalCardModal visible={cardVisible} onClose={() => setCardVisible(false)} />
 
@@ -915,11 +1300,70 @@ const styles = StyleSheet.create({
     shadowOffset:    { width: 0, height: 2 },
     elevation:       1,
   },
-  searchPlaceholder: {
+  searchInput: {
+    flex:       1,
     fontFamily: Typography.fontMedium,
     fontSize:   Typography.base,
-    color:      Colors.textMuted,
-    flex:       1,
+    color:      Colors.textPrimary,
+    padding:    0,
+  },
+  searchPlaceholder: {
+    display: 'none',
+  },
+  searchResultsCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.xxl,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    padding: Spacing.lg,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  searchResultsTitle: {
+    fontFamily: Typography.fontExtraBold,
+    fontSize: Typography.lg,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  searchResultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+  },
+  searchResultIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.brandGreenBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchResultBody: {
+    flex: 1,
+  },
+  searchResultTitle: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.base,
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  searchResultSubtitle: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
+  },
+  searchEmpty: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.base,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    paddingVertical: Spacing.md,
   },
 
   // ── Scroll ───────────────────────────────────────────────────────────────────

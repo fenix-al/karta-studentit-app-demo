@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Image, StyleSheet,
+  Image, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -10,24 +10,89 @@ import {
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { ActActivity } from '../../types';
+import { useFetch } from '../../hooks/useFetch';
+import { fetchAct4Single, volunteerAct4 } from '../../services/api';
 
 interface Props {
-  activity:    ActActivity;
-  onBack:      () => void;
+  activityId: string;
+  onBack: () => void;
   bottomInset: number;
 }
 
-// Height of the sticky footer (button + note + padding top)
 const FOOTER_H = 110;
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800';
 
-export default function ActProfileScreen({ activity, onBack, bottomInset }: Props) {
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export default function ActProfileScreen({ activityId, onBack, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
   const [joined, setJoined] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const { data, loading, error, reload } = useFetch(() => fetchAct4Single(Number(activityId)) as Promise<any>, [activityId]);
+
+  const activity: ActActivity | null = useMemo(() => {
+    if (!data) return null;
+
+    const textContent = stripHtml(data.content ?? '');
+
+    return {
+      id: String(data.id),
+      title: data.title ?? '',
+      category: data.category ?? '',
+      catId: data.cat_id ?? '',
+      badgeColor: '#0aa8a7',
+      dateStr: data.date ?? '',
+      fullDate: data.date_raw ?? data.date ?? '',
+      time: '',
+      location: data.location ?? 'Shkoder',
+      img: data.image || PLACEHOLDER,
+      desc: textContent || '',
+      fullDesc: textContent || '',
+      content: data.content ?? '',
+    };
+  }, [data]);
+
+  const handleVolunteer = async () => {
+    if (!activity || joined || submitting) return;
+
+    try {
+      setSubmitting(true);
+      await volunteerAct4(Number(activity.id), activity.title);
+      setJoined(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Regjistrimi deshtoi. Provo perseri.';
+      Alert.alert('Regjistrimi nuk u krye', message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.root, styles.centered]}>
+        <ActivityIndicator size="large" color="#0aa8a7" />
+      </View>
+    );
+  }
+
+  if (error || !activity) {
+    return (
+      <View style={[styles.root, styles.centered, { paddingTop: insets.top + 24 }]}>
+        <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.75}>
+          <ChevronLeft size={20} color={Colors.textPrimary} strokeWidth={2.5} />
+        </TouchableOpacity>
+        <Text style={styles.errorTitle}>Aktiviteti nuk u ngarkua.</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={reload} activeOpacity={0.85}>
+          <Text style={styles.retryBtnText}>Provo perseri</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
-
-      {/* ── Sticky white header ───────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.75}>
           <ChevronLeft size={20} color={Colors.textPrimary} strokeWidth={2.5} />
@@ -42,14 +107,11 @@ export default function ActProfileScreen({ activity, onBack, bottomInset }: Prop
         </View>
       </View>
 
-      {/* ── Scrollable content ─────────────────────────────────────────────── */}
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomInset + FOOTER_H + 16 }}
       >
-
-        {/* Hero image */}
         <View style={styles.heroPad}>
           <View style={styles.heroWrap}>
             <Image source={{ uri: activity.img }} style={styles.heroImage} resizeMode="cover" />
@@ -59,22 +121,19 @@ export default function ActProfileScreen({ activity, onBack, bottomInset }: Prop
           </View>
         </View>
 
-        {/* Title */}
         <View style={styles.titlePad}>
           <Text style={styles.title}>{activity.title}</Text>
         </View>
 
-        {/* Info box */}
         <View style={styles.infoBoxPad}>
           <View style={styles.infoBox}>
-
             <View style={styles.infoRow}>
               <View style={[styles.infoIcon, { backgroundColor: '#f0f9ff' }]}>
                 <Calendar size={20} color="#0ea5e9" strokeWidth={2} />
               </View>
               <View>
                 <Text style={styles.infoLabel}>Data & Ora</Text>
-                <Text style={styles.infoValue}>{activity.fullDate} • {activity.time}</Text>
+                <Text style={styles.infoValue}>{activity.fullDate}{activity.time ? ` • ${activity.time}` : ''}</Text>
               </View>
             </View>
 
@@ -89,40 +148,34 @@ export default function ActProfileScreen({ activity, onBack, bottomInset }: Prop
                 <Text style={styles.infoValue}>{activity.location}</Text>
               </View>
             </View>
-
           </View>
         </View>
 
-        {/* Description */}
         <View style={styles.descPad}>
           <Text style={styles.descTitle}>Rreth Aktivitetit</Text>
           <View style={styles.descCard}>
             <Text style={styles.descText}>{activity.fullDesc}</Text>
           </View>
         </View>
-
       </ScrollView>
 
-      {/* ── Sticky bottom action ────────────────────────────────────────────── */}
       <View style={[styles.stickyFooter, { paddingBottom: bottomInset + 16 }]}>
         <TouchableOpacity
           style={[styles.joinBtn, joined && styles.joinBtnDone]}
           activeOpacity={0.88}
-          onPress={() => !joined && setJoined(true)}
+          onPress={handleVolunteer}
         >
           {joined
             ? <CheckCircle size={20} color="#fff" strokeWidth={2.5} />
-            : <HandHeart size={20} color="#fff" strokeWidth={2} />
-          }
+            : <HandHeart size={20} color="#fff" strokeWidth={2} />}
           <Text style={styles.joinBtnText}>
-            {joined ? 'Je Regjistruar në Aktivitet' : 'Merr Pjesë si Vullnetar'}
+            {joined ? 'Je Regjistruar ne Aktivitet' : (submitting ? 'Duke u regjistruar...' : 'Merr Pjese si Vullnetar')}
           </Text>
         </TouchableOpacity>
         <Text style={styles.footerNote}>
-          Skanoni kartën kur të paraqiteni për të marrë Pikë Vullnetarizmi.
+          Skanoni Karten kur te paraqiteni per te marre Pike Vullnetarizmi.
         </Text>
       </View>
-
     </View>
   );
 }
@@ -130,8 +183,25 @@ export default function ActProfileScreen({ activity, onBack, bottomInset }: Prop
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll: { flex: 1 },
+  centered: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xxl, gap: 16 },
+  errorTitle: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.lg,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    backgroundColor: '#0aa8a7',
+    borderRadius: Radius.xl,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  retryBtnText: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.base,
+    color: '#fff',
+  },
 
-  // Header
   header: {
     backgroundColor: Colors.white,
     paddingHorizontal: Spacing.xxl,
@@ -148,7 +218,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
 
-  // Hero
   heroPad: { paddingHorizontal: Spacing.xxl, paddingTop: Spacing.xl, paddingBottom: Spacing.lg },
   heroWrap: {
     height: 224, borderRadius: Radius.xxl + 4,
@@ -165,14 +234,12 @@ const styles = StyleSheet.create({
     color: '#fff', textTransform: 'uppercase', letterSpacing: 0.8,
   },
 
-  // Title
   titlePad: { paddingHorizontal: Spacing.xxl, marginBottom: Spacing.lg },
   title: {
     fontFamily: Typography.fontExtraBold, fontSize: 22,
     color: '#003366', lineHeight: 30,
   },
 
-  // Info box
   infoBoxPad: { paddingHorizontal: Spacing.xxl, marginBottom: Spacing.lg },
   infoBox: {
     backgroundColor: Colors.white, borderRadius: Radius.xxl,
@@ -191,7 +258,6 @@ const styles = StyleSheet.create({
   },
   divider: { height: 1, backgroundColor: Colors.borderLight, marginVertical: Spacing.lg },
 
-  // Description
   descPad: { paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.xxl },
   descTitle: {
     fontFamily: Typography.fontExtraBold, fontSize: Typography.xl,
@@ -208,7 +274,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary, lineHeight: 24,
   },
 
-  // Sticky footer
   stickyFooter: {
     backgroundColor: 'rgba(255,255,255,0.97)',
     paddingHorizontal: Spacing.xxl,

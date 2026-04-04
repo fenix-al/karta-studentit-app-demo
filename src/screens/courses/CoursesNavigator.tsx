@@ -7,18 +7,21 @@ import { CourseItem } from '../../types';
 
 type Screen =
   | { name: 'hub' }
-  | { name: 'list'; title: string }
+  | { name: 'list'; title: string; categorySlug?: string }
   | { name: 'profile'; course: CourseItem };
 
 interface Props {
   onExit:      () => void;
   bottomInset: number;
   initialList?: string;
+  initialCourse?: CourseItem;
 }
 
-export default function CoursesNavigator({ onExit, bottomInset, initialList }: Props) {
+export default function CoursesNavigator({ onExit, bottomInset, initialList, initialCourse }: Props) {
   const [stack, setStack] = useState<Screen[]>(
-    initialList
+    initialCourse
+      ? [{ name: 'hub' }, { name: 'profile', course: initialCourse }]
+      : initialList
       ? [{ name: 'hub' }, { name: 'list', title: initialList }]
       : [{ name: 'hub' }]
   );
@@ -36,7 +39,7 @@ export default function CoursesNavigator({ onExit, bottomInset, initialList }: P
       {current.name === 'hub' && (
         <CoursesHubScreen
           onBack={onExit}
-          onList={title  => push({ name: 'list', title })}
+          onList={(title, categorySlug)  => push({ name: 'list', title, categorySlug })}
           onProfile={course => push({ name: 'profile', course })}
           bottomInset={bottomInset}
         />
@@ -44,6 +47,7 @@ export default function CoursesNavigator({ onExit, bottomInset, initialList }: P
       {current.name === 'list' && (
         <CoursesListScreen
           title={current.title}
+          categorySlug={current.categorySlug}
           onBack={pop}
           onProfile={course => push({ name: 'profile', course })}
           bottomInset={bottomInset}

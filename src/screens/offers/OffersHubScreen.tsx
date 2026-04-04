@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, FlatList, TouchableOpacity,
-  Image, ActivityIndicator, StyleSheet,
+  Image, ActivityIndicator, StyleSheet, TextInput, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,7 +10,7 @@ import { ChevronLeft, Search, Clock, Heart } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
-import { fetchOffers, fetchBusinessCategories } from '../../services/api';
+import { fetchOffers, fetchBusinessCategories, recommendBusiness } from '../../services/api';
 import { apiBizToBusiness } from '../../services/mappers';
 
 interface Props {
@@ -23,18 +23,36 @@ interface Props {
 export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
   const [activePill, setActivePill] = useState('all');
+  const [search, setSearch] = useState('');
+  const [voteOverrides, setVoteOverrides] = useState<Record<string, { votes: number; recommended: boolean }>>({});
 
   const { data, loading, error, reload } = useFetch(() => fetchOffers());
   const { data: catData }               = useFetch(() => fetchBusinessCategories());
 
   // API already returns sorted by scan_count DESC — no client re-sort needed
-  const rawItems: any[]    = (data as any)?.items || [];
-  const allBiz: Business[] = rawItems.map(apiBizToBusiness);
+  const rawItems: any[] = (data as any)?.items || [];
+  const allBiz: Business[] = rawItems.map(apiBizToBusiness).map((biz: Business) => {
+    const override = voteOverrides[biz.id];
+    return override ? { ...biz, votes: override.votes, has_recommended: override.recommended } : biz;
+  });
 
   const topRated = [...allBiz]
     .filter(biz => (biz.votes ?? 0) > 0)
     .sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0))
     .slice(0, 10);
+
+  const filteredBiz = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return [];
+
+    return allBiz.filter((biz) =>
+      biz.title.toLowerCase().includes(query) ||
+      biz.category.toLowerCase().includes(query) ||
+      biz.discount.toLowerCase().includes(query) ||
+      biz.desc.toLowerCase().includes(query) ||
+      biz.address.toLowerCase().includes(query)
+    );
+  }, [allBiz, search]);
 
   // Priority: Private first, then Publike, then Other — no duplicates
   const isPrivate = (slugs: string[]) =>
@@ -65,6 +83,47 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   const topRow    = wpcats.filter((_, i) => i % 2 === 0);
   const bottomRow = wpcats.filter((_, i) => i % 2 === 1);
 
+  const visibleTopRated = search.trim() ? filteredBiz : topRated;
+  const visiblePrivBiz = search.trim()
+    ? filteredBiz.filter((biz) => privBiz.some((item) => item.id === biz.id))
+    : privBiz;
+  const visiblePubBiz = search.trim()
+    ? filteredBiz.filter((biz) => pubBiz.some((item) => item.id === biz.id))
+    : pubBiz;
+  const visibleOtherBiz = search.trim()
+    ? filteredBiz.filter((biz) => otherBiz.some((item) => item.id === biz.id))
+    : otherBiz;
+
+  async function handleToggleRecommend(biz: Business) {
+    const current = voteOverrides[biz.id] ?? {
+      votes: biz.votes ?? 0,
+      recommended: biz.has_recommended ?? false,
+    };
+    const wasRecommended = current.recommended;
+
+    setVoteOverrides(prev => ({
+      ...prev,
+      [biz.id]: {
+        votes: Math.max(0, current.votes + (wasRecommended ? -1 : 1)),
+        recommended: !wasRecommended,
+      },
+    }));
+
+    try {
+      const res = await recommendBusiness(biz.id);
+      setVoteOverrides(prev => ({
+        ...prev,
+        [biz.id]: { votes: res.votes, recommended: res.recommended },
+      }));
+    } catch {
+      setVoteOverrides(prev => ({
+        ...prev,
+        [biz.id]: current,
+      }));
+      Alert.alert('Gabim', 'Nuk mund të regjistrohet rekomandimi. Provo përsëri.');
+    }
+  }
+
   return (
     <View style={styles.root}>
 
@@ -79,10 +138,18 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
             <Text style={styles.headerTitle}>Përfitimet</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.searchBar} onPress={() => onList('Të gjitha bizneset')}>
+        <View style={styles.searchBar}>
           <Search size={14} color={Colors.textMuted} strokeWidth={2} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Kërko biznes, ofertë..."
+            placeholderTextColor={Colors.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            autoCorrect={false}
+          />
           <Text style={styles.searchText}>Kërko biznes, ofertë...</Text>
-        </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -151,50 +218,56 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
         )}
 
         {/* ── Më të rekomanduara (top by real scan count) ───────────── */}
-        {!loading && topRated.length > 0 && (
+        {!loading && visibleTopRated.length > 0 && (
           <HSection
-            title="Më të rekomanduara 🔥"
-            subtitle={topRated[0]?.scans > 0 ? `Bazuar në ${topRated.reduce((s, b) => s + b.scans, 0)} skanime reale` : undefined}
-            data={topRated}
+            title={search.trim() ? 'Rezultatet e kërkimit' : 'Më të rekomanduara 🔥'}
+            subtitle={search.trim() ? `${filteredBiz.length} biznese të gjetura` : (visibleTopRated[0]?.scans > 0 ? `Bazuar në ${visibleTopRated.reduce((s, b) => s + b.scans, 0)} skanime reale` : undefined)}
+            data={visibleTopRated}
             onSeeAll={() => onList('Të gjitha bizneset')}
             onCard={onProfile}
+            onToggleRecommend={handleToggleRecommend}
           />
         )}
 
         {/* ── Biznese Private ───────────────────────────────────────── */}
-        {!loading && privBiz.length > 0 && (
+        {!loading && !search.trim() && visiblePrivBiz.length > 0 && (
           <HSection
             title="Biznese Private 🏪"
-            data={privBiz}
+            data={visiblePrivBiz}
             onSeeAll={() => onList('Biznese Private', 'sherbime-private')}
             onCard={onProfile}
+            onToggleRecommend={handleToggleRecommend}
           />
         )}
 
         {/* ── Biznese Publike ───────────────────────────────────────── */}
-        {!loading && pubBiz.length > 0 && (
+        {!loading && !search.trim() && visiblePubBiz.length > 0 && (
           <HSection
             title="Biznese Publike 🏛️"
-            data={pubBiz}
+            data={visiblePubBiz}
             onSeeAll={() => onList('Biznese Publike', 'sherbime-publike')}
             onCard={onProfile}
+            onToggleRecommend={handleToggleRecommend}
           />
         )}
 
         {/* ── Të tjera ──────────────────────────────────────────────── */}
-        {!loading && otherBiz.length > 0 && (
+        {!loading && !search.trim() && visibleOtherBiz.length > 0 && (
           <HSection
             title="Partnerë të tjerë"
-            data={otherBiz}
+            data={visibleOtherBiz}
             onSeeAll={() => onList('Të gjitha bizneset')}
             onCard={onProfile}
+            onToggleRecommend={handleToggleRecommend}
           />
         )}
 
         {/* ── Empty state ───────────────────────────────────────────── */}
-        {!loading && allBiz.length === 0 && !error && (
+        {!loading && ((search.trim() && filteredBiz.length === 0) || (!search.trim() && allBiz.length === 0)) && !error && (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>Nuk ka biznese për momentin.</Text>
+            <Text style={styles.emptyText}>
+              {search.trim() ? 'Nuk u gjet asnjë biznes për këtë kërkim.' : 'Nuk ka biznese për momentin.'}
+            </Text>
           </View>
         )}
 
@@ -213,9 +286,9 @@ function PillBtn({ id, name, active, onPress }: { id: string; name: string; acti
 }
 
 // ─── Horizontal Section ───────────────────────────────────────────────────────
-function HSection({ title, subtitle, data, onSeeAll, onCard }: {
+function HSection({ title, subtitle, data, onSeeAll, onCard, onToggleRecommend }: {
   title: string; subtitle?: string; data: Business[];
-  onSeeAll: () => void; onCard: (b: Business) => void;
+  onSeeAll: () => void; onCard: (b: Business) => void; onToggleRecommend: (b: Business) => void;
 }) {
   return (
     <View style={styles.hSection}>
@@ -241,6 +314,20 @@ function HSection({ title, subtitle, data, onSeeAll, onCard }: {
               <View style={[styles.badge, { backgroundColor: biz.badgeColor }]}>
                 <Text style={styles.badgeText} numberOfLines={1}>{biz.discount}</Text>
               </View>
+              <TouchableOpacity
+                style={[styles.bizHeartBtn, biz.has_recommended && styles.bizHeartBtnActive]}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  onToggleRecommend(biz);
+                }}
+              >
+                <Heart
+                  size={16}
+                  color={biz.has_recommended ? '#ef4444' : Colors.textSecondary}
+                  fill={biz.has_recommended ? '#ef4444' : 'none'}
+                  strokeWidth={2}
+                />
+              </TouchableOpacity>
               <View style={styles.timeChip}>
                 <Clock size={10} color="#fff" strokeWidth={2} />
                 <Text style={styles.timeText} numberOfLines={1}>{biz.time}</Text>
@@ -299,7 +386,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg, paddingVertical: 14,
     borderWidth: 1, borderColor: Colors.border,
   },
-  searchText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textMuted, flex: 1 },
+  searchInput: { flex: 1, fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textPrimary, padding: 0 },
+  searchText: { display: 'none' },
 
   // ── Pills ────────────────────────────────────────────────────────────────────
   pillsSection: {
@@ -371,6 +459,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.sm, maxWidth: 140,
   },
   badgeText: { color: '#fff', fontFamily: Typography.fontExtraBold, fontSize: 10, textTransform: 'uppercase' },
+  bizHeartBtn: {
+    position: 'absolute', top: 10, right: 10,
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  bizHeartBtnActive: {
+    backgroundColor: 'rgba(255,255,255,0.98)',
+    borderWidth: 1,
+    borderColor: '#fecdd3',
+  },
   timeChip: {
     position: 'absolute', bottom: 8, right: 8,
     backgroundColor: 'rgba(0,0,0,0.60)', flexDirection: 'row', alignItems: 'center',

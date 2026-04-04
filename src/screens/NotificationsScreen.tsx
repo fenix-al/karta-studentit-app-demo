@@ -1,50 +1,167 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft, CheckCheck, Gift, Briefcase, Calendar,
-  Tag, Heart, Trash2, BellOff,
+  Tag, Heart, Trash2, BellOff, Megaphone, Trophy, Bell,
 } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../constants/Theme';
-import { AppNotification } from '../types';
-import { NOTIFICATIONS } from '../data/mockData';
+import { AppNotification, NotificationApiItem } from '../types';
+import { useFetch } from '../hooks/useFetch';
+import {
+  deleteNotification,
+  fetchMyNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '../services/api';
 
 interface Props {
   onBack: () => void;
+  onOpenNotification?: (notification: AppNotification) => void;
 }
 
-// ── Icon resolver (string → lucide component) ─────────────────────────────────
-function NotifIcon({ name, color }: { name: string; color: string }) {
-  const props = { size: 20, color, strokeWidth: 2 };
-  switch (name) {
-    case 'Gift':     return <Gift     {...props} />;
-    case 'Briefcase':return <Briefcase {...props} />;
-    case 'Calendar': return <Calendar  {...props} />;
-    case 'Tag':      return <Tag       {...props} />;
-    case 'Heart':    return <Heart     {...props} />;
-    default:         return <Gift      {...props} />;
+function notificationAppearance(type: AppNotification['type']) {
+  switch (type) {
+    case 'offer':
+      return { iconName: 'Tag', iconColor: '#0284c7', iconBg: '#e0f2fe', iconBorder: '#bae6fd' };
+    case 'job':
+      return { iconName: 'Briefcase', iconColor: '#7c3aed', iconBg: '#f3e8ff', iconBorder: '#ddd6fe' };
+    case 'course':
+      return { iconName: 'Calendar', iconColor: '#16a34a', iconBg: '#dcfce7', iconBorder: '#bbf7d0' };
+    case 'act4':
+      return { iconName: 'Heart', iconColor: '#ea580c', iconBg: '#ffedd5', iconBorder: '#fed7aa' };
+    case 'startup':
+      return { iconName: 'Megaphone', iconColor: '#db2777', iconBg: '#fce7f3', iconBorder: '#fbcfe8' };
+    case 'kvr':
+      return { iconName: 'Bell', iconColor: '#0f766e', iconBg: '#ccfbf1', iconBorder: '#99f6e4' };
+    case 'raffle':
+      return { iconName: 'Gift', iconColor: '#ca8a04', iconBg: '#fef9c3', iconBorder: '#fde68a' };
+    case 'points':
+      return { iconName: 'Trophy', iconColor: '#ca8a04', iconBg: '#fef9c3', iconBorder: '#fde68a' };
+    default:
+      return { iconName: 'Gift', iconColor: '#475569', iconBg: '#f1f5f9', iconBorder: '#e2e8f0' };
   }
 }
 
-export default function NotificationsScreen({ onBack }: Props) {
+function NotifIcon({ name, color }: { name: string; color: string }) {
+  const props = { size: 20, color, strokeWidth: 2 };
+  switch (name) {
+    case 'Gift':      return <Gift {...props} />;
+    case 'Briefcase': return <Briefcase {...props} />;
+    case 'Calendar':  return <Calendar {...props} />;
+    case 'Tag':       return <Tag {...props} />;
+    case 'Heart':     return <Heart {...props} />;
+    case 'Megaphone': return <Megaphone {...props} />;
+    case 'Trophy':    return <Trophy {...props} />;
+    case 'Bell':      return <Bell {...props} />;
+    default:          return <Gift {...props} />;
+  }
+}
+
+function formatNotificationTime(dateString: string) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.max(0, Math.floor(diffMs / 60000));
+
+  if (diffMin < 1) return 'Tani';
+  if (diffMin < 60) return `${diffMin} min më parë`;
+
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours} orë më parë`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays} ditë më parë`;
+
+  return date.toLocaleDateString('sq-AL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+function mapNotification(item: NotificationApiItem): AppNotification {
+  const appearance = notificationAppearance(item.type);
+
+  return {
+    id: String(item.id),
+    type: item.type,
+    postId: item.post_id,
+    title: item.title,
+    message: item.message,
+    time: formatNotificationTime(item.created_at),
+    isRead: item.is_read,
+    ...appearance,
+  };
+}
+
+export default function NotificationsScreen({ onBack, onOpenNotification }: Props) {
   const insets = useSafeAreaInsets();
-  const [items, setItems]           = useState<AppNotification[]>(NOTIFICATIONS);
-  const [filter, setFilter]         = useState<'all' | 'unread'>('all');
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [items, setItems] = useState<AppNotification[]>([]);
 
-  const unreadCount = items.filter(n => !n.isRead).length;
-  const filtered    = filter === 'all' ? items : items.filter(n => !n.isRead);
+  const { data, loading, error, reload } = useFetch(() => fetchMyNotifications());
 
-  const markAllRead = () => setItems(prev => prev.map(n => ({ ...n, isRead: true })));
-  const markRead    = (id: string) => setItems(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-  const remove      = (id: string) => setItems(prev => prev.filter(n => n.id !== id));
+  useEffect(() => {
+    setItems((data?.items ?? []).map(mapNotification));
+  }, [data]);
+
+  const unreadCount = useMemo(() => items.filter((n) => !n.isRead).length, [items]);
+  const filtered = useMemo(
+    () => (filter === 'all' ? items : items.filter((n) => !n.isRead)),
+    [filter, items],
+  );
+
+  async function handleMarkAllRead() {
+    const unreadItems = items.filter((item) => !item.isRead);
+    if (unreadItems.length === 0) return;
+
+    setItems((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    try {
+      await markAllNotificationsRead();
+    } catch {
+      setItems((data?.items ?? []).map(mapNotification));
+      Alert.alert('Gabim', 'Njoftimet nuk u përditësuan dot. Provo përsëri.');
+    }
+  }
+
+  async function handleMarkRead(id: string) {
+    const target = items.find((item) => item.id === id);
+    if (!target) return;
+
+    if (target.isRead) {
+      onOpenNotification?.(target);
+      return;
+    }
+
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, isRead: true } : item)));
+    try {
+      await markNotificationRead(Number(id));
+    } catch {
+      setItems((data?.items ?? []).map(mapNotification));
+      Alert.alert('Gabim', 'Njoftimi nuk u shënua dot si i lexuar.');
+    }
+    onOpenNotification?.(target);
+  }
+
+  async function handleDelete(id: string) {
+    const previousItems = items;
+    setItems((prev) => prev.filter((item) => item.id !== id));
+
+    try {
+      await deleteNotification(Number(id));
+    } catch {
+      setItems(previousItems);
+      Alert.alert('Gabim', 'Njoftimi nuk u fshi dot. Provo përsëri.');
+    }
+  }
 
   return (
     <View style={styles.root}>
-
-      {/* ── Header ───────────────────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.75}>
@@ -53,12 +170,11 @@ export default function NotificationsScreen({ onBack }: Props) {
 
           <Text style={styles.headerTitle}>Njoftimet</Text>
 
-          <TouchableOpacity style={styles.iconBtn} onPress={markAllRead} activeOpacity={0.75}>
+          <TouchableOpacity style={styles.iconBtn} onPress={handleMarkAllRead} activeOpacity={0.75}>
             <CheckCheck size={20} color="#0ea5e9" strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
 
-        {/* ── Filter tabs ──────────────────────────────────────────────── */}
         <View style={styles.filterRow}>
           <TouchableOpacity
             style={[styles.filterBtn, filter === 'all' && styles.filterBtnAllActive]}
@@ -89,41 +205,56 @@ export default function NotificationsScreen({ onBack }: Props) {
         </View>
       </View>
 
-      {/* ── List ─────────────────────────────────────────────────────────── */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={Colors.textMuted} />
+          <Text style={styles.loadingText}>Duke ngarkuar njoftimet...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.empty}>
+          <View style={styles.emptyIconWrap}>
+            <BellOff size={40} color="#94a3b8" strokeWidth={1.5} />
+          </View>
+          <Text style={styles.emptyTitle}>Gabim në ngarkim</Text>
+          <Text style={styles.emptyText}>
+            {error}
+          </Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={reload}>
+            <Text style={styles.retryText}>Provo përsëri</Text>
+          </TouchableOpacity>
+        </View>
+      ) : filtered.length === 0 ? (
         <View style={styles.empty}>
           <View style={styles.emptyIconWrap}>
             <BellOff size={40} color="#94a3b8" strokeWidth={1.5} />
           </View>
           <Text style={styles.emptyTitle}>Nuk ka njoftime</Text>
           <Text style={styles.emptyText}>
-            Nuk keni asnjë njoftim të ri për momentin. Çdo përditësim do të shfaqet këtu.
+            Nuk keni asnjë njoftim të ri për momentin. Çdo përditësim i ri nga WordPress do të shfaqet këtu.
           </Text>
         </View>
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.card, !item.isRead && styles.cardUnread]}
-              onPress={() => markRead(item.id)}
+              onPress={() => handleMarkRead(item.id)}
               activeOpacity={0.85}
             >
-              {/* Unread blue dot */}
               {!item.isRead && <View style={styles.unreadDot} />}
 
-              {/* Icon box */}
               <View style={[styles.iconBox, {
                 backgroundColor: item.iconBg,
                 borderColor: item.iconBorder,
-              }]}>
+              }]}
+              >
                 <NotifIcon name={item.iconName} color={item.iconColor} />
               </View>
 
-              {/* Content */}
               <View style={styles.content}>
                 <Text style={[styles.title, !item.isRead && styles.titleUnread]} numberOfLines={2}>
                   {item.title}
@@ -134,10 +265,9 @@ export default function NotificationsScreen({ onBack }: Props) {
                 <Text style={styles.time}>{item.time}</Text>
               </View>
 
-              {/* Delete button */}
               <TouchableOpacity
                 style={styles.deleteBtn}
-                onPress={() => remove(item.id)}
+                onPress={() => handleDelete(item.id)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Trash2 size={15} color="#cbd5e1" strokeWidth={2} />
@@ -146,15 +276,15 @@ export default function NotificationsScreen({ onBack }: Props) {
           )}
         />
       )}
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg },
+  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  loadingText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textMuted },
 
-  // Header
   header: {
     backgroundColor: Colors.white,
     paddingHorizontal: Spacing.xxl,
@@ -181,8 +311,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.xl,
     color: Colors.textPrimary,
   },
-
-  // Filters
   filterRow: { flexDirection: 'row', gap: 12 },
   filterBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
@@ -192,7 +320,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceBg,
     borderWidth: 1, borderColor: Colors.border,
   },
-  filterBtnAllActive:    { backgroundColor: '#1e293b', borderColor: '#1e293b' },
+  filterBtnAllActive: { backgroundColor: '#1e293b', borderColor: '#1e293b' },
   filterBtnUnreadActive: { backgroundColor: '#0ea5e9', borderColor: '#0ea5e9' },
   filterText: {
     fontFamily: Typography.fontBold,
@@ -205,14 +333,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 6, paddingVertical: 2,
   },
-  badgeActive:    { backgroundColor: '#fff' },
-  badgeText:      { fontFamily: Typography.fontBold, fontSize: 10, color: '#475569' },
-  badgeTextActive:{ color: '#0ea5e9' },
+  badgeActive: { backgroundColor: '#fff' },
+  badgeText: { fontFamily: Typography.fontBold, fontSize: 10, color: '#475569' },
+  badgeTextActive: { color: '#0ea5e9' },
 
-  // List
   list: { padding: Spacing.xxl, gap: 10 },
-
-  // Cards
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -276,7 +401,6 @@ const styles = StyleSheet.create({
     bottom: 14, right: 14,
   },
 
-  // Empty state
   empty: {
     flex: 1,
     justifyContent: 'center',
@@ -303,5 +427,17 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 16,
+  },
+  retryBtn: {
+    backgroundColor: '#0ea5e9',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: Radius.full,
+  },
+  retryText: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.sm,
+    color: '#fff',
   },
 });

@@ -195,7 +195,7 @@ export const REKOMANDUAT: Business[] = [
     img: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80',
     desc: 'Mrekullia e mishit e mbështjellë në një pite!',
     rules: 'Zbritje 20% për studentët. Vlen çdo ditë gjatë gjithë muajit.',
-    address: 'Pedonale, Shkodër', phone: '067 457 3012', recommendations: 142,
+    address: 'Pedonale, Shkodër', phone: '067 457 3012', recommendations: 142, votes: 142,
   },
   {
     id: 'r2', title: 'Cliché Bar & Bistro', category: 'Kafe & Lounge',
@@ -204,7 +204,7 @@ export const REKOMANDUAT: Business[] = [
     img: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
     desc: 'Flavors that inspire! Vendi perfekt pasdite.',
     rules: 'Vlen pas orës 16:00. Shfaq kartën para porosisë.',
-    address: 'Rruga 13 Dhjetori', phone: '069 111 2222', recommendations: 89,
+    address: 'Rruga 13 Dhjetori', phone: '069 111 2222', recommendations: 89, votes: 89,
   },
 ];
 
@@ -216,7 +216,7 @@ export const TE_PERDORURAT: Business[] = [
     img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
     desc: 'Zgjedhja e parë e studentëve për drekën!',
     rules: 'Menu speciale studentore vetëm me kartë.',
-    address: 'Pranë Rektoratit', phone: '068 222 3333', recommendations: 312,
+    address: 'Pranë Rektoratit', phone: '068 222 3333', recommendations: 312, votes: 312,
   },
   {
     id: 'p2', title: 'Librari Universitare', category: 'Materiale Studimi',
@@ -225,7 +225,7 @@ export const TE_PERDORURAT: Business[] = [
     img: 'https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=800&q=80',
     desc: 'Librat dhe printimet me çmimin më të lirë.',
     rules: 'Zbritje në çdo shërbim printimi/fotokopje.',
-    address: 'Pranë Fakultetit Ekonomik', phone: 'N/A', recommendations: 205,
+    address: 'Pranë Fakultetit Ekonomik', phone: 'N/A', recommendations: 205, votes: 205,
   },
 ];
 
@@ -237,7 +237,7 @@ export const SHERBIME_PRIVATE: Business[] = [
     img: 'https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=800&q=80',
     desc: 'Kujdesuni për shëndetin tuaj dentar me tarifa studentore.',
     rules: 'Zbritja aplikohet për pastrim gurëzash dhe konsulta.',
-    address: 'Rruga Skënderbeu', phone: '069 444 5555', recommendations: 45,
+    address: 'Rruga Skënderbeu', phone: '069 444 5555', recommendations: 45, votes: 45,
   },
   {
     id: 'sp2', title: 'Optika "Vizioni"', category: 'Shëndet & Kujdes',
@@ -246,7 +246,7 @@ export const SHERBIME_PRIVATE: Business[] = [
     img: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=800&q=80',
     desc: 'Kontroll falas i syve dhe skeleti falas.',
     rules: 'Bleni xhamat dhe skeletin e merrni falas.',
-    address: 'Rruga Parrucë', phone: '067 888 9999', recommendations: 120,
+    address: 'Rruga Parrucë', phone: '067 888 9999', recommendations: 120, votes: 120,
   },
 ];
 
@@ -258,7 +258,7 @@ export const SHERBIME_PUBLIKE: Business[] = [
     img: 'https://images.unsplash.com/photo-1600588665044-672ce00cb36a?auto=format&fit=crop&w=800&q=80',
     desc: 'Parku Kombëtar Arkeologjik. Zbuloni historinë.',
     rules: 'Hyrja për studentët me tarifë të reduktuar.',
-    address: 'Kala, Shkodër', phone: 'N/A', recommendations: 256,
+    address: 'Kala, Shkodër', phone: 'N/A', recommendations: 256, votes: 256,
   },
   {
     id: 'pu2', title: 'Mensa e Qytetit Shkodër', category: 'Shërbime Publike',
@@ -267,7 +267,7 @@ export const SHERBIME_PUBLIKE: Business[] = [
     img: 'https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=800&q=80',
     desc: 'Vakte të plota me çmime të subvencionuara.',
     rules: 'Hyrja vetëm me Kartë Studenti.',
-    address: 'Kampusi Universitar', phone: 'N/A', recommendations: 480,
+    address: 'Kampusi Universitar', phone: 'N/A', recommendations: 480, votes: 480,
   },
 ];
 
@@ -667,6 +667,7 @@ export const NOTIFICATIONS: AppNotification[] = [
   {
     id:         'n1',
     type:       'points',
+    postId:     0,
     title:      'Urime! Ke fituar pikë 🟡',
     message:    'Skanimi yt tek "Opa Shkodër" ishte i suksesshëm. Ke fituar +5 SCoins në llogarinë tënde.',
     time:       'Para 10 minutash',
@@ -679,6 +680,7 @@ export const NOTIFICATIONS: AppNotification[] = [
   {
     id:         'n2',
     type:       'job',
+    postId:     1,
     title:      'Aplikimi u pranua! 🎉',
     message:    'Aplikimi juaj për pozicionin "Praktikë IT" tek Bashkia Shkodër është pranuar. Shih detajet.',
     time:       'Para 2 orësh',
@@ -691,6 +693,7 @@ export const NOTIFICATIONS: AppNotification[] = [
   {
     id:         'n3',
     type:       'course',
+    postId:     1,
     title:      'Rikujtesë për Kursin',
     message:    'Nesër në orën 17:00 fillon seanca e parë e kursit "Hyrje në Marketing Digjital". Mos mungo!',
     time:       'Dje',
@@ -703,6 +706,7 @@ export const NOTIFICATIONS: AppNotification[] = [
   {
     id:         'n4',
     type:       'offer',
+    postId:     1,
     title:      'Ofertë e Re Ekskluzive 🔥',
     message:    'Kinema Republika sapo ka shtuar ofertën 1+1 Falas për të gjithë studentët gjatë kësaj fundjave.',
     time:       'Para 2 ditësh',
@@ -715,6 +719,7 @@ export const NOTIFICATIONS: AppNotification[] = [
   {
     id:         'n5',
     type:       'act4',
+    postId:     1,
     title:      'Aksion i Ri Vullnetar',
     message:    'Një aksion i ri pastrimi është shtuar në kategorinë Eco. Regjistrohu tani për të kontribuar.',
     time:       'Para 3 ditësh',

@@ -1,42 +1,75 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView,
-  TouchableOpacity, StyleSheet,
+  TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { KvrActivity } from '../../types';
-import { KVR_ACTIVITIES, KVR_GROUPS } from '../../data/mockData';
 import { KVRActivityCard } from './KVRHubScreen';
+import { useFetch } from '../../hooks/useFetch';
+import { fetchKvr, fetchKvrCategories } from '../../services/api';
 
 const NAVY = '#003366';
+const ALL_PILL = { id: 'all', name: 'Te gjitha' };
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=800';
 
-const ALL_PILL = { id: 'all', name: 'Të gjitha' };
+function apiToKvrActivity(k: any): KvrActivity {
+  return {
+    id: String(k.id),
+    title: k.title ?? '',
+    category: k.category ?? '',
+    catId: k.cat_id ?? '',
+    date: k.date ?? '',
+    img: k.image || PLACEHOLDER,
+    desc: k.excerpt ?? '',
+    fullDesc: k.content ?? k.excerpt ?? '',
+    location: k.location ?? 'Bashkia Shkoder',
+  };
+}
 
 interface Props {
-  title:        string;
+  title: string;
   initialCatId: string;
-  onBack:       () => void;
-  onProfile:    (activity: KvrActivity) => void;
-  bottomInset:  number;
+  onBack: () => void;
+  onProfile: (activityId: string) => void;
+  bottomInset: number;
 }
 
 export default function KVRListScreen({ title, initialCatId, onBack, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
-  const [activeCat, setActiveCat] = useState(initialCatId);
+  const [activeCat, setActiveCat] = useState(initialCatId || 'all');
 
-  const pills = [ALL_PILL, ...KVR_GROUPS.map(g => ({ id: g.id, name: g.name }))];
+  const {
+    data: categoryData,
+    loading: categoryLoading,
+  } = useFetch(() => fetchKvrCategories());
 
-  const filtered = activeCat === 'all'
-    ? KVR_ACTIVITIES
-    : KVR_ACTIVITIES.filter(a => a.catId === activeCat);
+  const {
+    data,
+    loading,
+    error,
+    reload,
+  } = useFetch(
+    () => fetchKvr(activeCat === 'all' ? undefined : { category: activeCat }) as Promise<any>,
+    [activeCat],
+  );
+
+  useEffect(() => {
+    setActiveCat(initialCatId || 'all');
+  }, [initialCatId]);
+
+  const pills = useMemo(
+    () => [ALL_PILL, ...((categoryData ?? []).map((item) => ({ id: item.slug, name: item.name })))],
+    [categoryData],
+  );
+
+  const items: KvrActivity[] = (data?.items ?? []).map(apiToKvrActivity);
 
   return (
     <View style={styles.root}>
-
-      {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.75}>
@@ -50,42 +83,51 @@ export default function KVRListScreen({ title, initialCatId, onBack, onProfile, 
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterList}
         >
-          {pills.map(p => (
+          {pills.map((pill) => (
             <TouchableOpacity
-              key={p.id}
-              style={[styles.filterPill, activeCat === p.id && styles.filterPillActive]}
+              key={pill.id}
+              style={[styles.filterPill, activeCat === pill.id && styles.filterPillActive]}
               activeOpacity={0.8}
-              onPress={() => setActiveCat(p.id)}
+              onPress={() => setActiveCat(pill.id)}
             >
-              <Text style={[styles.filterText, activeCat === p.id && styles.filterTextActive]}>
-                {p.name}
+              <Text style={[styles.filterText, activeCat === pill.id && styles.filterTextActive]}>
+                {pill.name}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* ── List ────────────────────────────────────────────────────────── */}
-      {filtered.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyEmoji}>📰</Text>
+      {loading || categoryLoading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#e30613" />
+        </View>
+      ) : error ? (
+        <View style={styles.centered}>
+          <Text style={styles.emptyTitle}>Nuk u ngarkuan postimet</Text>
+          <Text style={styles.emptyText}>Provo perseri per te pare lajmet e KVR.</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={reload}>
+            <Text style={styles.retryText}>Provo Perseri</Text>
+          </TouchableOpacity>
+        </View>
+      ) : items.length === 0 ? (
+        <View style={styles.centered}>
           <Text style={styles.emptyTitle}>Nuk ka postime</Text>
-          <Text style={styles.emptyText}>Lajmet për këtë grup do të shfaqen këtu.</Text>
+          <Text style={styles.emptyText}>Lajmet per kete kategori do te shfaqen ketu.</Text>
         </View>
       ) : (
         <FlatList
-          data={filtered}
-          keyExtractor={a => a.id}
+          data={items}
+          keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.list, { paddingBottom: bottomInset + 24 }]}
           renderItem={({ item }) => (
             <View style={styles.fullWidthCard}>
-              <KVRActivityCard activity={item} onPress={() => onProfile(item)} />
+              <KVRActivityCard activity={item} onPress={() => onProfile(item.id)} />
             </View>
           )}
         />
       )}
-
     </View>
   );
 }
@@ -97,37 +139,76 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     paddingHorizontal: Spacing.xxl,
     paddingBottom: Spacing.lg,
-    borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   headerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: Spacing.lg,
   },
   iconBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.borderLight,
-    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.surfaceBg,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
   },
   headerTitle: {
-    fontFamily: Typography.fontExtraBold, fontSize: Typography.xxl, color: NAVY, flex: 1,
+    fontFamily: Typography.fontExtraBold,
+    fontSize: Typography.xxl,
+    color: NAVY,
+    flex: 1,
   },
   filterList: { gap: 8 },
   filterPill: {
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: Radius.full, borderWidth: 1,
-    borderColor: Colors.border, backgroundColor: Colors.white,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.white,
   },
   filterPillActive: { backgroundColor: NAVY, borderColor: NAVY },
   filterText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: Colors.textPrimary },
   filterTextActive: { color: '#fff' },
 
-  // The FlatList uses KVRActivityCard in horizontal mode — override to full-width
   list: { padding: Spacing.xxl, gap: 20 },
-
   fullWidthCard: { width: '100%' },
-  emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xxl },
-  emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xl, color: Colors.textPrimary, marginBottom: 6 },
-  emptyText:  { fontFamily: Typography.fontMedium, fontSize: Typography.md, color: Colors.textMuted, textAlign: 'center' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xxl, gap: 12 },
+  emptyTitle: {
+    fontFamily: Typography.fontExtraBold,
+    fontSize: Typography.xl,
+    color: Colors.textPrimary,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.md,
+    color: Colors.textMuted,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    backgroundColor: '#e30613',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: Radius.full,
+    marginTop: 4,
+  },
+  retryText: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.base,
+    color: '#fff',
+  },
 });

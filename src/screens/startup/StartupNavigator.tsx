@@ -3,32 +3,45 @@ import { View } from 'react-native';
 import StartupHubScreen from './StartupHubScreen';
 import StartupListScreen from './StartupListScreen';
 import StartupItemProfileScreen from './StartupItemProfileScreen';
-import { StartupItem } from '../../types';
 
 type Screen =
   | { name: 'hub' }
-  | { name: 'list'; title: string }
-  | { name: 'profile'; item: StartupItem };
+  | { name: 'list'; title: string; type?: 'thirrje' | 'udhezues' }
+  | { name: 'profile'; itemId: string };
 
 interface Props {
-  onExit:      () => void;
+  onExit: () => void;
   bottomInset: number;
   initialList?: string;
+  initialItemId?: string;
 }
 
-export default function StartupNavigator({ onExit, bottomInset, initialList }: Props) {
+function titleToType(title?: string): 'thirrje' | 'udhezues' | undefined {
+  const normalized = (title ?? '').toLowerCase();
+  if (normalized.includes('thirrje')) return 'thirrje';
+  if (normalized.includes('material') || normalized.includes('udhezues')) return 'udhezues';
+  return undefined;
+}
+
+export default function StartupNavigator({ onExit, bottomInset, initialList, initialItemId }: Props) {
   const [stack, setStack] = useState<Screen[]>(
-    initialList
-      ? [{ name: 'hub' }, { name: 'list', title: initialList }]
-      : [{ name: 'hub' }]
+    initialItemId
+      ? [{ name: 'profile', itemId: initialItemId }]
+      : initialList
+      ? [{ name: 'hub' }, { name: 'list', title: initialList, type: titleToType(initialList) }]
+      : [{ name: 'hub' }],
   );
 
   const current = stack[stack.length - 1];
 
-  const push = (screen: Screen) => setStack(prev => [...prev, screen]);
-  const pop  = () => {
-    if (stack.length <= 1) { onExit(); return; }
-    setStack(prev => prev.slice(0, -1));
+  const push = (screen: Screen) => setStack((prev) => [...prev, screen]);
+  const pop = () => {
+    if (stack.length <= 1) {
+      onExit();
+      return;
+    }
+
+    setStack((prev) => prev.slice(0, -1));
   };
 
   return (
@@ -36,22 +49,23 @@ export default function StartupNavigator({ onExit, bottomInset, initialList }: P
       {current.name === 'hub' && (
         <StartupHubScreen
           onBack={onExit}
-          onList={title => push({ name: 'list', title })}
-          onProfile={item => push({ name: 'profile', item })}
+          onList={(title, type) => push({ name: 'list', title, type })}
+          onProfile={(itemId) => push({ name: 'profile', itemId })}
           bottomInset={bottomInset}
         />
       )}
       {current.name === 'list' && (
         <StartupListScreen
           title={current.title}
+          initialType={current.type}
           onBack={pop}
-          onProfile={item => push({ name: 'profile', item })}
+          onProfile={(itemId) => push({ name: 'profile', itemId })}
           bottomInset={bottomInset}
         />
       )}
       {current.name === 'profile' && (
         <StartupItemProfileScreen
-          item={current.item}
+          itemId={current.itemId}
           onBack={pop}
           bottomInset={bottomInset}
         />

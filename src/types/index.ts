@@ -256,6 +256,7 @@ export interface ActActivity {
   img:      string;
   desc:     string;
   fullDesc: string;
+  content?: string;
 }
 
 // ── Startup module ────────────────────────────────────────────────────────────
@@ -286,6 +287,10 @@ export interface StartupItem {
   fullDesc:   string;
   criteria:   string[];
   actionText: string;
+  content?:   string;
+  isCall?:    boolean;
+  applyLink?: string | null;
+  materials?: Array<{ id: string; title: string; desc: string }>;
 }
 
 // ── Opportunities / Jobs module ───────────────────────────────────────────────
@@ -309,6 +314,12 @@ export interface JobItem {
   duration:   string;
   img:        string;
   desc:       string;
+  typeSlug?:  string;
+  typeSlugs?: string[];
+  applied?:   boolean;
+  applyStatus?: string | null;
+  canApply?:  boolean;
+  content?:   string;
 }
 
 // ── Courses module ────────────────────────────────────────────────────────────
@@ -337,12 +348,21 @@ export interface CourseItem {
   seats:      string;
   img:        string;
   desc:       string;
+  categories?: string[];
+  categorySlugs?: string[];
+  totalSpots?: number;
+  freeSpots?: number | null;
+  isEnrolled?: boolean;
+  enrollStatus?: string | null;
+  canEnroll?: boolean;
+  content?: string;
 }
 
 // ── Notification ─────────────────────────────────────────────────────────────
 export interface AppNotification {
   id:         string;
-  type:       'points' | 'job' | 'course' | 'offer' | 'act4';
+  type:       'points' | 'job' | 'course' | 'offer' | 'act4' | 'startup' | 'kvr' | 'raffle' | 'system';
+  postId:     number;
   title:      string;
   message:    string;
   time:       string;
@@ -351,4 +371,14 @@ export interface AppNotification {
   iconColor:  string;   // hex
   iconBg:     string;   // hex background for icon box
   iconBorder: string;   // hex border for icon box
+}
+
+export interface NotificationApiItem {
+  id:         number;
+  type:       AppNotification['type'];
+  title:      string;
+  message:    string;
+  post_id:    number;
+  is_read:    boolean;
+  created_at: string;
 }

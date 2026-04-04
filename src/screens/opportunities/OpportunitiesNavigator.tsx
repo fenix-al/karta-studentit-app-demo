@@ -7,19 +7,23 @@ import { JobItem } from '../../types';
 
 type Screen =
   | { name: 'hub' }
-  | { name: 'list'; title: string }
+  | { name: 'list'; title: string; typeSlug?: string }
   | { name: 'profile'; job: JobItem };
 
 interface Props {
   onExit:      () => void;
   bottomInset: number;
   initialList?: string;
+  initialTypeSlug?: string;
+  initialJob?: JobItem;
 }
 
-export default function OpportunitiesNavigator({ onExit, bottomInset, initialList }: Props) {
+export default function OpportunitiesNavigator({ onExit, bottomInset, initialList, initialTypeSlug, initialJob }: Props) {
   const [stack, setStack] = useState<Screen[]>(
-    initialList
-      ? [{ name: 'hub' }, { name: 'list', title: initialList }]
+    initialJob
+      ? [{ name: 'hub' }, { name: 'profile', job: initialJob }]
+      : initialList
+      ? [{ name: 'hub' }, { name: 'list', title: initialList, typeSlug: initialTypeSlug }]
       : [{ name: 'hub' }]
   );
 
@@ -36,7 +40,7 @@ export default function OpportunitiesNavigator({ onExit, bottomInset, initialLis
       {current.name === 'hub' && (
         <OpportunitiesHubScreen
           onBack={onExit}
-          onList={title => push({ name: 'list', title })}
+          onList={(title, typeSlug) => push({ name: 'list', title, typeSlug })}
           onProfile={job  => push({ name: 'profile', job })}
           bottomInset={bottomInset}
         />
@@ -44,6 +48,7 @@ export default function OpportunitiesNavigator({ onExit, bottomInset, initialLis
       {current.name === 'list' && (
         <OpportunitiesListScreen
           title={current.title}
+          typeSlug={current.typeSlug}
           onBack={pop}
           onProfile={job => push({ name: 'profile', job })}
           bottomInset={bottomInset}

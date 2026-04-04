@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, ActivityIndicator,
   TouchableOpacity, Image, StyleSheet,
@@ -7,42 +7,47 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Search, MapPin, Clock, Building } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
-import { JobItem } from '../../types';
-import { JOB_CATEGORIES } from '../../data/mockData';
+import { JobCategory, JobItem } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
-import { fetchJobs } from '../../services/api';
+import { fetchJobCategories, fetchJobs } from '../../services/api';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800';
 
-function badgeStyle(types: string[]): { badgeBg: string; badgeText: string; badgeBorder: string } {
-  const t = (types?.[0] ?? '').toLowerCase();
-  if (t.includes('praktik')) return { badgeBg: '#f3e8ff', badgeText: '#7e22ce', badgeBorder: '#e9d5ff' };
-  if (t.includes('part'))    return { badgeBg: '#fef9c3', badgeText: '#854d0e', badgeBorder: '#fde047' };
-  if (t.includes('full'))    return { badgeBg: '#dcfce7', badgeText: '#166534', badgeBorder: '#86efac' };
-  if (t.includes('vull'))    return { badgeBg: '#fff1f2', badgeText: '#be123c', badgeBorder: '#fecdd3' };
+function badgeStyle(typeSlugs: string[] = []): { badgeBg: string; badgeText: string; badgeBorder: string } {
+  const t = (typeSlugs[0] ?? '').toLowerCase();
+  if (t.includes('prakt')) return { badgeBg: '#f3e8ff', badgeText: '#7e22ce', badgeBorder: '#e9d5ff' };
+  if (t.includes('part'))  return { badgeBg: '#fef9c3', badgeText: '#854d0e', badgeBorder: '#fde047' };
+  if (t.includes('full'))  return { badgeBg: '#dcfce7', badgeText: '#166534', badgeBorder: '#86efac' };
+  if (t.includes('vull'))  return { badgeBg: '#fff1f2', badgeText: '#be123c', badgeBorder: '#fecdd3' };
   return { badgeBg: '#e0f2fe', badgeText: '#0369a1', badgeBorder: '#bae6fd' };
 }
 
-function apiToJobItem(o: any): JobItem {
-  const badge = badgeStyle(o.types ?? []);
+export function apiToJobItem(o: any): JobItem {
+  const badge = badgeStyle(o.type_slugs ?? []);
   return {
     id:       String(o.id),
-    title:    o.title    ?? '',
-    company:  o.company  ?? '',
-    type:     (o.types?.[0] ?? 'Mundësi').toUpperCase(),
+    title:    o.title ?? '',
+    company:  o.company ?? '',
+    type:     (o.types?.[0] ?? 'Mundesi').toUpperCase(),
+    typeSlug: o.type_slugs?.[0] ?? 'all',
+    typeSlugs: o.type_slugs ?? [],
     ...badge,
     date:     o.deadline || o.date || '',
-    location: o.location || 'Shkodër',
-    salary:   o.salary   ?? '',
+    location: o.location || 'Shkoder',
+    salary:   o.salary ?? '',
     duration: '',
-    img:      o.image    || PLACEHOLDER,
-    desc:     o.excerpt  ?? '',
+    img:      o.image || PLACEHOLDER,
+    desc:     o.excerpt ?? '',
+    applied:  !!o.is_applied,
+    applyStatus: o.apply_status ?? null,
+    canApply: !!o.can_apply,
+    content:  o.content ?? '',
   };
 }
 
 interface Props {
   onBack:      () => void;
-  onList:      (title: string) => void;
+  onList:      (title: string, typeSlug?: string) => void;
   onProfile:   (job: JobItem) => void;
   bottomInset: number;
 }
@@ -50,58 +55,52 @@ interface Props {
 export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
   const [activeCat, setActiveCat] = useState('all');
+  const { data, loading, error, reload } = useFetch(
+    () => fetchJobs({ type: activeCat === 'all' ? '' : activeCat }) as Promise<any>,
+    [activeCat],
+  );
+  const { data: catData } = useFetch(() => fetchJobCategories());
+  const jobs = ((data?.items ?? []) as any[]).map(apiToJobItem);
 
-  const { data, loading, error, reload } = useFetch(() => fetchJobs() as Promise<any>);
-  const rawItems: any[] = data?.items ?? [];
-  const jobs = rawItems.map(apiToJobItem);
+  const categories = useMemo<JobCategory[]>(() => {
+    const live = (catData ?? []).map((c) => ({ id: c.slug, name: c.name, icon: '•' }));
+    return [{ id: 'all', name: 'Te gjitha', icon: '•' }, ...live];
+  }, [catData]);
 
   return (
     <View style={styles.root}>
-
-      {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.75}>
             <ChevronLeft size={20} color={Colors.textSecondary} strokeWidth={2.5} />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerSub}>Qendra e Mundësive</Text>
+            <Text style={styles.headerSub}>Qendra e Mundesive</Text>
             <Text style={styles.headerTitle}>Karriera & Praktika</Text>
           </View>
         </View>
         <View style={styles.searchBar}>
           <Search size={15} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.searchPlaceholder}>Kërko pozicion ose kompani...</Text>
+          <Text style={styles.searchPlaceholder}>Kerko pozicion ose kompani...</Text>
         </View>
       </View>
 
-      {/* ── Category pills ──────────────────────────────────────────────── */}
       <View style={styles.catSection}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.catList}
-        >
-          {JOB_CATEGORIES.map(cat => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catList}>
+          {categories.map(cat => (
             <TouchableOpacity
               key={cat.id}
               style={[styles.catPill, activeCat === cat.id && styles.catPillActive]}
               activeOpacity={0.8}
-              onPress={() => {
-                setActiveCat(cat.id);
-                if (cat.id !== 'all') onList(cat.name);
-              }}
+              onPress={() => setActiveCat(cat.id)}
             >
               <Text style={styles.catEmoji}>{cat.icon}</Text>
-              <Text style={[styles.catText, activeCat === cat.id && styles.catTextActive]}>
-                {cat.name}
-              </Text>
+              <Text style={[styles.catText, activeCat === cat.id && styles.catTextActive]}>{cat.name}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* ── Content ─────────────────────────────────────────────────────── */}
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#e30613" />
@@ -109,10 +108,10 @@ export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bott
       ) : error ? (
         <View style={styles.centered}>
           <Text style={styles.errorText}>
-            ⚠️ {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+            {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
           </Text>
           <TouchableOpacity style={styles.retryBtn} onPress={reload}>
-            <Text style={styles.retryText}>Provo Përsëri</Text>
+            <Text style={styles.retryText}>Provo Perseri</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -124,16 +123,17 @@ export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bott
           <View style={styles.sectionMb}>
             <View style={[styles.sectionHeader, styles.sectionPadH]}>
               <View>
-                <Text style={styles.sectionTitle}>Më të fundit</Text>
-                <Text style={styles.sectionSubtitle}>
-                  {jobs.length} mundësi pune dhe praktikash.
-                </Text>
+                <Text style={styles.sectionTitle}>Me te fundit</Text>
+                <Text style={styles.sectionSubtitle}>{jobs.length} mundesi pune dhe praktikash.</Text>
               </View>
               <TouchableOpacity
                 style={styles.seeAllBtn}
-                onPress={() => onList('Të gjitha Mundësitë')}
+                onPress={() => onList(
+                  activeCat === 'all' ? 'Te gjitha Mundesite' : `Kategoria: ${categories.find((c) => c.id === activeCat)?.name ?? ''}`,
+                  activeCat === 'all' ? undefined : activeCat,
+                )}
               >
-                <Text style={styles.seeAllText}>Shiko të gjitha</Text>
+                <Text style={styles.seeAllText}>Shiko te gjitha</Text>
               </TouchableOpacity>
             </View>
 
@@ -149,12 +149,9 @@ export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bott
   );
 }
 
-// ── Shared job card (reused in ListScreen) ────────────────────────────────────
 export function JobCard({ job, onPress }: { job: JobItem; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.jobCard} onPress={onPress} activeOpacity={0.92}>
-
-      {/* Top row: logo + badge */}
       <View style={styles.jobCardTop}>
         <View style={styles.jobLogo}>
           <Image source={{ uri: job.img }} style={styles.jobLogoImg} resizeMode="cover" />
@@ -164,7 +161,6 @@ export function JobCard({ job, onPress }: { job: JobItem; onPress: () => void })
         </View>
       </View>
 
-      {/* Title + company */}
       <View style={styles.jobCardMid}>
         <Text style={styles.jobTitle}>{job.title}</Text>
         {job.company ? (
@@ -175,16 +171,12 @@ export function JobCard({ job, onPress }: { job: JobItem; onPress: () => void })
         ) : null}
       </View>
 
-      {/* Description */}
-      {job.desc ? (
-        <Text style={styles.jobDesc} numberOfLines={2}>{job.desc}</Text>
-      ) : null}
+      {job.desc ? <Text style={styles.jobDesc} numberOfLines={2}>{job.desc}</Text> : null}
 
-      {/* Footer: location + deadline */}
       <View style={styles.jobFooter}>
         <View style={styles.jobLocation}>
           <MapPin size={12} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.jobLocationText}>{job.location || 'Shkodër'}</Text>
+          <Text style={styles.jobLocationText}>{job.location || 'Shkoder'}</Text>
         </View>
         {job.date ? (
           <View style={styles.jobDeadline}>
@@ -193,26 +185,18 @@ export function JobCard({ job, onPress }: { job: JobItem; onPress: () => void })
           </View>
         ) : null}
       </View>
-
     </TouchableOpacity>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   root:    { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll:  { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  errorText: {
-    fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary,
-  },
-  retryBtn: {
-    backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10,
-    borderRadius: Radius.full,
-  },
+  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
+  retryBtn: { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
   retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
-  // Header
   header: {
     backgroundColor: Colors.white,
     paddingHorizontal: Spacing.xxl,
@@ -221,16 +205,12 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
-  headerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.lg,
-  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.lg },
   headerSub: {
     fontFamily: Typography.fontBold, fontSize: Typography.xs,
     color: '#f43f5e', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2,
   },
-  headerTitle: {
-    fontFamily: Typography.fontExtraBold, fontSize: Typography.xxl, color: Colors.textPrimary,
-  },
+  headerTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xxl, color: Colors.textPrimary },
   iconBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.borderLight,
@@ -242,11 +222,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg, paddingVertical: 14,
     borderWidth: 1, borderColor: Colors.border,
   },
-  searchPlaceholder: {
-    fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textMuted, flex: 1,
-  },
+  searchPlaceholder: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textMuted, flex: 1 },
 
-  // Categories
   catSection: {
     backgroundColor: Colors.white,
     borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
@@ -264,7 +241,6 @@ const styles = StyleSheet.create({
   catText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: Colors.textPrimary },
   catTextActive: { color: '#fff' },
 
-  // Section helpers
   sectionPadH: { paddingHorizontal: Spacing.xxl },
   sectionMb:   { marginBottom: Spacing.xxxl, marginTop: Spacing.xxl },
   sectionHeader: {
@@ -275,15 +251,10 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontExtraBold, fontSize: Typography.xxl,
     color: Colors.textPrimary, marginBottom: 2,
   },
-  sectionSubtitle: {
-    fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textSecondary,
-  },
-  seeAllBtn: {
-    backgroundColor: '#f0f9ff', paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.full,
-  },
+  sectionSubtitle: { fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textSecondary },
+  seeAllBtn: { backgroundColor: '#f0f9ff', paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.full },
   seeAllText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#0ea5e9' },
 
-  // Job cards
   jobListWrap: { paddingHorizontal: Spacing.xxl, gap: 16 },
   jobCard: {
     backgroundColor: Colors.white, borderRadius: Radius.xxl,
@@ -301,9 +272,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.borderLight,
   },
   jobLogoImg: { width: '100%', height: '100%' },
-  jobBadge: {
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1,
-  },
+  jobBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1 },
   jobBadgeText: {
     fontFamily: Typography.fontExtraBold, fontSize: 10,
     textTransform: 'uppercase', letterSpacing: 0.6,
@@ -314,9 +283,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary, marginBottom: 4, lineHeight: 22,
   },
   jobCompanyRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  jobCompany: {
-    fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary,
-  },
+  jobCompany: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
   jobDesc: {
     fontFamily: Typography.fontMedium, fontSize: Typography.base,
     color: Colors.textSecondary, lineHeight: 20, marginBottom: Spacing.lg,
@@ -326,14 +293,10 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.borderLight,
   },
   jobLocation: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  jobLocationText: {
-    fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textSecondary,
-  },
+  jobLocationText: { fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textSecondary },
   jobDeadline: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: '#fff1f2', paddingHorizontal: 8, paddingVertical: 5, borderRadius: Radius.sm,
   },
-  jobDeadlineText: {
-    fontFamily: Typography.fontBold, fontSize: Typography.sm, color: '#be123c',
-  },
+  jobDeadlineText: { fontFamily: Typography.fontBold, fontSize: Typography.sm, color: '#be123c' },
 });

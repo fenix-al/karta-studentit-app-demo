@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  Image, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -11,6 +10,9 @@ import {
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { JobItem } from '../../types';
+import { useFetch } from '../../hooks/useFetch';
+import { applyJob, fetchJob } from '../../services/api';
+import { apiToJobItem } from './OpportunitiesHubScreen';
 
 interface Props {
   job:         JobItem;
@@ -18,14 +20,44 @@ interface Props {
   bottomInset: number;
 }
 
+function stripHtml(html: string) {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 export default function JobProfileScreen({ job, onBack, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
-  const [applied, setApplied] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const { data, loading, error, reload } = useFetch(() => fetchJob(Number(job.id)) as Promise<any>, [job.id]);
+
+  const liveJob = useMemo<JobItem>(() => {
+    if (!data) return job;
+    return {
+      ...job,
+      ...apiToJobItem(data),
+      desc: data.excerpt ?? job.desc,
+      content: stripHtml(data.content ?? ''),
+      applied: !!data.is_applied,
+      applyStatus: data.apply_status ?? null,
+      canApply: !!data.can_apply,
+    };
+  }, [data, job]);
+
+  async function handleApply() {
+    if (!liveJob.canApply || applying) return;
+    try {
+      setApplying(true);
+      const res = await applyJob(Number(liveJob.id));
+      Alert.alert('Sukses', res.msg || 'Aplikimi u dergua me sukses.');
+      reload();
+    } catch (err) {
+      Alert.alert('Gabim', err instanceof Error ? err.message : 'Aplikimi deshtoi.');
+    } finally {
+      setApplying(false);
+    }
+  }
 
   return (
     <View style={styles.root}>
-
-      {/* ── Transparent overlay header ────────────────────────────────────── */}
       <View style={[styles.overlayHeader, { top: insets.top + 12 }]}>
         <TouchableOpacity style={styles.overlayBtn} onPress={onBack} activeOpacity={0.8}>
           <ChevronLeft size={22} color={Colors.textPrimary} strokeWidth={2.5} />
@@ -40,118 +72,120 @@ export default function JobProfileScreen({ job, onBack, bottomInset }: Props) {
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: bottomInset + 24 }}
-      >
-
-        {/* ── Hero image ────────────────────────────────────────────────── */}
-        <View style={styles.hero}>
-          <Image source={{ uri: job.img }} style={styles.heroImage} resizeMode="cover" />
-          <View style={styles.heroOverlay} />
-        </View>
-
-        {/* ── Floating badge + title ────────────────────────────────────── */}
-        <View style={styles.mainInfo}>
-          <View style={[styles.badge, { backgroundColor: job.badgeBg, borderColor: job.badgeBorder }]}>
-            <Text style={[styles.badgeText, { color: job.badgeText }]}>{job.type}</Text>
-          </View>
-          <Text style={styles.jobTitle}>{job.title}</Text>
-          <View style={styles.companyRow}>
-            <Building size={15} color={Colors.textMuted} strokeWidth={2} />
-            <Text style={styles.companyName}>{job.company}</Text>
-          </View>
-        </View>
-
-        {/* ── Info box ─────────────────────────────────────────────────── */}
-        <View style={styles.infoBoxPad}>
-          <View style={styles.infoBox}>
-
-            <View style={styles.infoRow}>
-              <View style={[styles.infoIcon, { backgroundColor: Colors.surfaceBg }]}>
-                <MapPin size={20} color={Colors.textSecondary} strokeWidth={2} />
-              </View>
-              <View>
-                <Text style={styles.infoLabel}>Vendndodhja</Text>
-                <Text style={styles.infoValue}>{job.location}</Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <View style={[styles.infoIcon, { backgroundColor: '#fffbeb' }]}>
-                <Briefcase size={20} color="#f59e0b" strokeWidth={2} />
-              </View>
-              <View>
-                <Text style={styles.infoLabel}>Lloji i Pozicionit</Text>
-                <Text style={styles.infoValue}>{job.type} / {job.duration}</Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <View style={[styles.infoIcon, { backgroundColor: '#fff1f2' }]}>
-                <Clock size={20} color="#be123c" strokeWidth={2} />
-              </View>
-              <View>
-                <Text style={[styles.infoLabel, { color: '#f43f5e' }]}>Afati i Aplikimit</Text>
-                <Text style={styles.infoValue}>{job.date}</Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <View style={[styles.infoIcon, { backgroundColor: '#ecfdf5' }]}>
-                <DollarSign size={20} color="#10b981" strokeWidth={2} />
-              </View>
-              <View>
-                <Text style={styles.infoLabel}>Paga / Shpërblimi</Text>
-                <Text style={[styles.infoValue, { color: '#059669' }]}>{job.salary}</Text>
-              </View>
-            </View>
-
-          </View>
-        </View>
-
-        {/* ── Description ───────────────────────────────────────────────── */}
-        <View style={styles.descPad}>
-          <Text style={styles.descTitle}>Përshkrimi i Pozicionit</Text>
-          <View style={styles.descCard}>
-            <Text style={styles.descText}>{job.desc}</Text>
-            <Text style={styles.criteriaTitle}>Kriteret:</Text>
-            {[
-              'Student në vitin e 2-të ose 3-të.',
-              'Dëshirë për të mësuar dhe punuar në ekip.',
-              'Njohuri bazë në paketën Office/Mjetet digjitale.',
-            ].map((c, i) => (
-              <View key={i} style={styles.criteriaRow}>
-                <View style={styles.criteriaDot} />
-                <Text style={styles.criteriaText}>{c}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* ── Apply button ──────────────────────────────────────────────── */}
-        <View style={styles.applyPad}>
-          <TouchableOpacity
-            style={[styles.applyBtn, applied && styles.applyBtnDone]}
-            activeOpacity={0.88}
-            onPress={() => !applied && setApplied(true)}
-          >
-            <CheckCircle size={20} color="#fff" strokeWidth={2.5} />
-            <Text style={styles.applyBtnText}>
-              {applied ? 'Aplikimi u Dërgua!' : 'Apliko Tani'}
-            </Text>
+      {loading ? (
+        <View style={styles.centered}><ActivityIndicator size="large" color="#e30613" /></View>
+      ) : error ? (
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>
+            {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+          </Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={reload}>
+            <Text style={styles.retryText}>Provo Perseri</Text>
           </TouchableOpacity>
         </View>
+      ) : (
+        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomInset + 24 }}>
+          <View style={styles.hero}>
+            <Image source={{ uri: liveJob.img }} style={styles.heroImage} resizeMode="cover" />
+            <View style={styles.heroOverlay} />
+          </View>
 
-      </ScrollView>
+          <View style={styles.mainInfo}>
+            <View style={[styles.badge, { backgroundColor: liveJob.badgeBg, borderColor: liveJob.badgeBorder }]}>
+              <Text style={[styles.badgeText, { color: liveJob.badgeText }]}>{liveJob.type}</Text>
+            </View>
+            <Text style={styles.jobTitle}>{liveJob.title}</Text>
+            <View style={styles.companyRow}>
+              <Building size={15} color={Colors.textMuted} strokeWidth={2} />
+              <Text style={styles.companyName}>{liveJob.company || 'Kompani Partnere'}</Text>
+            </View>
+          </View>
 
+          <View style={styles.infoBoxPad}>
+            <View style={styles.infoBox}>
+              <View style={styles.infoRow}>
+                <View style={[styles.infoIcon, { backgroundColor: Colors.surfaceBg }]}>
+                  <MapPin size={20} color={Colors.textSecondary} strokeWidth={2} />
+                </View>
+                <View>
+                  <Text style={styles.infoLabel}>Vendndodhja</Text>
+                  <Text style={styles.infoValue}>{liveJob.location}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <View style={[styles.infoIcon, { backgroundColor: '#fffbeb' }]}>
+                  <Briefcase size={20} color="#f59e0b" strokeWidth={2} />
+                </View>
+                <View>
+                  <Text style={styles.infoLabel}>Lloji i Pozicionit</Text>
+                  <Text style={styles.infoValue}>{liveJob.type}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <View style={[styles.infoIcon, { backgroundColor: '#fff1f2' }]}>
+                  <Clock size={20} color="#be123c" strokeWidth={2} />
+                </View>
+                <View>
+                  <Text style={[styles.infoLabel, { color: '#f43f5e' }]}>Afati i Aplikimit</Text>
+                  <Text style={styles.infoValue}>{liveJob.date || 'Pa afat te percaktuar'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <View style={[styles.infoIcon, { backgroundColor: '#ecfdf5' }]}>
+                  <DollarSign size={20} color="#10b981" strokeWidth={2} />
+                </View>
+                <View>
+                  <Text style={styles.infoLabel}>Paga / Shperblimi</Text>
+                  <Text style={[styles.infoValue, { color: '#059669' }]}>{liveJob.salary || 'Sipas pershkrimit'}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.descPad}>
+            <Text style={styles.descTitle}>Pershkrimi i Pozicionit</Text>
+            <View style={styles.descCard}>
+              <Text style={styles.descText}>{liveJob.content || liveJob.desc || 'Pershkrimi nuk eshte plotesuar ende.'}</Text>
+            </View>
+          </View>
+
+          <View style={styles.applyPad}>
+            <TouchableOpacity
+              style={[
+                styles.applyBtn,
+                liveJob.applied && styles.applyBtnDone,
+                !liveJob.canApply && !liveJob.applied && styles.applyBtnDisabled,
+              ]}
+              activeOpacity={0.88}
+              disabled={!liveJob.canApply || applying}
+              onPress={handleApply}
+            >
+              <CheckCircle size={20} color="#fff" strokeWidth={2.5} />
+              <Text style={styles.applyBtnText}>
+                {applying
+                  ? 'Duke aplikuar...'
+                  : liveJob.applied
+                  ? 'Keni Aplikuar Tashme'
+                  : liveJob.canApply
+                  ? 'Apliko me 1 Klik'
+                  : 'Vetem Studentet mund te Aplikojne'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.applyHint}>
+              Profili dhe te dhenat e kartes suaj i dergohen automatikisht kompanise.
+            </Text>
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -159,8 +193,11 @@ export default function JobProfileScreen({ job, onBack, bottomInset }: Props) {
 const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
+  retryBtn: { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
+  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
-  // Overlay header
   overlayHeader: {
     position: 'absolute', left: Spacing.lg, right: Spacing.lg, zIndex: 20,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -174,12 +211,10 @@ const styles = StyleSheet.create({
   },
   overlayRight: { flexDirection: 'row', gap: 8 },
 
-  // Hero
   hero: { height: 280 },
   heroImage: { width: '100%', height: '100%' },
   heroOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.20)' },
 
-  // Main info
   mainInfo: {
     backgroundColor: Colors.white, paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.xl, paddingBottom: Spacing.xl,
@@ -198,11 +233,8 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary, lineHeight: 30, marginBottom: Spacing.sm,
   },
   companyRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  companyName: {
-    fontFamily: Typography.fontSemiBold, fontSize: Typography.md, color: Colors.textSecondary,
-  },
+  companyName: { fontFamily: Typography.fontSemiBold, fontSize: Typography.md, color: Colors.textSecondary },
 
-  // Info box
   infoBoxPad: { paddingHorizontal: Spacing.xxl, marginBottom: Spacing.lg },
   infoBox: {
     backgroundColor: Colors.white, borderRadius: Radius.xxl + 4,
@@ -216,12 +248,9 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontBold, fontSize: Typography.xs,
     color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2,
   },
-  infoValue: {
-    fontFamily: Typography.fontBold, fontSize: Typography.md, color: Colors.textPrimary,
-  },
+  infoValue: { fontFamily: Typography.fontBold, fontSize: Typography.md, color: Colors.textPrimary },
   divider: { height: 1, backgroundColor: Colors.borderLight, marginVertical: Spacing.lg },
 
-  // Description
   descPad: { paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.xxl },
   descTitle: {
     fontFamily: Typography.fontExtraBold, fontSize: Typography.xl,
@@ -235,23 +264,9 @@ const styles = StyleSheet.create({
   },
   descText: {
     fontFamily: Typography.fontMedium, fontSize: Typography.md,
-    color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.lg,
-  },
-  criteriaTitle: {
-    fontFamily: Typography.fontBold, fontSize: Typography.lg,
-    color: Colors.textPrimary, marginBottom: Spacing.md,
-  },
-  criteriaRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
-  criteriaDot: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: Colors.textMuted, marginTop: 7, flexShrink: 0,
-  },
-  criteriaText: {
-    fontFamily: Typography.fontMedium, fontSize: Typography.md,
-    color: Colors.textSecondary, lineHeight: 22, flex: 1,
+    color: Colors.textSecondary, lineHeight: 22,
   },
 
-  // Apply button
   applyPad: { paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.xxl },
   applyBtn: {
     backgroundColor: '#dc2626', borderRadius: Radius.xxl,
@@ -261,8 +276,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 }, elevation: 6,
   },
   applyBtnDone: { backgroundColor: '#10b981', shadowColor: '#10b981' },
+  applyBtnDisabled: { backgroundColor: '#94a3b8', shadowColor: '#94a3b8' },
   applyBtnText: {
     fontFamily: Typography.fontExtraBold, fontSize: Typography.lg,
     color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5,
+  },
+  applyHint: {
+    marginTop: 12, textAlign: 'center', color: Colors.textMuted,
+    fontFamily: Typography.fontMedium, fontSize: Typography.sm, lineHeight: 18,
   },
 });

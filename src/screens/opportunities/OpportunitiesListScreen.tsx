@@ -1,29 +1,41 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Search } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
-import { JobItem } from '../../types';
-import { JOBS } from '../../data/mockData';
-import { JobCard } from './OpportunitiesHubScreen';
+import { JobCategory, JobItem } from '../../types';
+import { useFetch } from '../../hooks/useFetch';
+import { fetchJobCategories, fetchJobs } from '../../services/api';
+import { apiToJobItem, JobCard } from './OpportunitiesHubScreen';
 
 interface Props {
   title:       string;
+  typeSlug?:   string;
   onBack:      () => void;
   onProfile:   (job: JobItem) => void;
   bottomInset: number;
 }
 
-export default function OpportunitiesListScreen({ title, onBack, onProfile, bottomInset }: Props) {
+export default function OpportunitiesListScreen({ title, typeSlug, onBack, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
+  const [activeCat, setActiveCat] = useState(typeSlug ?? 'all');
+  const { data, loading, error, reload } = useFetch(
+    () => fetchJobs({ type: activeCat === 'all' ? '' : activeCat }) as Promise<any>,
+    [activeCat],
+  );
+  const { data: catData } = useFetch(() => fetchJobCategories());
+  const jobs = ((data?.items ?? []) as any[]).map(apiToJobItem);
+
+  const categories = useMemo<JobCategory[]>(() => {
+    const live = (catData ?? []).map((c) => ({ id: c.slug, name: c.name, icon: '•' }));
+    return [{ id: 'all', name: 'Te gjitha', icon: '•' }, ...live];
+  }, [catData]);
 
   return (
     <View style={styles.root}>
-
-      {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.75}>
@@ -33,27 +45,56 @@ export default function OpportunitiesListScreen({ title, onBack, onProfile, bott
         </View>
         <View style={styles.searchBar}>
           <Search size={15} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.searchPlaceholder}>Kërko në listë...</Text>
+          <Text style={styles.searchPlaceholder}>Kerko ne liste...</Text>
         </View>
       </View>
 
-      {/* ── Job list ─────────────────────────────────────────────────────── */}
-      <FlatList
-        data={JOBS}
-        keyExtractor={j => j.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.list, { paddingBottom: bottomInset + 24 }]}
-        renderItem={({ item }) => (
-          <JobCard job={item} onPress={() => onProfile(item)} />
-        )}
-      />
+      <View style={styles.catSection}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catList}>
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat.id}
+              style={[styles.catPill, activeCat === cat.id && styles.catPillActive]}
+              activeOpacity={0.8}
+              onPress={() => setActiveCat(cat.id)}
+            >
+              <Text style={styles.catEmoji}>{cat.icon}</Text>
+              <Text style={[styles.catText, activeCat === cat.id && styles.catTextActive]}>{cat.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
+      {loading ? (
+        <View style={styles.centered}><ActivityIndicator size="large" color="#e30613" /></View>
+      ) : error ? (
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>
+            {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+          </Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={reload}>
+            <Text style={styles.retryText}>Provo Perseri</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={jobs}
+          keyExtractor={j => j.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.list, { paddingBottom: bottomInset + 24 }]}
+          renderItem={({ item }) => <JobCard job={item} onPress={() => onProfile(item)} />}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
+  retryBtn: { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
+  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
   header: {
     backgroundColor: Colors.white,
@@ -63,9 +104,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }, elevation: 2,
   },
-  headerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.lg,
-  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.lg },
   iconBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.borderLight,
@@ -81,9 +120,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg, paddingVertical: 14,
     borderWidth: 1, borderColor: Colors.border,
   },
-  searchPlaceholder: {
-    fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textMuted, flex: 1,
+  searchPlaceholder: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textMuted, flex: 1 },
+
+  catSection: {
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+    paddingVertical: Spacing.lg,
   },
+  catList: { paddingHorizontal: Spacing.xxl, gap: 8 },
+  catPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 9,
+    borderRadius: Radius.full, borderWidth: 1,
+    borderColor: Colors.border, backgroundColor: Colors.white,
+  },
+  catPillActive: { backgroundColor: Colors.textPrimary, borderColor: Colors.textPrimary },
+  catEmoji: { fontSize: 13 },
+  catText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: Colors.textPrimary },
+  catTextActive: { color: '#fff' },
 
   list: { padding: Spacing.xxl, gap: 16 },
 });

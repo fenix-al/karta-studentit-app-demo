@@ -30,9 +30,10 @@ const { width: SW, height: SH } = Dimensions.get('window');
 interface Props {
   item: CardItem | null;
   onClose: () => void;
+  onAction?: (item: CardItem) => void;
 }
 
-export default function SmartModal({ item, onClose }: Props) {
+export default function SmartModal({ item, onClose, onAction }: Props) {
   const insets   = useSafeAreaInsets();
   const progress = useRef(new Animated.Value(0)).current;
   const anim     = useRef<Animated.CompositeAnimation | null>(null);
@@ -121,7 +122,7 @@ export default function SmartModal({ item, onClose }: Props) {
           <Text style={styles.desc}>{item.fullDesc}</Text>
 
           {/* Dynamic CTA button */}
-          <TouchableOpacity style={styles.ctaWrap} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.ctaWrap} activeOpacity={0.85} onPress={() => onAction?.(item)}>
             <LinearGradient
               colors={item.btnGradient}
               start={{ x: 0, y: 0 }}

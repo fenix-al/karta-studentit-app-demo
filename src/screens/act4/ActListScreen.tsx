@@ -1,35 +1,80 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView,
-  TouchableOpacity, Image, StyleSheet,
+  TouchableOpacity, Image, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
-import { ActActivity } from '../../types';
-import { ACT_ACTIVITIES, ACT_CATEGORIES } from '../../data/mockData';
+import { ActActivity, ActCategory } from '../../types';
+import { useFetch } from '../../hooks/useFetch';
+import { fetchAct4 } from '../../services/api';
+
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800';
+
+function apiToActActivity(a: any): ActActivity {
+  return {
+    id: String(a.id),
+    title: a.title ?? '',
+    category: a.category ?? '',
+    catId: a.cat_id ?? '',
+    badgeColor: '#0aa8a7',
+    dateStr: a.date ?? '',
+    fullDate: a.date_raw ?? a.date ?? '',
+    time: '',
+    location: a.location ?? 'Shkoder',
+    img: a.image || PLACEHOLDER,
+    desc: a.excerpt ?? '',
+    fullDesc: a.excerpt ?? '',
+    content: a.content ?? '',
+  };
+}
 
 interface Props {
-  title:        string;
+  title: string;
   initialCatId: string;
-  onBack:       () => void;
-  onProfile:    (activity: ActActivity) => void;
-  bottomInset:  number;
+  onBack: () => void;
+  onProfile: (activityId: string) => void;
+  bottomInset: number;
 }
 
 export default function ActListScreen({ title, initialCatId, onBack, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
   const [activeCat, setActiveCat] = useState(initialCatId);
+  const { data, loading, error, reload } = useFetch(() => fetchAct4() as Promise<any>);
+
+  const activities: ActActivity[] = (data?.items ?? []).map(apiToActActivity);
+
+  const categories: ActCategory[] = useMemo(() => {
+    const unique = new Map<string, ActCategory>();
+    unique.set('all', { id: 'all', name: 'Te Gjitha', icon: '•' });
+
+    activities.forEach((activity) => {
+      if (!activity.catId || unique.has(activity.catId)) return;
+
+      unique.set(activity.catId, {
+        id: activity.catId,
+        name: activity.category || 'Kategori',
+        icon: '•',
+      });
+    });
+
+    return Array.from(unique.values());
+  }, [activities]);
+
+  useEffect(() => {
+    if (activeCat !== 'all' && !categories.some((category) => category.id === activeCat)) {
+      setActiveCat('all');
+    }
+  }, [activeCat, categories]);
 
   const filtered = activeCat === 'all'
-    ? ACT_ACTIVITIES
-    : ACT_ACTIVITIES.filter(a => a.catId === activeCat);
+    ? activities
+    : activities.filter((activity) => activity.catId === activeCat);
 
   return (
     <View style={styles.root}>
-
-      {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.75}>
@@ -38,13 +83,12 @@ export default function ActListScreen({ title, initialCatId, onBack, onProfile, 
           <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
         </View>
 
-        {/* Filter pills */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterList}
         >
-          {ACT_CATEGORIES.map(cat => (
+          {categories.map((cat) => (
             <TouchableOpacity
               key={cat.id}
               style={[styles.filterPill, activeCat === cat.id && styles.filterPillActive]}
@@ -60,30 +104,39 @@ export default function ActListScreen({ title, initialCatId, onBack, onProfile, 
         </ScrollView>
       </View>
 
-      {/* ── Activity list ────────────────────────────────────────────────── */}
-      {filtered.length === 0 ? (
+      {loading ? (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>Nuk ka aktivitete për këtë kategori aktualisht.</Text>
+          <ActivityIndicator size="large" color="#0aa8a7" />
+        </View>
+      ) : error ? (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>Ngarkimi deshtoi. Provo perseri.</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={reload} activeOpacity={0.8}>
+            <Text style={styles.retryText}>Provo perseri</Text>
+          </TouchableOpacity>
+        </View>
+      ) : filtered.length === 0 ? (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>Nuk ka aktivitete per kete kategori aktualisht.</Text>
         </View>
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={a => a.id}
+          keyExtractor={(a) => a.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.list, { paddingBottom: bottomInset + 24 }]}
           renderItem={({ item }) => (
-            <ActivityCardFull activity={item} onPress={() => onProfile(item)} />
+            <ActivityCardFull activity={item} onPress={() => onProfile(item.id)} />
           )}
         />
       )}
-
     </View>
   );
 }
 
-// Full-width vertical card for the list view
 function ActivityCardFull({ activity, onPress }: { activity: ActActivity; onPress: () => void }) {
   const [day, mon] = activity.dateStr.split(' ');
+
   return (
     <TouchableOpacity style={listCardStyles.card} onPress={onPress} activeOpacity={0.9}>
       <View style={listCardStyles.imageWrap}>
@@ -101,7 +154,7 @@ function ActivityCardFull({ activity, onPress }: { activity: ActActivity; onPres
         <Text style={listCardStyles.desc} numberOfLines={2}>{activity.desc}</Text>
         <View style={listCardStyles.footer}>
           <Text style={listCardStyles.location}>📍 {activity.location}</Text>
-          <Text style={listCardStyles.readMore}>Lexo më shumë →</Text>
+          <Text style={listCardStyles.readMore}>Lexo me shume →</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -196,4 +249,12 @@ const styles = StyleSheet.create({
   list: { padding: Spacing.xxl, gap: 24 },
   emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xxl },
   emptyText: { fontFamily: Typography.fontMedium, fontSize: Typography.md, color: Colors.textMuted, textAlign: 'center' },
+  retryBtn: {
+    marginTop: 12,
+    backgroundColor: '#0aa8a7',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: Radius.full,
+  },
+  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 });

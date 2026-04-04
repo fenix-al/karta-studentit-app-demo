@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Image, StyleSheet,
+  Image, StyleSheet, ActivityIndicator, Linking, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -11,22 +11,116 @@ import {
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { StartupItem } from '../../types';
+import { useFetch } from '../../hooks/useFetch';
+import { fetchStartupSingle } from '../../services/api';
 
 interface Props {
-  item:        StartupItem;
-  onBack:      () => void;
+  itemId: string;
+  onBack: () => void;
   bottomInset: number;
 }
 
-export default function StartupItemProfileScreen({ item, onBack, bottomInset }: Props) {
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800';
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export default function StartupItemProfileScreen({ itemId, onBack, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
   const [applied, setApplied] = useState(false);
+  const { data, loading, error, reload } = useFetch(() => fetchStartupSingle(Number(itemId)) as Promise<any>, [itemId]);
+
+  const item: StartupItem | null = useMemo(() => {
+    if (!data) return null;
+
+    const isCall = !!data.is_call;
+    const description = stripHtml(data.content ?? '') || data.title || '';
+
+    return {
+      id: String(data.id),
+      title: data.title ?? '',
+      type: data.type_label ?? 'Startup',
+      category: isCall ? 'thirrje' : 'udhezues',
+      badgeBg: isCall ? '#fdf4ff' : '#eff6ff',
+      badgeText: isCall ? '#7e22ce' : '#1d4ed8',
+      badgeBorder: isCall ? '#e9d5ff' : '#bfdbfe',
+      date: data.deadline || data.date || '',
+      img: data.image || PLACEHOLDER,
+      desc: description,
+      fullDesc: description,
+      criteria: [],
+      actionText: isCall ? 'Apliko Tani' : 'Shiko Materialin',
+      content: data.content ?? '',
+      isCall,
+      applyLink: data.apply_link ?? null,
+      materials: (data.materials ?? []).map((material: any) => ({
+        id: String(material.id),
+        title: material.title ?? '',
+        desc: material.excerpt ?? '',
+      })),
+    };
+  }, [data]);
+
+  const handlePrimaryAction = async () => {
+    if (!item) return;
+
+    if (item.category === 'thirrje') {
+      if (!item.applyLink) {
+        Alert.alert('Linku mungon', 'Kjo thirrje nuk ka ende nje link aplikimi.');
+        return;
+      }
+
+      try {
+        const supported = await Linking.canOpenURL(item.applyLink);
+        if (!supported) {
+          Alert.alert('Link i pavlefshem', 'Nuk mund te hapet linku i aplikimit.');
+          return;
+        }
+
+        await Linking.openURL(item.applyLink);
+        setApplied(true);
+      } catch {
+        Alert.alert('Hapja deshtoi', 'Nuk mund te hapej linku i aplikimit.');
+      }
+      return;
+    }
+
+    if (item.applyLink) {
+      try {
+        await Linking.openURL(item.applyLink);
+      } catch {
+        Alert.alert('Hapja deshtoi', 'Nuk mund te hapej materiali.');
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.root, styles.centered]}>
+        <ActivityIndicator size="large" color="#10b981" />
+      </View>
+    );
+  }
+
+  if (error || !item) {
+    return (
+      <View style={[styles.root, styles.centered, { paddingTop: insets.top + 24 }]}>
+        <TouchableOpacity style={styles.overlayBtn} onPress={onBack} activeOpacity={0.8}>
+          <ChevronLeft size={22} color={Colors.textPrimary} strokeWidth={2.5} />
+        </TouchableOpacity>
+        <Text style={styles.errorText}>Startup-i nuk u ngarkua.</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={reload} activeOpacity={0.85}>
+          <Text style={styles.retryBtnText}>Provo perseri</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const isThirrje = item.category === 'thirrje';
 
   return (
     <View style={styles.root}>
-
-      {/* ── Transparent overlay header ────────────────────────────────────── */}
       <View style={[styles.overlayHeader, { top: insets.top + 12 }]}>
         <TouchableOpacity style={styles.overlayBtn} onPress={onBack} activeOpacity={0.8}>
           <ChevronLeft size={22} color={Colors.textPrimary} strokeWidth={2.5} />
@@ -46,14 +140,11 @@ export default function StartupItemProfileScreen({ item, onBack, bottomInset }: 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomInset + 24 }}
       >
-
-        {/* ── Hero image ────────────────────────────────────────────────── */}
         <View style={styles.hero}>
           <Image source={{ uri: item.img }} style={styles.heroImage} resizeMode="cover" />
           <View style={styles.heroOverlay} />
         </View>
 
-        {/* ── Floating badge + title ─────────────────────────────────────── */}
         <View style={styles.mainInfo}>
           <View style={[styles.badge, { backgroundColor: item.badgeBg, borderColor: item.badgeBorder }]}>
             <Text style={[styles.badgeText, { color: item.badgeText }]}>{item.type}</Text>
@@ -67,17 +158,15 @@ export default function StartupItemProfileScreen({ item, onBack, bottomInset }: 
           <Text style={styles.itemTitle}>{item.title}</Text>
         </View>
 
-        {/* ── Info box ──────────────────────────────────────────────────── */}
         <View style={styles.infoBoxPad}>
           <View style={styles.infoBox}>
-
             <View style={styles.infoRow}>
               <View style={[styles.infoIcon, { backgroundColor: isThirrje ? '#fff1f2' : Colors.surfaceBg }]}>
                 <Calendar size={20} color={isThirrje ? '#be123c' : Colors.textSecondary} strokeWidth={2} />
               </View>
               <View>
                 <Text style={[styles.infoLabel, isThirrje && { color: '#f43f5e' }]}>
-                  {isThirrje ? 'Afati i Aplikimit' : 'Disponueshmëria'}
+                  {isThirrje ? 'Afati i Aplikimit' : 'Disponueshmeria'}
                 </Text>
                 <Text style={styles.infoValue}>{item.date}</Text>
               </View>
@@ -92,7 +181,7 @@ export default function StartupItemProfileScreen({ item, onBack, bottomInset }: 
               <View>
                 <Text style={styles.infoLabel}>Kategoria</Text>
                 <Text style={styles.infoValue}>
-                  {item.category === 'thirrje' ? 'Thirrje e Hapur' : 'Material Udhëzues'}
+                  {item.category === 'thirrje' ? 'Thirrje e Hapur' : 'Material Udhezues'}
                 </Text>
               </View>
             </View>
@@ -118,29 +207,25 @@ export default function StartupItemProfileScreen({ item, onBack, bottomInset }: 
                   </View>
                   <View>
                     <Text style={styles.infoLabel}>Aplikimet</Text>
-                    <Text style={styles.infoValue}>Hapur për të gjithë studentët</Text>
+                    <Text style={styles.infoValue}>Hapur per te gjithe studentet</Text>
                   </View>
                 </View>
               </>
             )}
-
           </View>
         </View>
 
-        {/* ── Description ───────────────────────────────────────────────── */}
         <View style={styles.descPad}>
-          <Text style={styles.descTitle}>Përshkrimi</Text>
+          <Text style={styles.descTitle}>Pershkrimi</Text>
           <View style={styles.descCard}>
             <Text style={styles.descText}>{item.fullDesc}</Text>
-            {item.criteria.length > 0 && (
+            {!!item.materials?.length && (
               <>
-                <Text style={styles.criteriaTitle}>
-                  {isThirrje ? 'Kriteret e Aplikimit:' : 'Informacion:'}
-                </Text>
-                {item.criteria.map((c, i) => (
-                  <View key={i} style={styles.criteriaRow}>
+                <Text style={styles.criteriaTitle}>Materiale te lidhura</Text>
+                {item.materials.map((material) => (
+                  <View key={material.id} style={styles.criteriaRow}>
                     <View style={styles.criteriaDot} />
-                    <Text style={styles.criteriaText}>{c}</Text>
+                    <Text style={styles.criteriaText}>{material.title}</Text>
                   </View>
                 ))}
               </>
@@ -148,33 +233,43 @@ export default function StartupItemProfileScreen({ item, onBack, bottomInset }: 
           </View>
         </View>
 
-        {/* ── Apply button — only for thirrje category ──────────────────── */}
         {isThirrje && (
           <View style={styles.applyPad}>
             <TouchableOpacity
               style={[styles.applyBtn, applied && styles.applyBtnDone]}
               activeOpacity={0.88}
-              onPress={() => !applied && setApplied(true)}
+              onPress={handlePrimaryAction}
             >
               <CheckCircle size={20} color="#fff" strokeWidth={2.5} />
               <Text style={styles.applyBtnText}>
-                {applied ? 'Aplikimi u Dërgua!' : item.actionText}
+                {applied ? 'Aplikimi u Hap!' : item.actionText}
               </Text>
             </TouchableOpacity>
           </View>
         )}
-
       </ScrollView>
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: Colors.surfaceBg },
+  root: { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll: { flex: 1 },
+  centered: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xxl, gap: 16 },
+  errorText: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.lg,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    backgroundColor: '#10b981',
+    borderRadius: Radius.xl,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  retryBtnText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
-  // Overlay header
   overlayHeader: {
     position: 'absolute', left: Spacing.lg, right: Spacing.lg, zIndex: 20,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -188,7 +283,6 @@ const styles = StyleSheet.create({
   },
   overlayRight: { flexDirection: 'row', gap: 8 },
 
-  // Hero
   hero: { height: 280 },
   heroImage: { width: '100%', height: '100%' },
   heroOverlay: {
@@ -196,7 +290,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.22)',
   },
 
-  // Main info
   mainInfo: {
     backgroundColor: Colors.white, paddingHorizontal: Spacing.xxl,
     paddingTop: Spacing.xl, paddingBottom: Spacing.xl,
@@ -223,7 +316,6 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary, lineHeight: 30,
   },
 
-  // Info box
   infoBoxPad: { paddingHorizontal: Spacing.xxl, marginBottom: Spacing.lg },
   infoBox: {
     backgroundColor: Colors.white, borderRadius: Radius.xxl + 4,
@@ -231,7 +323,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 }, elevation: 1,
   },
-  infoRow:  { flexDirection: 'row', alignItems: 'center', gap: Spacing.lg },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.lg },
   infoIcon: { width: 42, height: 42, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
   infoLabel: {
     fontFamily: Typography.fontBold, fontSize: Typography.xs,
@@ -242,7 +334,6 @@ const styles = StyleSheet.create({
   },
   divider: { height: 1, backgroundColor: Colors.borderLight, marginVertical: Spacing.lg },
 
-  // Description
   descPad: { paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.xxl },
   descTitle: {
     fontFamily: Typography.fontExtraBold, fontSize: Typography.xl,
@@ -262,7 +353,7 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontBold, fontSize: Typography.lg,
     color: Colors.textPrimary, marginBottom: Spacing.md,
   },
-  criteriaRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
+  criteriaRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
   criteriaDot: {
     width: 6, height: 6, borderRadius: 3,
     backgroundColor: '#10b981', marginTop: 7, flexShrink: 0,
@@ -272,7 +363,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary, lineHeight: 22, flex: 1,
   },
 
-  // Apply button (thirrje only)
   applyPad: { paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.xxl },
   applyBtn: {
     backgroundColor: '#10b981', borderRadius: Radius.xxl,

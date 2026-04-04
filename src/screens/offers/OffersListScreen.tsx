@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  Image, TextInput, ActivityIndicator, StyleSheet,
+  Image, TextInput, ActivityIndicator, StyleSheet, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Search, Heart, ArrowDownUp } from 'lucide-react-native';
@@ -9,7 +9,7 @@ import { ChevronLeft, Search, Heart, ArrowDownUp } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
-import { fetchOffers } from '../../services/api';
+import { fetchOffers, recommendBusiness } from '../../services/api';
 import { apiBizToBusiness } from '../../services/mappers';
 
 interface Props {
@@ -23,6 +23,7 @@ interface Props {
 export default function OffersListScreen({ title, catSlug, onBack, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
+  const [voteOverrides, setVoteOverrides] = useState<Record<string, { votes: number; recommended: boolean }>>({});
 
   const { data, loading } = useFetch(
     () => fetchOffers(catSlug ? { category: catSlug } : undefined),
@@ -30,8 +31,11 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
   );
 
   const allBiz: Business[] = useMemo(() =>
-    (data as any)?.items?.map(apiBizToBusiness) ?? [],
-    [data],
+    ((data as any)?.items?.map(apiBizToBusiness) ?? []).map((biz: Business) => {
+      const override = voteOverrides[biz.id];
+      return override ? { ...biz, votes: override.votes, has_recommended: override.recommended } : biz;
+    }),
+    [data, voteOverrides],
   );
 
   const filtered = useMemo(() => {
@@ -45,6 +49,36 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
       : allBiz;
     return [...list].sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0));
   }, [allBiz, search]);
+
+  async function handleToggleRecommend(biz: Business) {
+    const current = voteOverrides[biz.id] ?? {
+      votes: biz.votes ?? 0,
+      recommended: biz.has_recommended ?? false,
+    };
+    const wasRecommended = current.recommended;
+
+    setVoteOverrides(prev => ({
+      ...prev,
+      [biz.id]: {
+        votes: Math.max(0, current.votes + (wasRecommended ? -1 : 1)),
+        recommended: !wasRecommended,
+      },
+    }));
+
+    try {
+      const res = await recommendBusiness(biz.id);
+      setVoteOverrides(prev => ({
+        ...prev,
+        [biz.id]: { votes: res.votes, recommended: res.recommended },
+      }));
+    } catch {
+      setVoteOverrides(prev => ({
+        ...prev,
+        [biz.id]: current,
+      }));
+      Alert.alert('Gabim', 'Nuk mund të regjistrohet rekomandimi. Provo përsëri.');
+    }
+  }
 
   return (
     <View style={styles.root}>
@@ -108,8 +142,19 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
                 <View style={[styles.badge, { backgroundColor: biz.badgeColor }]}>
                   <Text style={styles.badgeText}>{biz.discount}</Text>
                 </View>
-                <TouchableOpacity style={styles.heartBtn}>
-                  <Heart size={18} color={Colors.textSecondary} strokeWidth={2} />
+                <TouchableOpacity
+                  style={[styles.heartBtn, biz.has_recommended && styles.heartBtnActive]}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    handleToggleRecommend(biz);
+                  }}
+                >
+                  <Heart
+                    size={18}
+                    color={biz.has_recommended ? '#ef4444' : Colors.textSecondary}
+                    fill={biz.has_recommended ? '#ef4444' : 'none'}
+                    strokeWidth={2}
+                  />
                 </TouchableOpacity>
                 <View style={styles.timeChip}>
                   <Text style={styles.timeText}>{biz.time}</Text>
@@ -214,6 +259,11 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.90)',
     justifyContent: 'center', alignItems: 'center',
+  },
+  heartBtnActive: {
+    backgroundColor: 'rgba(255,255,255,0.98)',
+    borderWidth: 1,
+    borderColor: '#fecdd3',
   },
   timeChip: {
     position: 'absolute', bottom: 12, right: 12,

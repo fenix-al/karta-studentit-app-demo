@@ -8,7 +8,7 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { SK_API, JWT_ENDPOINT } from '../constants/config';
-import { ProfileApplicationApiItem, ProfileCourseApiItem, ProfileHistoryApiItem, StudentCard } from '../types';
+import { NotificationApiItem, ProfileApplicationApiItem, ProfileCourseApiItem, ProfileHistoryApiItem, StudentCard } from '../types';
 
 export const TOKEN_KEY = 'sk_jwt_token';
 
@@ -118,14 +118,16 @@ export async function fetchMe(): Promise<StudentCard> {
 
 // ── Points ────────────────────────────────────────────────────────────────────
 
+export interface PointsTransaction {
+  points:        number;
+  business_name: string;
+  date:          string;
+  type:          'earn' | 'spend';
+}
+
 export interface PointsResponse {
-  total:   number;
-  entries: Array<{
-    id:            number;
-    business_name: string;
-    points_earned: number;
-    created_at:    string;
-  }>;
+  balance:      number;
+  transactions: PointsTransaction[];
 }
 
 export async function fetchPoints(): Promise<PointsResponse> {
@@ -134,8 +136,60 @@ export async function fetchPoints(): Promise<PointsResponse> {
 
 // ── Loyalty ───────────────────────────────────────────────────────────────────
 
-export async function fetchLoyalty() {
-  return apiFetch('/loyalty');
+export interface LoyaltyApiReward {
+  uid:        string;
+  title:      string;
+  threshold:  number;
+  one_time:   boolean;
+  unlocked:   boolean;
+  redeemed:   boolean;
+  progress:   number;
+}
+
+export interface LoyaltyApiBusiness {
+  business_post_id: number;
+  business_name:    string;
+  logo:             string | null;
+  scan_count:       number;
+  rewards:          LoyaltyApiReward[];
+}
+
+export async function fetchLoyalty(): Promise<LoyaltyApiBusiness[]> {
+  return apiFetch<LoyaltyApiBusiness[]>('/loyalty');
+}
+
+export async function redeemLoyaltyReward(
+  businessPostId: number,
+  rewardUid: string,
+): Promise<{ success: boolean; msg: string }> {
+  return apiFetch('/loyalty/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ business_post_id: businessPostId, reward_uid: rewardUid }),
+  });
+}
+
+export interface RaffleApiItem {
+  id:          number;
+  title:       string;
+  excerpt:     string;
+  image:       string | null;
+  points_cost: number;
+  end_date:    string | null;
+  has_entered: boolean;
+  can_afford:  boolean;
+}
+
+export async function fetchRaffles(): Promise<RaffleApiItem[]> {
+  return apiFetch<RaffleApiItem[]>('/raffles');
+}
+
+export async function enterRaffle(
+  raffleId: number,
+): Promise<{ success: boolean; msg: string; new_balance: number }> {
+  return apiFetch('/raffles/enter', {
+    method: 'POST',
+    body: JSON.stringify({ raffle_id: raffleId }),
+  });
 }
 
 // ── Offers / Businesses ───────────────────────────────────────────────────────
@@ -174,12 +228,25 @@ export async function fetchBusinessCategories(): Promise<Array<{ id: number; slu
 // ── Kurset (Courses) ──────────────────────────────────────────────────────────
 
 export async function fetchKurset(params?: { category?: string; search?: string }) {
-  const qs = new URLSearchParams(params as Record<string, string>).toString();
-  return publicFetch(`/kurset${qs ? `?${qs}` : ''}`);
+  const qs = new URLSearchParams(
+    Object.fromEntries(Object.entries(params ?? {}).filter(([, v]) => v != null && v !== '')) as Record<string, string>
+  ).toString();
+  return apiFetch(`/kurset${qs ? `?${qs}` : ''}`);
 }
 
 export async function fetchKurs(id: number) {
-  return publicFetch(`/kurset/${id}`);
+  return apiFetch(`/kurset/${id}`);
+}
+
+export async function fetchKursCategories(): Promise<Array<{ id: number; slug: string; name: string; count: number }>> {
+  return publicFetch('/kurs-categories');
+}
+
+export async function enrollCourse(courseId: number): Promise<{ success: boolean; msg: string }> {
+  return apiFetch('/kurset/enroll', {
+    method: 'POST',
+    body: JSON.stringify({ course_id: courseId }),
+  });
 }
 
 // ── KVR ───────────────────────────────────────────────────────────────────────
@@ -195,6 +262,10 @@ export async function fetchKvrSingle(id: number) {
 
 // ── ACT4Shkodra ───────────────────────────────────────────────────────────────
 
+export async function fetchKvrCategories(): Promise<Array<{ id: number; slug: string; name: string; count: number }>> {
+  return publicFetch('/kvr-categories');
+}
+
 export async function fetchAct4(params?: { category?: string }) {
   const qs = new URLSearchParams(params as Record<string, string>).toString();
   return publicFetch(`/act4${qs ? `?${qs}` : ''}`);
@@ -204,21 +275,35 @@ export async function fetchAct4Single(id: number) {
   return publicFetch(`/act4/${id}`);
 }
 
-export async function volunteerAct4(activityId: number): Promise<{ success: boolean; message: string }> {
+export async function volunteerAct4(
+  activityId: number,
+  interests?: string,
+): Promise<{ success: boolean; msg: string }> {
   return apiFetch('/act4/volunteer', {
     method: 'POST',
-    body: JSON.stringify({ activity_id: activityId }),
+    body: JSON.stringify({
+      activity_id: activityId,
+      interests: interests ?? '',
+    }),
   });
 }
 
 // ── Jobs ──────────────────────────────────────────────────────────────────────
 
-export async function fetchJobs(params?: { category?: string; search?: string }) {
+export async function fetchJobs(params?: { type?: string; search?: string }) {
   const qs = new URLSearchParams(params as Record<string, string>).toString();
-  return publicFetch(`/opportunities${qs ? `?${qs}` : ''}`);
+  return apiFetch(`/opportunities${qs ? `?${qs}` : ''}`);
 }
 
-export async function applyJob(jobId: number): Promise<{ success: boolean; message: string }> {
+export async function fetchJobCategories(): Promise<Array<{ id: number; slug: string; name: string; count: number }>> {
+  return publicFetch('/opportunity-categories');
+}
+
+export async function fetchJob(id: number) {
+  return apiFetch(`/opportunities/${id}`);
+}
+
+export async function applyJob(jobId: number): Promise<{ success: boolean; msg: string }> {
   return apiFetch('/opportunities/apply', {
     method: 'POST',
     body: JSON.stringify({ job_id: jobId }),
@@ -227,8 +312,28 @@ export async function applyJob(jobId: number): Promise<{ success: boolean; messa
 
 // ── Startups ──────────────────────────────────────────────────────────────────
 
-export async function fetchStartups() {
-  return publicFetch('/startup');
+export async function fetchStartups(params?: { type?: string }) {
+  const qs = new URLSearchParams(params as Record<string, string>).toString();
+  return publicFetch(`/startup${qs ? `?${qs}` : ''}`);
+}
+
+export async function fetchStartupSingle(id: number) {
+  return publicFetch(`/startup/${id}`);
+}
+
+export async function submitStartupIdea(
+  ideaTitle: string,
+  ideaDesc: string,
+  helpNeeded: string,
+): Promise<{ success: boolean; msg: string }> {
+  return apiFetch('/startup/idea', {
+    method: 'POST',
+    body: JSON.stringify({
+      idea_title: ideaTitle,
+      idea_desc: ideaDesc,
+      help_needed: helpNeeded,
+    }),
+  });
 }
 
 // ── Me: history, applications, suggestion ─────────────────────────────────────
@@ -243,6 +348,59 @@ export async function fetchMyApplications(): Promise<ProfileApplicationApiItem[]
 
 export async function fetchMyCourses(): Promise<ProfileCourseApiItem[]> {
   return apiFetch<ProfileCourseApiItem[]>('/me/courses');
+}
+
+export async function fetchMyNotifications(): Promise<{ items: NotificationApiItem[]; unread_count: number }> {
+  return apiFetch<{ items: NotificationApiItem[]; unread_count: number }>('/me/notifications');
+}
+
+export async function markNotificationRead(notificationId: number): Promise<{ success: boolean }> {
+  return apiFetch('/me/notifications/read', {
+    method: 'POST',
+    body: JSON.stringify({ notification_id: notificationId }),
+  });
+}
+
+export async function markAllNotificationsRead(): Promise<{ success: boolean }> {
+  return apiFetch('/me/notifications/read-all', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function deleteNotification(notificationId: number): Promise<{ success: boolean }> {
+  return apiFetch('/me/notifications/delete', {
+    method: 'POST',
+    body: JSON.stringify({ notification_id: notificationId }),
+  });
+}
+
+export async function registerPushToken(
+  pushToken: string,
+  deviceId: string,
+  platform: string,
+): Promise<{ success: boolean }> {
+  return apiFetch('/me/push-token', {
+    method: 'POST',
+    body: JSON.stringify({
+      push_token: pushToken,
+      device_id: deviceId,
+      platform,
+    }),
+  });
+}
+
+export async function removePushToken(
+  deviceId: string,
+  pushToken?: string,
+): Promise<{ success: boolean }> {
+  return apiFetch('/me/push-token/remove', {
+    method: 'POST',
+    body: JSON.stringify({
+      device_id: deviceId,
+      push_token: pushToken ?? '',
+    }),
+  });
 }
 
 export async function postSuggestion(

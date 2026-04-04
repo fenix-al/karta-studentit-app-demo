@@ -1,28 +1,46 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import KVRHubScreen from './KVRHubScreen';
 import KVRListScreen from './KVRListScreen';
 import KVRProfileScreen from './KVRProfileScreen';
-import { KvrActivity } from '../../types';
 
 type Screen =
   | { name: 'hub' }
   | { name: 'list'; title: string; catId: string }
-  | { name: 'profile'; activity: KvrActivity };
+  | { name: 'profile'; activityId: string };
 
 interface Props {
-  onExit:      () => void;
+  onExit: () => void;
   bottomInset: number;
+  initialList?: { title: string; catId: string };
+  initialActivityId?: string;
 }
 
-export default function KVRNavigator({ onExit, bottomInset }: Props) {
+export default function KVRNavigator({ onExit, bottomInset, initialList, initialActivityId }: Props) {
   const [stack, setStack] = useState<Screen[]>([{ name: 'hub' }]);
 
+  useEffect(() => {
+    if (initialActivityId) {
+      setStack([{ name: 'hub' }, { name: 'profile', activityId: initialActivityId }]);
+      return;
+    }
+
+    if (initialList) {
+      setStack([{ name: 'hub' }, { name: 'list', title: initialList.title, catId: initialList.catId }]);
+      return;
+    }
+
+    setStack([{ name: 'hub' }]);
+  }, [initialActivityId, initialList]);
+
   const current = stack[stack.length - 1];
-  const push = (screen: Screen) => setStack(prev => [...prev, screen]);
-  const pop  = () => {
-    if (stack.length <= 1) { onExit(); return; }
-    setStack(prev => prev.slice(0, -1));
+  const push = (screen: Screen) => setStack((prev) => [...prev, screen]);
+  const pop = () => {
+    if (stack.length <= 1) {
+      onExit();
+      return;
+    }
+    setStack((prev) => prev.slice(0, -1));
   };
 
   return (
@@ -31,7 +49,7 @@ export default function KVRNavigator({ onExit, bottomInset }: Props) {
         <KVRHubScreen
           onBack={onExit}
           onList={(title, catId) => push({ name: 'list', title, catId })}
-          onProfile={activity => push({ name: 'profile', activity })}
+          onProfile={(activityId) => push({ name: 'profile', activityId })}
           bottomInset={bottomInset}
         />
       )}
@@ -40,13 +58,13 @@ export default function KVRNavigator({ onExit, bottomInset }: Props) {
           title={current.title}
           initialCatId={current.catId}
           onBack={pop}
-          onProfile={activity => push({ name: 'profile', activity })}
+          onProfile={(activityId) => push({ name: 'profile', activityId })}
           bottomInset={bottomInset}
         />
       )}
       {current.name === 'profile' && (
         <KVRProfileScreen
-          activity={current.activity}
+          activityId={current.activityId}
           onBack={pop}
           bottomInset={bottomInset}
         />

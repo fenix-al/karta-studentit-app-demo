@@ -71,7 +71,7 @@ export function kursToCard(k: any): CardItem {
     img:           k.image || PLACEHOLDER,
     meta:          [k.start_date, k.location, k.total_spots ? `${k.total_spots} vende` : ''].filter(Boolean).join(' · '),
     fullDesc:      k.excerpt || '',
-    actionText:    'Regjistrohu',
+    actionText:    k.is_enrolled ? 'Jeni regjistruar tashme' : 'Regjistrohu',
     actionIconName:'GraduationCap',
     btnGradient:   ['#0891b2', '#0e7490'] as [string, string],
   };
@@ -88,7 +88,7 @@ export function opportunityToCard(o: any): CardItem {
     img:           o.image || PLACEHOLDER,
     meta:          metaParts.length ? metaParts.join(' · ') : (o.date || ''),
     fullDesc:      o.excerpt || '',
-    actionText:    'Apliko Tani',
+    actionText:    o.is_applied ? 'Keni aplikuar tashme' : 'Apliko Tani',
     actionIconName:'Briefcase',
     btnGradient:   ['#0d9488', '#0f766e'] as [string, string],
   };

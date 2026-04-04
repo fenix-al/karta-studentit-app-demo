@@ -1,29 +1,61 @@
 import React from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Search } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { StartupItem } from '../../types';
-import { STARTUP_ITEMS } from '../../data/mockData';
+import { useFetch } from '../../hooks/useFetch';
+import { fetchStartups } from '../../services/api';
 import { StartupCard } from './StartupHubScreen';
 
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800';
+
+function apiToStartupItem(s: any): StartupItem {
+  const isCall = !!s.is_call;
+  return {
+    id: String(s.id),
+    title: s.title ?? '',
+    type: s.type_label ?? 'Startup',
+    category: isCall ? 'thirrje' : 'udhezues',
+    badgeBg: isCall ? '#fdf4ff' : '#eff6ff',
+    badgeText: isCall ? '#7e22ce' : '#1d4ed8',
+    badgeBorder: isCall ? '#e9d5ff' : '#bfdbfe',
+    date: s.deadline || s.date || '',
+    img: s.image || PLACEHOLDER,
+    desc: s.excerpt ?? '',
+    fullDesc: s.excerpt ?? '',
+    criteria: [],
+    actionText: isCall ? 'Apliko Tani' : 'Shiko Detajet',
+    content: s.content ?? '',
+    isCall,
+    applyLink: s.apply_link ?? null,
+    materials: (s.materials ?? []).map((material: any) => ({
+      id: String(material.id),
+      title: material.title ?? '',
+      desc: material.excerpt ?? '',
+    })),
+  };
+}
+
 interface Props {
-  title:       string;
-  onBack:      () => void;
-  onProfile:   (item: StartupItem) => void;
+  title: string;
+  initialType?: 'thirrje' | 'udhezues';
+  onBack: () => void;
+  onProfile: (itemId: string) => void;
   bottomInset: number;
 }
 
-export default function StartupListScreen({ title, onBack, onProfile, bottomInset }: Props) {
+export default function StartupListScreen({ title, initialType, onBack, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
+  const { data, loading, error, reload } = useFetch(() => fetchStartups(initialType ? { type: initialType === 'thirrje' ? 'thirrje-te-hapura' : 'udhezues-materiale' } as any : undefined) as Promise<any>, [initialType]);
+
+  const items: StartupItem[] = (data?.items ?? []).map(apiToStartupItem);
 
   return (
     <View style={styles.root}>
-
-      {/* ── Header ──────────────────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.75}>
@@ -33,27 +65,39 @@ export default function StartupListScreen({ title, onBack, onProfile, bottomInse
         </View>
         <View style={styles.searchBar}>
           <Search size={15} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.searchPlaceholder}>Kërko në listë...</Text>
+          <Text style={styles.searchPlaceholder}>Kerko ne liste...</Text>
         </View>
       </View>
 
-      {/* ── Startup list ─────────────────────────────────────────────────── */}
-      <FlatList
-        data={STARTUP_ITEMS}
-        keyExtractor={i => i.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.list, { paddingBottom: bottomInset + 24 }]}
-        renderItem={({ item }) => (
-          <StartupCard item={item} onPress={() => onProfile(item)} />
-        )}
-      />
-
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#10b981" />
+        </View>
+      ) : error ? (
+        <View style={styles.centered}>
+          <Text style={styles.emptyText}>Ngarkimi deshtoi. Provo perseri.</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={reload} activeOpacity={0.8}>
+            <Text style={styles.retryText}>Provo perseri</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(i) => i.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.list, { paddingBottom: bottomInset + 24 }]}
+          renderItem={({ item }) => (
+            <StartupCard item={item} onPress={() => onProfile(item.id)} />
+          )}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xxl, gap: 12 },
 
   header: {
     backgroundColor: Colors.white,
@@ -86,4 +130,13 @@ const styles = StyleSheet.create({
   },
 
   list: { padding: Spacing.xxl, gap: 20 },
+  emptyText: { fontFamily: Typography.fontMedium, fontSize: Typography.md, color: Colors.textMuted, textAlign: 'center' },
+  retryBtn: {
+    marginTop: 12,
+    backgroundColor: '#10b981',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: Radius.full,
+  },
+  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 });
