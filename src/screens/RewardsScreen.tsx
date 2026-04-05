@@ -14,7 +14,7 @@ import ScreenState from '../components/ScreenState';
 interface Props {
   bottomInset: number;
   onBack?: () => void;
-  onOpenLiveRaffle?: () => void;
+  onOpenLiveRaffle?: (sessionId: number) => void;
   initialRaffleId?: number;
   initialRewardTarget?: { businessPostId: number; rewardUid: string };
   onConsumeInitialSelection?: () => void;
@@ -158,7 +158,7 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
               <>
                 <Section title="Shorti Live" meta={currentLiveSession.status.toUpperCase()} />
                 <SectionPad>
-                  <TouchableOpacity style={s.liveCard} activeOpacity={0.92} onPress={onOpenLiveRaffle}>
+                  <TouchableOpacity style={s.liveCard} activeOpacity={0.92} onPress={() => onOpenLiveRaffle?.(currentLiveSession.id)}>
                     <LinearGradient colors={['#082f49', '#0f172a']} style={s.liveGradient}>
                       <View style={s.liveBadge}>
                         <Radio size={12} color="#38bdf8" />

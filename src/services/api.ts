@@ -10,8 +10,7 @@ import { Platform } from 'react-native';
 import { SK_API, JWT_ENDPOINT } from '../constants/config';
 import {
   LiveRaffleCurrentApiResponse,
-  LiveRaffleEventsApiResponse,
-  LiveRaffleStateApiResponse,
+  LiveRaffleLaunchUrlResponse,
   NotificationApiItem,
   ProfileAct4HistoryApiItem,
   ProfileApplicationApiItem,
@@ -278,38 +277,8 @@ export async function fetchCurrentLiveRaffle(): Promise<LiveRaffleCurrentApiResp
   return apiFetch<LiveRaffleCurrentApiResponse>('/live-raffles/current');
 }
 
-export async function fetchLiveRaffleState(sessionId: number): Promise<LiveRaffleStateApiResponse> {
-  return apiFetch<LiveRaffleStateApiResponse>(`/live-raffles/${sessionId}/state`);
-}
-
-export async function fetchLiveRaffleEvents(
-  sessionId: number,
-  limit = 30,
-): Promise<LiveRaffleEventsApiResponse> {
-  return apiFetch<LiveRaffleEventsApiResponse>(`/live-raffles/${sessionId}/events?limit=${limit}`);
-}
-
-export async function joinLiveRaffle(
-  sessionId: number,
-): Promise<{ success: boolean }> {
-  return apiFetch(`/live-raffles/${sessionId}/join`, {
-    method: 'POST',
-    body: JSON.stringify({}),
-  });
-}
-
-export async function pickLiveRaffleBox(
-  sessionId: number,
-  roundNo: number,
-  boxNumber: number,
-): Promise<{ success: boolean; round_no: number; box_number: number; picked_at: string }> {
-  return apiFetch(`/live-raffles/${sessionId}/pick`, {
-    method: 'POST',
-    body: JSON.stringify({
-      round_no: roundNo,
-      box_number: boxNumber,
-    }),
-  });
+export async function fetchLiveRaffleLaunchUrl(sessionId: number): Promise<LiveRaffleLaunchUrlResponse> {
+  return apiFetch<LiveRaffleLaunchUrlResponse>(`/live-raffles/player-launch-url?session_id=${sessionId}`);
 }
 
 export async function fetchOffers(params?: {

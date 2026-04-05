@@ -233,44 +233,15 @@ export interface LiveRaffleCurrentApiResponse {
   session: LiveRaffleSessionApiItem | null;
 }
 
-export interface LiveRaffleStateCurrentUser {
-  is_joined:         boolean;
-  is_active:         boolean;
-  eliminated_reason: string;
-  display_name:      string;
-  last_seen_at:      string | null;
-  pick_submitted:    boolean;
-  picked_box:        number | null;
-  pick_is_correct:   boolean | null;
+export interface LiveRaffleLaunchUrlResponse {
+  ok:         boolean;
+  can_join:   boolean;
+  session_id: number;
+  stage:      string;
+  launch_url?: string;
+  message?:   string;
 }
 
-export interface LiveRaffleStateApiResponse {
-  session: LiveRaffleSessionApiItem;
-  state: {
-    round_no:        number;
-    boxes_count:     number;
-    winning_box:     number | null;
-    players_total:   number;
-    players_active:  number;
-    players_online:  number;
-    picked_count:    number;
-    remaining_count: number;
-    current_user:    LiveRaffleStateCurrentUser | null;
-    server_time:     string;
-  };
-}
-
-export interface LiveRaffleEventApiItem {
-  id:         number;
-  event_type: string;
-  payload:    Record<string, unknown> | null;
-  created_at: string;
-}
-
-export interface LiveRaffleEventsApiResponse {
-  session: LiveRaffleSessionApiItem;
-  items:   LiveRaffleEventApiItem[];
-}
 
 export interface ProfileLoyaltyRedemptionApiItem {
   redemption_id:    number;

@@ -27,7 +27,7 @@ import { Colors, Typography, Spacing, Radius, Gradients } from '../constants/The
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES } from '../data/mockData';
 import { useFetch } from '../hooks/useFetch';
-import { fetchOffers, fetchKurset, fetchJobs, fetchStartups, fetchAct4, fetchKvr, recommendBusiness } from '../services/api';
+import { fetchOffers, fetchKurset, fetchJobs, fetchStartups, fetchAct4, fetchKvr, recommendBusiness, fetchLiveRaffleLaunchUrl } from '../services/api';
 import { apiBizToBusiness, kursToCard, opportunityToCard, startupToCard, act4ToCard, kvrToCard } from '../services/mappers';
 import { AppNotification, Business, CardItem, Category, CourseItem, JobItem } from '../types';
 import StoryModal from '../components/StoryModal';
@@ -41,7 +41,7 @@ import ActNavigator from './act4/ActNavigator';
 import KVRNavigator from './kvr/KVRNavigator';
 import DigitalCardModal from '../components/DigitalCardModal';
 import RewardsScreen from './RewardsScreen';
-import LiveRaffleScreen from './LiveRaffleScreen';
+import LiveRaffleWebViewScreen from './LiveRaffleWebViewScreen';
 import ProfileScreen from './ProfileScreen';
 import NotificationsScreen from './NotificationsScreen';
 import SettingsScreen from './SettingsScreen';
@@ -203,6 +203,8 @@ export default function HomeScreen() {
   const [kvrInitialList, setKvrInitialList] = useState<{ title: string; catId: string } | undefined>(undefined);
   const [kvrInitialArticleId, setKvrInitialArticleId] = useState<string | undefined>(undefined);
   const [act4InitialActivityId, setAct4InitialActivityId] = useState<string | undefined>(undefined);
+  const [liveRaffleWebViewUrl, setLiveRaffleWebViewUrl] = useState<string | undefined>(undefined);
+  const [liveRaffleLaunching, setLiveRaffleLaunching] = useState(false);
 
   const handleFindNearMe = async () => {
     if (userCoords) {
@@ -1149,19 +1151,36 @@ export default function HomeScreen() {
             resetRewardsRoute();
             exitTab('dhurata');
           }}
-          onOpenLiveRaffle={() => goToTab('shortiLive', 'dhurata')}
+          onOpenLiveRaffle={async (sessionId) => {
+            if (liveRaffleLaunching) return;
+            setLiveRaffleLaunching(true);
+            try {
+              const result = await fetchLiveRaffleLaunchUrl(sessionId);
+              if (result.ok && result.launch_url) {
+                setLiveRaffleWebViewUrl(result.launch_url);
+                goToTab('shortiLive', 'dhurata');
+              } else {
+                Alert.alert('Live Raffle', result.message || 'Nuk mund të hysh në këtë sesion.');
+              }
+            } catch (e: any) {
+              Alert.alert('Gabim', e?.message || 'Nuk u lidh me serverin.');
+            } finally {
+              setLiveRaffleLaunching(false);
+            }
+          }}
           initialRaffleId={rewardsInitialRaffleId}
           initialRewardTarget={rewardsInitialRewardTarget}
           onConsumeInitialSelection={resetRewardsRoute}
         />
       )}
 
-      {activeTab === 'shortiLive' && (
-        <LiveRaffleScreen
-          bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
+      {activeTab === 'shortiLive' && liveRaffleWebViewUrl ? (
+        <LiveRaffleWebViewScreen
+          url={liveRaffleWebViewUrl}
+          title="Live Raffle"
           onBack={() => exitTab('shortiLive')}
         />
-      )}
+      ) : null}
 
       {activeTab === 'profil' && (
         <ProfileScreen
