@@ -18,7 +18,7 @@ import { Colors }   from './src/constants/Theme';
 
 // ── Inner component — consumes AuthContext (must be inside AuthProvider) ──────
 function AppNavigator() {
-  const { isLoading, isLoggedIn, onLoginSuccess } = useAuth();
+  const { isLoading, isLoggedIn, onLoginSuccess, authNotice } = useAuth();
 
   if (isLoading) {
     return (
@@ -29,7 +29,7 @@ function AppNavigator() {
   }
 
   if (!isLoggedIn) {
-    return <LoginScreen onSuccess={onLoginSuccess} />;
+    return <LoginScreen onSuccess={onLoginSuccess} notice={authNotice} />;
   }
 
   return <HomeScreen />;

@@ -10,6 +10,7 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { ActActivity, ActCategory } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchAct4 } from '../../services/api';
+import ScreenState from '../../components/ScreenState';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800';
 
@@ -110,14 +111,23 @@ export default function ActListScreen({ title, initialCatId, onBack, onProfile, 
         </View>
       ) : error ? (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>Ngarkimi deshtoi. Provo perseri.</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={reload} activeOpacity={0.8}>
-            <Text style={styles.retryText}>Provo perseri</Text>
-          </TouchableOpacity>
+          <ScreenState
+            icon="error"
+            title="Gabim ne ngarkim"
+            message="Aktivitetet nuk u ngarkuan dot."
+            actionLabel="Provo perseri"
+            onAction={reload}
+          />
         </View>
       ) : filtered.length === 0 ? (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>Nuk ka aktivitete per kete kategori aktualisht.</Text>
+          <ScreenState
+            icon="empty"
+            title="Nuk ka aktivitete"
+            message="Nuk ka aktivitete per kete kategori aktualisht."
+            actionLabel="Kthehu ne Home"
+            onAction={onBack}
+          />
         </View>
       ) : (
         <FlatList

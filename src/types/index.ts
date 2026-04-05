@@ -184,6 +184,103 @@ export interface ProfileCourseApiItem {
   start_date?: string;
 }
 
+export interface ProfileStartupIdeaApiItem {
+  idea_id:      number;
+  title:        string;
+  description:  string;
+  help_needed:  string;
+  status:       string;
+  created_at:   string;
+}
+
+export interface ProfileAct4HistoryApiItem {
+  id:          string;
+  activity_id: number;
+  title:       string;
+  status:      'registered' | 'attended' | string;
+  date:        string;
+}
+
+export interface ProfileRaffleEntryApiItem {
+  entry_id:    number;
+  raffle_id:   number;
+  title:       string;
+  points_cost: number;
+  status:      'active' | 'closed' | string;
+  entry_date:  string;
+  end_date?:   string | null;
+}
+
+export interface LiveRaffleSessionApiItem {
+  id:                  number;
+  raffle_id:           number;
+  raffle_title:        string;
+  raffle_excerpt:      string;
+  raffle_image:        string | null;
+  status:              'scheduled' | 'countdown' | 'live' | 'reveal' | 'finished' | 'cancelled' | string;
+  starts_at:           string | null;
+  countdown_starts_at: string | null;
+  reveal_at:           string | null;
+  finished_at:         string | null;
+  current_round:       number;
+  boxes_count:         number;
+  winning_box:         number;
+  created_at:          string;
+  updated_at:          string;
+}
+
+export interface LiveRaffleCurrentApiResponse {
+  session: LiveRaffleSessionApiItem | null;
+}
+
+export interface LiveRaffleStateCurrentUser {
+  is_joined:         boolean;
+  is_active:         boolean;
+  eliminated_reason: string;
+  display_name:      string;
+  last_seen_at:      string | null;
+  pick_submitted:    boolean;
+  picked_box:        number | null;
+  pick_is_correct:   boolean | null;
+}
+
+export interface LiveRaffleStateApiResponse {
+  session: LiveRaffleSessionApiItem;
+  state: {
+    round_no:        number;
+    boxes_count:     number;
+    winning_box:     number | null;
+    players_total:   number;
+    players_active:  number;
+    players_online:  number;
+    picked_count:    number;
+    remaining_count: number;
+    current_user:    LiveRaffleStateCurrentUser | null;
+    server_time:     string;
+  };
+}
+
+export interface LiveRaffleEventApiItem {
+  id:         number;
+  event_type: string;
+  payload:    Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface LiveRaffleEventsApiResponse {
+  session: LiveRaffleSessionApiItem;
+  items:   LiveRaffleEventApiItem[];
+}
+
+export interface ProfileLoyaltyRedemptionApiItem {
+  redemption_id:    number;
+  business_post_id: number;
+  business_name:    string;
+  reward_uid:       string;
+  reward_title:     string;
+  redeemed_at:      string;
+}
+
 // ── Offers module ─────────────────────────────────────────────────────────────
 export interface Business {
   id:              string;

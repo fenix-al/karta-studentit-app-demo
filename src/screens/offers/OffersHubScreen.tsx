@@ -1,17 +1,18 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, FlatList, TouchableOpacity,
   Image, ActivityIndicator, StyleSheet, TextInput, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Search, Clock, Heart } from 'lucide-react-native';
+import { ChevronLeft, Search, Heart } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchOffers, fetchBusinessCategories, recommendBusiness } from '../../services/api';
 import { apiBizToBusiness } from '../../services/mappers';
+import ScreenState from '../../components/ScreenState';
 
 interface Props {
   onBack:      () => void;
@@ -29,7 +30,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   const { data, loading, error, reload } = useFetch(() => fetchOffers());
   const { data: catData }               = useFetch(() => fetchBusinessCategories());
 
-  // API already returns sorted by scan_count DESC — no client re-sort needed
+  // API already returns sorted by scan_count DESC; no client re-sort needed
   const rawItems: any[] = (data as any)?.items || [];
   const allBiz: Business[] = rawItems.map(apiBizToBusiness).map((biz: Business) => {
     const override = voteOverrides[biz.id];
@@ -39,6 +40,11 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   const topRated = [...allBiz]
     .filter(biz => (biz.votes ?? 0) > 0)
     .sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0))
+    .slice(0, 10);
+
+  const mostUsed = [...allBiz]
+    .filter((biz) => (biz.scans ?? 0) > 0)
+    .sort((a, b) => (b.scans ?? 0) - (a.scans ?? 0))
     .slice(0, 10);
 
   const filteredBiz = useMemo(() => {
@@ -54,7 +60,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
     );
   }, [allBiz, search]);
 
-  // Priority: Private first, then Publike, then Other — no duplicates
+  // Priority: Private first, then Publike, then Other; no duplicates
   const isPrivate = (slugs: string[]) =>
     slugs.some(s => s === 'sherbime-private' || s.includes('-private'));
   const isPublic  = (slugs: string[]) =>
@@ -74,7 +80,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
     else                       otherBiz.push(biz);
   });
 
-  // Categories from WordPress — "Të gjitha" pill prepended
+  // Categories from WordPress; "Të gjitha" pill prepended
   const wpcats: Array<{ id: string; slug: string; name: string; icon?: string }> =
     Array.isArray(catData)
       ? [{ id: 'all', slug: 'all', name: 'Të gjitha' }, ...(catData as any[]).map(t => ({ id: t.slug, slug: t.slug, name: t.name }))]
@@ -84,6 +90,11 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   const bottomRow = wpcats.filter((_, i) => i % 2 === 1);
 
   const visibleTopRated = search.trim() ? filteredBiz : topRated;
+  const visibleMostUsed = search.trim()
+    ? filteredBiz
+        .filter((biz) => (biz.scans ?? 0) > 0)
+        .sort((a, b) => (b.scans ?? 0) - (a.scans ?? 0))
+    : mostUsed;
   const visiblePrivBiz = search.trim()
     ? filteredBiz.filter((biz) => privBiz.some((item) => item.id === biz.id))
     : privBiz;
@@ -127,7 +138,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   return (
     <View style={styles.root}>
 
-      {/* ── Fixed header ─────────────────────────────────────────────── */}
+      {/* Fixed header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.backBtn} onPress={onBack}>
@@ -158,7 +169,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
         contentContainerStyle={{ paddingBottom: bottomInset + 24 }}
       >
 
-        {/* ── 2-Row scrolling pill grid ─────────────────────────────── */}
+        {/* 2-row scrolling pill grid */}
         <View style={styles.pillsSection}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsOuter}>
             <View style={styles.pillsGrid}>
@@ -172,7 +183,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           </ScrollView>
         </View>
 
-        {/* ── Promo Banner ─────────────────────────────────────────── */}
+        {/* Promo banner */}
         <View style={styles.bannerWrap}>
           <TouchableOpacity activeOpacity={0.9} onPress={() => onList('Të gjitha bizneset')}>
             <LinearGradient
@@ -197,7 +208,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           </TouchableOpacity>
         </View>
 
-        {/* ── Loading ───────────────────────────────────────────────── */}
+        {/* Loading */}
         {loading && (
           <View style={styles.loadingWrap}>
             <ActivityIndicator size="large" color={Colors.textMuted} />
@@ -205,22 +216,23 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           </View>
         )}
 
-        {/* ── Error ─────────────────────────────────────────────────── */}
+        {/* Error */}
         {!loading && !!error && (
           <View style={styles.errorWrap}>
-            <Text style={styles.errorText}>
-              ⚠️ {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
-            </Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={reload}>
-              <Text style={styles.retryText}>Provo Përsëri</Text>
-            </TouchableOpacity>
+            <ScreenState
+              icon="error"
+              title="Gabim ne ngarkim"
+              message={typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+              actionLabel="Provo perseri"
+              onAction={reload}
+            />
           </View>
         )}
 
-        {/* ── Më të rekomanduara (top by real scan count) ───────────── */}
+        {/* Më të rekomanduara */}
         {!loading && visibleTopRated.length > 0 && (
           <HSection
-            title={search.trim() ? 'Rezultatet e kërkimit' : 'Më të rekomanduara 🔥'}
+            title={search.trim() ? 'Rezultatet e kërkimit' : 'Më të rekomanduara'}
             subtitle={search.trim() ? `${filteredBiz.length} biznese të gjetura` : (visibleTopRated[0]?.scans > 0 ? `Bazuar në ${visibleTopRated.reduce((s, b) => s + b.scans, 0)} skanime reale` : undefined)}
             data={visibleTopRated}
             onSeeAll={() => onList('Të gjitha bizneset')}
@@ -229,10 +241,20 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           />
         )}
 
-        {/* ── Biznese Private ───────────────────────────────────────── */}
+        {!loading && !search.trim() && visibleMostUsed.length > 0 && (
+          <HSection
+            title="Më të përdorurat"
+            data={visibleMostUsed}
+            onSeeAll={() => onList('Të gjitha bizneset')}
+            onCard={onProfile}
+            onToggleRecommend={handleToggleRecommend}
+          />
+        )}
+
+        {/* Biznese private */}
         {!loading && !search.trim() && visiblePrivBiz.length > 0 && (
           <HSection
-            title="Biznese Private 🏪"
+            title="Biznese Private"
             data={visiblePrivBiz}
             onSeeAll={() => onList('Biznese Private', 'sherbime-private')}
             onCard={onProfile}
@@ -240,10 +262,10 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           />
         )}
 
-        {/* ── Biznese Publike ───────────────────────────────────────── */}
+        {/* Biznese publike */}
         {!loading && !search.trim() && visiblePubBiz.length > 0 && (
           <HSection
-            title="Biznese Publike 🏛️"
+            title="Biznese Publike"
             data={visiblePubBiz}
             onSeeAll={() => onList('Biznese Publike', 'sherbime-publike')}
             onCard={onProfile}
@@ -251,7 +273,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           />
         )}
 
-        {/* ── Të tjera ──────────────────────────────────────────────── */}
+        {/* Të tjera */}
         {!loading && !search.trim() && visibleOtherBiz.length > 0 && (
           <HSection
             title="Partnerë të tjerë"
@@ -262,12 +284,16 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           />
         )}
 
-        {/* ── Empty state ───────────────────────────────────────────── */}
+        {/* Empty state */}
         {!loading && ((search.trim() && filteredBiz.length === 0) || (!search.trim() && allBiz.length === 0)) && !error && (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>
-              {search.trim() ? 'Nuk u gjet asnjë biznes për këtë kërkim.' : 'Nuk ka biznese për momentin.'}
-            </Text>
+            <ScreenState
+              icon={search.trim() ? 'search' : 'briefcase'}
+              title={search.trim() ? 'Nuk u gjet asgje' : 'Nuk ka biznese'}
+              message={search.trim() ? 'Provo nje kerkese tjeter ose hiqe filtrin aktual.' : 'Kur te shtohen partneret e rinj, do te shfaqen ketu.'}
+              actionLabel={search.trim() ? 'Kthehu ne Home' : undefined}
+              onAction={search.trim() ? onBack : undefined}
+            />
           </View>
         )}
 
@@ -276,7 +302,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   );
 }
 
-// ─── Pill button ──────────────────────────────────────────────────────────────
+// Pill button
 function PillBtn({ id, name, active, onPress }: { id: string; name: string; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity style={[styles.pill, active && styles.pillActive]} onPress={onPress} activeOpacity={0.8}>
@@ -285,7 +311,7 @@ function PillBtn({ id, name, active, onPress }: { id: string; name: string; acti
   );
 }
 
-// ─── Horizontal Section ───────────────────────────────────────────────────────
+// Horizontal section
 function HSection({ title, subtitle, data, onSeeAll, onCard, onToggleRecommend }: {
   title: string; subtitle?: string; data: Business[];
   onSeeAll: () => void; onCard: (b: Business) => void; onToggleRecommend: (b: Business) => void;
@@ -328,10 +354,6 @@ function HSection({ title, subtitle, data, onSeeAll, onCard, onToggleRecommend }
                   strokeWidth={2}
                 />
               </TouchableOpacity>
-              <View style={styles.timeChip}>
-                <Clock size={10} color="#fff" strokeWidth={2} />
-                <Text style={styles.timeText} numberOfLines={1}>{biz.time}</Text>
-              </View>
             </View>
             <View style={styles.bizBody}>
               <Text style={styles.bizTitle} numberOfLines={1}>{biz.title}</Text>
@@ -361,7 +383,7 @@ const styles = StyleSheet.create({
   retryBtn:    { backgroundColor: '#e30613', paddingHorizontal: 24, paddingVertical: 11, borderRadius: Radius.full },
   retryText:   { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
-  // ── Header ──────────────────────────────────────────────────────────────────
+  // Header
   header: {
     backgroundColor: Colors.white,
     paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.lg,
@@ -389,7 +411,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textPrimary, padding: 0 },
   searchText: { display: 'none' },
 
-  // ── Pills ────────────────────────────────────────────────────────────────────
+  // Pills
   pillsSection: {
     backgroundColor: Colors.white, paddingVertical: Spacing.xl,
     borderBottomWidth: 1, borderBottomColor: Colors.borderLight, marginBottom: Spacing.xxl,
@@ -408,7 +430,7 @@ const styles = StyleSheet.create({
   pillText:       { fontFamily: Typography.fontBold, fontSize: Typography.base, color: Colors.textPrimary },
   pillTextActive: { color: '#fff' },
 
-  // ── Promo banner ─────────────────────────────────────────────────────────────
+  // Promo banner
   bannerWrap: { paddingHorizontal: Spacing.xxl, marginBottom: Spacing.xxxl },
   banner: {
     borderRadius: Radius.xxl + 4, padding: Spacing.xxl, overflow: 'hidden',
@@ -433,7 +455,7 @@ const styles = StyleSheet.create({
   bannerDots: { flexDirection: 'row', gap: 6 },
   dot: { width: 7, height: 7, borderRadius: 4 },
 
-  // ── Horizontal section ────────────────────────────────────────────────────────
+  // Horizontal section
   hSection: { marginBottom: Spacing.xxxl },
   sectionHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -445,7 +467,7 @@ const styles = StyleSheet.create({
   seeAllText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#0ea5e9' },
   cardList: { paddingHorizontal: Spacing.xxl, gap: 14, paddingBottom: 4, paddingTop: 2 },
 
-  // ── Business card ─────────────────────────────────────────────────────────────
+  // Business card
   bizCard: {
     width: 240, backgroundColor: Colors.white, borderRadius: Radius.xxl,
     overflow: 'hidden', borderWidth: 1, borderColor: Colors.borderLight,
@@ -470,12 +492,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#fecdd3',
   },
-  timeChip: {
-    position: 'absolute', bottom: 8, right: 8,
-    backgroundColor: 'rgba(0,0,0,0.60)', flexDirection: 'row', alignItems: 'center',
-    gap: 4, paddingHorizontal: 8, paddingVertical: 5, borderRadius: Radius.sm, maxWidth: 130,
-  },
-  timeText:    { color: '#fff', fontFamily: Typography.fontBold, fontSize: 10 },
   bizBody:     { padding: Spacing.lg },
   bizTitle:    { fontFamily: Typography.fontBold, fontSize: Typography.lg, color: Colors.textPrimary, marginBottom: 4 },
   bizMeta:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -483,3 +499,4 @@ const styles = StyleSheet.create({
   bizDot:      { fontSize: Typography.sm, color: Colors.textMuted },
   bizCategory: { fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textSecondary, flex: 1 },
 });
+

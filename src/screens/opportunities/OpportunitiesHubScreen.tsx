@@ -10,6 +10,7 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { JobCategory, JobItem } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchJobCategories, fetchJobs } from '../../services/api';
+import ScreenState from '../../components/ScreenState';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800';
 
@@ -107,12 +108,13 @@ export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bott
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={styles.errorText}>
-            {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
-          </Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={reload}>
-            <Text style={styles.retryText}>Provo Perseri</Text>
-          </TouchableOpacity>
+          <ScreenState
+            icon="error"
+            title="Gabim ne ngarkim"
+            message={typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+            actionLabel="Provo perseri"
+            onAction={reload}
+          />
         </View>
       ) : (
         <ScrollView
@@ -138,9 +140,19 @@ export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bott
             </View>
 
             <View style={styles.jobListWrap}>
-              {jobs.map(job => (
-                <JobCard key={job.id} job={job} onPress={() => onProfile(job)} />
-              ))}
+              {jobs.length ? (
+                jobs.map(job => (
+                  <JobCard key={job.id} job={job} onPress={() => onProfile(job)} />
+                ))
+              ) : (
+                <ScreenState
+                  icon="briefcase"
+                  title="Nuk ka mundesi"
+                  message="Kur te publikohen mundesi te reja, do te shfaqen ketu."
+                  actionLabel="Kthehu ne Home"
+                  onAction={onBack}
+                />
+              )}
             </View>
           </View>
         </ScrollView>
@@ -193,9 +205,6 @@ const styles = StyleSheet.create({
   root:    { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll:  { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
-  retryBtn: { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
-  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
   header: {
     backgroundColor: Colors.white,

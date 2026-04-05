@@ -11,6 +11,7 @@ import { KvrActivity } from '../../types';
 import { KVRActivityCard } from './KVRHubScreen';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchKvr, fetchKvrCategories } from '../../services/api';
+import ScreenState from '../../components/ScreenState';
 
 const NAVY = '#003366';
 const ALL_PILL = { id: 'all', name: 'Te gjitha' };
@@ -104,16 +105,23 @@ export default function KVRListScreen({ title, initialCatId, onBack, onProfile, 
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={styles.emptyTitle}>Nuk u ngarkuan postimet</Text>
-          <Text style={styles.emptyText}>Provo perseri per te pare lajmet e KVR.</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={reload}>
-            <Text style={styles.retryText}>Provo Perseri</Text>
-          </TouchableOpacity>
+          <ScreenState
+            icon="error"
+            title="Gabim ne ngarkim"
+            message="Postimet e KVR nuk u ngarkuan dot."
+            actionLabel="Provo perseri"
+            onAction={reload}
+          />
         </View>
       ) : items.length === 0 ? (
         <View style={styles.centered}>
-          <Text style={styles.emptyTitle}>Nuk ka postime</Text>
-          <Text style={styles.emptyText}>Lajmet per kete kategori do te shfaqen ketu.</Text>
+          <ScreenState
+            icon="empty"
+            title="Nuk ka postime"
+            message="Lajmet per kete kategori do te shfaqen ketu."
+            actionLabel="Kthehu ne Home"
+            onAction={onBack}
+          />
         </View>
       ) : (
         <FlatList
@@ -186,29 +194,4 @@ const styles = StyleSheet.create({
   list: { padding: Spacing.xxl, gap: 20 },
   fullWidthCard: { width: '100%' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xxl, gap: 12 },
-  emptyTitle: {
-    fontFamily: Typography.fontExtraBold,
-    fontSize: Typography.xl,
-    color: Colors.textPrimary,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  emptyText: {
-    fontFamily: Typography.fontMedium,
-    fontSize: Typography.md,
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
-  retryBtn: {
-    backgroundColor: '#e30613',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: Radius.full,
-    marginTop: 4,
-  },
-  retryText: {
-    fontFamily: Typography.fontBold,
-    fontSize: Typography.base,
-    color: '#fff',
-  },
 });

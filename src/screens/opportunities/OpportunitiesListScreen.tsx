@@ -10,6 +10,7 @@ import { JobCategory, JobItem } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchJobCategories, fetchJobs } from '../../services/api';
 import { apiToJobItem, JobCard } from './OpportunitiesHubScreen';
+import ScreenState from '../../components/ScreenState';
 
 interface Props {
   title:       string;
@@ -69,12 +70,23 @@ export default function OpportunitiesListScreen({ title, typeSlug, onBack, onPro
         <View style={styles.centered}><ActivityIndicator size="large" color="#e30613" /></View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={styles.errorText}>
-            {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
-          </Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={reload}>
-            <Text style={styles.retryText}>Provo Perseri</Text>
-          </TouchableOpacity>
+          <ScreenState
+            icon="error"
+            title="Gabim ne ngarkim"
+            message={typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+            actionLabel="Provo perseri"
+            onAction={reload}
+          />
+        </View>
+      ) : jobs.length === 0 ? (
+        <View style={styles.centered}>
+          <ScreenState
+            icon="briefcase"
+            title="Nuk ka mundesi"
+            message="Nuk ka pozicione te publikuara ne kete kategori."
+            actionLabel="Kthehu ne Home"
+            onAction={onBack}
+          />
         </View>
       ) : (
         <FlatList
@@ -92,9 +104,6 @@ export default function OpportunitiesListScreen({ title, typeSlug, onBack, onPro
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
-  retryBtn: { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
-  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 
   header: {
     backgroundColor: Colors.white,

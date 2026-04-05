@@ -13,6 +13,7 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { StartupItem } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchStartupSingle } from '../../services/api';
+import ScreenState from '../../components/ScreenState';
 
 interface Props {
   itemId: string;
@@ -67,21 +68,21 @@ export default function StartupItemProfileScreen({ itemId, onBack, bottomInset }
 
     if (item.category === 'thirrje') {
       if (!item.applyLink) {
-        Alert.alert('Linku mungon', 'Kjo thirrje nuk ka ende nje link aplikimi.');
+        Alert.alert('Nuk disponohet', 'Kjo thirrje nuk ka ende nje link aplikimi.');
         return;
       }
 
       try {
         const supported = await Linking.canOpenURL(item.applyLink);
         if (!supported) {
-          Alert.alert('Link i pavlefshem', 'Nuk mund te hapet linku i aplikimit.');
+          Alert.alert('Gabim', 'Nuk mund te hapet linku i aplikimit.');
           return;
         }
 
         await Linking.openURL(item.applyLink);
         setApplied(true);
       } catch {
-        Alert.alert('Hapja deshtoi', 'Nuk mund te hapej linku i aplikimit.');
+        Alert.alert('Gabim', 'Nuk mund te hapet linku i aplikimit.');
       }
       return;
     }
@@ -90,7 +91,7 @@ export default function StartupItemProfileScreen({ itemId, onBack, bottomInset }
       try {
         await Linking.openURL(item.applyLink);
       } catch {
-        Alert.alert('Hapja deshtoi', 'Nuk mund te hapej materiali.');
+        Alert.alert('Gabim', 'Nuk mund te hapet materiali.');
       }
     }
   };
@@ -109,10 +110,13 @@ export default function StartupItemProfileScreen({ itemId, onBack, bottomInset }
         <TouchableOpacity style={styles.overlayBtn} onPress={onBack} activeOpacity={0.8}>
           <ChevronLeft size={22} color={Colors.textPrimary} strokeWidth={2.5} />
         </TouchableOpacity>
-        <Text style={styles.errorText}>Startup-i nuk u ngarkua.</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={reload} activeOpacity={0.85}>
-          <Text style={styles.retryBtnText}>Provo perseri</Text>
-        </TouchableOpacity>
+        <ScreenState
+          icon="error"
+          title="Startup-i nuk u ngarkua"
+          message="Provo perseri per te pare detajet."
+          actionLabel="Provo perseri"
+          onAction={reload}
+        />
       </View>
     );
   }
@@ -256,20 +260,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll: { flex: 1 },
   centered: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xxl, gap: 16 },
-  errorText: {
-    fontFamily: Typography.fontBold,
-    fontSize: Typography.lg,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  retryBtn: {
-    backgroundColor: '#10b981',
-    borderRadius: Radius.xl,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  retryBtnText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
-
   overlayHeader: {
     position: 'absolute', left: Spacing.lg, right: Spacing.lg, zIndex: 20,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

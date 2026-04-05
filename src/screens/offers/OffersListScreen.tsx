@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   Image, TextInput, ActivityIndicator, StyleSheet, Alert,
@@ -83,7 +83,7 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
   return (
     <View style={styles.root}>
 
-      {/* ── Header ──────────────────────────────────────────────────── */}
+      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.backBtn} onPress={onBack}>
@@ -110,7 +110,7 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
         </View>
       </View>
 
-      {/* ── Loading ──────────────────────────────────────────────────── */}
+      {/* Loading */}
       {loading && (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={Colors.textMuted} />
@@ -118,7 +118,7 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
         </View>
       )}
 
-      {/* ── Vertical feed ────────────────────────────────────────────── */}
+      {/* Vertical feed */}
       {!loading && (
         <FlatList
           data={filtered}
@@ -156,9 +156,6 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
                     strokeWidth={2}
                   />
                 </TouchableOpacity>
-                <View style={styles.timeChip}>
-                  <Text style={styles.timeText}>{biz.time}</Text>
-                </View>
               </View>
 
               {/* Body */}
@@ -201,7 +198,7 @@ const styles = StyleSheet.create({
   emptyWrap:   { paddingTop: 60, alignItems: 'center' },
   emptyText:   { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textMuted },
 
-  // ── Header ──────────────────────────────────────────────────────────────────
+  // Header
   header: {
     backgroundColor: Colors.white,
     paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.lg,
@@ -236,7 +233,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
 
-  // ── Cards ───────────────────────────────────────────────────────────────────
+  // Cards
   listContent: { padding: Spacing.xxl, gap: Spacing.xxl },
   card: {
     backgroundColor: Colors.white, borderRadius: Radius.xxl + 4,
@@ -265,12 +262,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#fecdd3',
   },
-  timeChip: {
-    position: 'absolute', bottom: 12, right: 12,
-    backgroundColor: 'rgba(15,23,42,0.70)',
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.md,
-  },
-  timeText:  { color: '#7dd3fc', fontFamily: Typography.fontBold, fontSize: Typography.sm },
   body:      { padding: Spacing.xl },
   bodyTop:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
   bodyLeft:  { flex: 1, paddingRight: Spacing.lg },
@@ -289,3 +280,4 @@ const styles = StyleSheet.create({
   footerDot:  { width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.border },
   footerText: { fontFamily: Typography.fontBold, fontSize: Typography.xs, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 },
 });
+

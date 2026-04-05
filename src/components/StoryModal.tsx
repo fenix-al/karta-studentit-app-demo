@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   Modal, View, Text, Image, TouchableOpacity,
-  Animated, StyleSheet, Dimensions, StatusBar,
+  Animated, StyleSheet, Dimensions, StatusBar, PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,6 +9,7 @@ import { X, ArrowRight, MapPin, Phone } from 'lucide-react-native';
 import { Business } from '../types';
 const { width: SW, height: SH } = Dimensions.get('window');
 const STORY_DURATION = 5000;
+const SWIPE_THRESHOLD = 50;
 
 interface Props {
   visible:          boolean;
@@ -70,6 +71,24 @@ export default function StoryModal({ visible, stories, initialIndex, onClose, on
     // already at first story — do nothing
   }
 
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dx) > 12 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx <= -SWIPE_THRESHOLD) {
+            goToNext();
+            return;
+          }
+          if (gestureState.dx >= SWIPE_THRESHOLD) {
+            goToPrev();
+          }
+        },
+      }),
+    [currentIndex, stories.length],
+  );
+
   // ── Guard — nothing to render ──────────────────────────────────────────────
   if (!stories.length) return null;
 
@@ -86,7 +105,7 @@ export default function StoryModal({ visible, stories, initialIndex, onClose, on
       onRequestClose={onClose}
     >
       <StatusBar hidden />
-      <View style={styles.root}>
+      <View style={styles.root} {...panResponder.panHandlers}>
 
         {/* ── Background image ────────────────────────────────────────── */}
         <View style={StyleSheet.absoluteFillObject}>

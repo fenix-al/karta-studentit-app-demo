@@ -13,6 +13,7 @@ import { JobItem } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { applyJob, fetchJob } from '../../services/api';
 import { apiToJobItem } from './OpportunitiesHubScreen';
+import ScreenState from '../../components/ScreenState';
 
 interface Props {
   job:         JobItem;
@@ -47,10 +48,10 @@ export default function JobProfileScreen({ job, onBack, bottomInset }: Props) {
     try {
       setApplying(true);
       const res = await applyJob(Number(liveJob.id));
-      Alert.alert('Sukses', res.msg || 'Aplikimi u dergua me sukses.');
+      Alert.alert('U krye', res.msg || 'Aplikimi u dergua me sukses.');
       reload();
     } catch (err) {
-      Alert.alert('Gabim', err instanceof Error ? err.message : 'Aplikimi deshtoi.');
+      Alert.alert('Gabim', err instanceof Error ? err.message : 'Aplikimi nuk u dergua. Provo perseri.');
     } finally {
       setApplying(false);
     }
@@ -76,12 +77,13 @@ export default function JobProfileScreen({ job, onBack, bottomInset }: Props) {
         <View style={styles.centered}><ActivityIndicator size="large" color="#e30613" /></View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={styles.errorText}>
-            {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
-          </Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={reload}>
-            <Text style={styles.retryText}>Provo Perseri</Text>
-          </TouchableOpacity>
+          <ScreenState
+            icon="error"
+            title="Nuk u ngarkua pozicioni"
+            message={typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+            actionLabel="Provo perseri"
+            onAction={reload}
+          />
         </View>
       ) : (
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomInset + 24 }}>
@@ -194,10 +196,6 @@ const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
-  retryBtn: { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
-  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
-
   overlayHeader: {
     position: 'absolute', left: Spacing.lg, right: Spacing.lg, zIndex: 20,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

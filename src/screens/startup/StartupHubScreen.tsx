@@ -11,6 +11,7 @@ import { StartupItem } from '../../types';
 import { STARTUP_CATEGORIES, STARTUP_STEPS } from '../../data/mockData';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchStartups, submitStartupIdea } from '../../services/api';
+import ScreenState from '../../components/ScreenState';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800';
 
@@ -78,7 +79,7 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
       setHelpNeeded('');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Ideja nuk u dergua. Provo perseri.';
-      Alert.alert('Dergimi deshtoi', message);
+      Alert.alert('Gabim', message);
     } finally {
       setSubmittingIdea(false);
     }
@@ -237,22 +238,33 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
             </View>
           ) : error ? (
             <View style={styles.centered}>
-              <Text style={styles.errorText}>
-                {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
-              </Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={reload}>
-                <Text style={styles.retryText}>Provo Perseri</Text>
-              </TouchableOpacity>
+              <ScreenState
+                icon="error"
+                title="Gabim ne ngarkim"
+                message={typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+                actionLabel="Provo perseri"
+                onAction={reload}
+              />
             </View>
           ) : (
             <View style={styles.itemListWrap}>
-              {visibleItems.map((item) => (
-                <StartupCard
-                  key={item.id}
-                  item={item}
-                  onPress={() => onProfile(item.id)}
+              {visibleItems.length ? (
+                visibleItems.map((item) => (
+                  <StartupCard
+                    key={item.id}
+                    item={item}
+                    onPress={() => onProfile(item.id)}
+                  />
+                ))
+              ) : (
+                <ScreenState
+                  icon="startup"
+                  title="Nuk ka startup ne kete kategori"
+                  message="Kur te publikohen thirrje ose materiale te reja, do t'i shihni ketu."
+                  actionLabel="Shko te Startup"
+                  onAction={() => onList('Te gjitha Startupet')}
                 />
-              ))}
+              )}
             </View>
           )}
         </View>
@@ -305,10 +317,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll: { flex: 1 },
   centered: { paddingVertical: 40, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary, textAlign: 'center' },
-  retryBtn: { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
-  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
-
   header: {
     backgroundColor: Colors.white,
     paddingHorizontal: Spacing.xxl,

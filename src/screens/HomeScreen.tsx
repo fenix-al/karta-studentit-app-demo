@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -30,8 +30,8 @@ import { useFetch } from '../hooks/useFetch';
 import { fetchOffers, fetchKurset, fetchJobs, fetchStartups, fetchAct4, fetchKvr, recommendBusiness } from '../services/api';
 import { apiBizToBusiness, kursToCard, opportunityToCard, startupToCard, act4ToCard, kvrToCard } from '../services/mappers';
 import { AppNotification, Business, CardItem, Category, CourseItem, JobItem } from '../types';
-import SmartModal from '../components/SmartModal';
 import StoryModal from '../components/StoryModal';
+import CardStoryModal from '../components/CardStoryModal';
 import FloatingChat from '../components/FloatingChat';
 import OffersNavigator from './offers/OffersNavigator';
 import CoursesNavigator from './courses/CoursesNavigator';
@@ -41,6 +41,7 @@ import ActNavigator from './act4/ActNavigator';
 import KVRNavigator from './kvr/KVRNavigator';
 import DigitalCardModal from '../components/DigitalCardModal';
 import RewardsScreen from './RewardsScreen';
+import LiveRaffleScreen from './LiveRaffleScreen';
 import ProfileScreen from './ProfileScreen';
 import NotificationsScreen from './NotificationsScreen';
 import SettingsScreen from './SettingsScreen';
@@ -116,6 +117,8 @@ function apiToJobItem(o: any): JobItem {
   };
 }
 
+type MainTab = 'home' | 'perfitimet' | 'dhurata' | 'shortiLive' | 'profil' | 'kurset' | 'mundesit' | 'startupet' | 'act4' | 'kvr';
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { onLogout, card } = useAuth();
@@ -179,11 +182,15 @@ export default function HomeScreen() {
   const [isUserMenuOpen, setIsUserMenuOpen]       = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings]           = useState(false);
-  const [activeItem, setActiveItem] = useState<CardItem | null>(null);
+  const [activeCarousel, setActiveCarousel] = useState<{ items: CardItem[]; initialIndex: number } | null>(null);
+  const [activeStories, setActiveStories] = useState<Business[]>([]);
   const [storyVisible, setStoryVisible] = useState(false);
   const [storyIndex,   setStoryIndex]   = useState(0);
   const [cardVisible, setCardVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'home' | 'perfitimet' | 'dhurata' | 'profil' | 'kurset' | 'mundesit' | 'startupet' | 'act4' | 'kvr'>('home');
+  const [activeTab, setActiveTab] = useState<MainTab>('home');
+  const [tabReturnTargets, setTabReturnTargets] = useState<Partial<Record<MainTab, MainTab>>>({});
+  const [rewardsInitialRaffleId, setRewardsInitialRaffleId] = useState<number | undefined>(undefined);
+  const [rewardsInitialRewardTarget, setRewardsInitialRewardTarget] = useState<{ businessPostId: number; rewardUid: string } | undefined>(undefined);
   const [offersInitialList,     setOffersInitialList]     = useState<string | undefined>(undefined);
   const [offersInitialBusiness, setOffersInitialBusiness] = useState<Business | undefined>(undefined);
   const [coursesInitialList, setCoursesInitialList] = useState<string | undefined>(undefined);
@@ -225,11 +232,12 @@ export default function HomeScreen() {
 
   const openOffers = (list?: string) => {
     setOffersInitialList(list);
+    setOffersInitialBusiness(undefined);
     setActiveTab('perfitimet');
   };
 
   const openOfferProfile = (business: Business) => {
-    setActiveItem(null);
+    setActiveCarousel(null);
     setOffersInitialList(undefined);
     setOffersInitialBusiness(business);
     setActiveTab('perfitimet');
@@ -247,7 +255,7 @@ export default function HomeScreen() {
       openCourses('Te gjitha Kurset');
       return;
     }
-    setActiveItem(null);
+    setActiveCarousel(null);
     setCoursesInitialList(undefined);
     setCoursesInitialCourse(selectedCourse);
     setActiveTab('kurset');
@@ -266,7 +274,7 @@ export default function HomeScreen() {
       openJobs('Te gjitha Mundesite');
       return;
     }
-    setActiveItem(null);
+    setActiveCarousel(null);
     setJobsInitialList(undefined);
     setJobsInitialTypeSlug(undefined);
     setJobsInitialJob(selectedJob);
@@ -284,7 +292,7 @@ export default function HomeScreen() {
       openStartups();
       return;
     }
-    setActiveItem(null);
+    setActiveCarousel(null);
     setStartupsInitialList(undefined);
     setStartupsInitialItemId(startupId);
     setActiveTab('startupet');
@@ -300,7 +308,7 @@ export default function HomeScreen() {
       openAct4();
       return;
     }
-    setActiveItem(null);
+    setActiveCarousel(null);
     setAct4InitialActivityId(activityId);
     setActiveTab('act4');
   };
@@ -316,14 +324,88 @@ export default function HomeScreen() {
       openKVR();
       return;
     }
-    setActiveItem(null);
+    setActiveCarousel(null);
     setKvrInitialList(undefined);
     setKvrInitialArticleId(articleId);
     setActiveTab('kvr');
   };
 
+  const openBusinessStories = (stories: Business[], businessId: string) => {
+    if (!stories.length) return;
+    const index = stories.findIndex((story) => story.id === businessId);
+    setActiveStories(stories);
+    setStoryIndex(index >= 0 ? index : 0);
+    setStoryVisible(true);
+  };
+
+  const openCardCarousel = (items: CardItem[], itemId: string) => {
+    if (!items.length) return;
+    const index = items.findIndex((entry) => entry.id === itemId);
+    setActiveCarousel({ items, initialIndex: index >= 0 ? index : 0 });
+  };
+
+  const resetOffersRoute = () => {
+    setOffersInitialList(undefined);
+    setOffersInitialBusiness(undefined);
+  };
+
+  const resetCoursesRoute = () => {
+    setCoursesInitialList(undefined);
+    setCoursesInitialCourse(undefined);
+  };
+
+  const resetJobsRoute = () => {
+    setJobsInitialList(undefined);
+    setJobsInitialTypeSlug(undefined);
+    setJobsInitialJob(undefined);
+  };
+
+  const resetStartupRoute = () => {
+    setStartupsInitialList(undefined);
+    setStartupsInitialItemId(undefined);
+  };
+
+  const resetAct4Route = () => {
+    setAct4InitialActivityId(undefined);
+  };
+
+  const resetKvrRoute = () => {
+    setKvrInitialList(undefined);
+    setKvrInitialArticleId(undefined);
+  };
+
+  const resetRewardsRoute = () => {
+    setRewardsInitialRaffleId(undefined);
+    setRewardsInitialRewardTarget(undefined);
+  };
+
+  const setTabReturnTarget = (targetTab: MainTab, returnTab?: MainTab) => {
+    setTabReturnTargets((prev) => {
+      if (!returnTab || returnTab === targetTab) {
+        if (!(targetTab in prev)) return prev;
+        const next = { ...prev };
+        delete next[targetTab];
+        return next;
+      }
+
+      return { ...prev, [targetTab]: returnTab };
+    });
+  };
+
+  const goToTab = (targetTab: MainTab, returnTab?: MainTab) => {
+    setTabReturnTarget(targetTab, returnTab);
+    setActiveTab(targetTab);
+  };
+
+  const exitTab = (targetTab: MainTab) => {
+    const returnTab = tabReturnTargets[targetTab] ?? 'home';
+    setTabReturnTarget(targetTab);
+    setActiveTab(returnTab);
+  };
+
   const handleOpenNotification = (notification: AppNotification) => {
     const targetId = notification.postId ? String(notification.postId) : '';
+    const returnTab = activeTab;
 
     setShowNotifications(false);
 
@@ -331,35 +413,43 @@ export default function HomeScreen() {
       case 'offer': {
         const business = realBusinesses.find((item) => item.id === targetId);
         if (business) {
+          setTabReturnTarget('perfitimet', returnTab);
           openOfferProfile(business);
         } else {
+          setTabReturnTarget('perfitimet', returnTab);
           openOffers('Te Gjitha Ofertat');
         }
         return;
       }
       case 'course':
+        setTabReturnTarget('kurset', returnTab);
         if (targetId) openCourseProfile(targetId);
         else openCourses('Te Gjitha Kurset');
         return;
       case 'job':
+        setTabReturnTarget('mundesit', returnTab);
         if (targetId) openJobProfile(targetId);
         else openJobs('Te Gjitha Mundesite');
         return;
       case 'startup':
+        setTabReturnTarget('startupet', returnTab);
         if (targetId) openStartupProfile(targetId);
         else openStartups();
         return;
       case 'act4':
+        setTabReturnTarget('act4', returnTab);
         if (targetId) openAct4Profile(targetId);
         else openAct4();
         return;
       case 'kvr':
+        setTabReturnTarget('kvr', returnTab);
         if (targetId) openKvrArticle(targetId);
         else openKVR();
         return;
       case 'raffle':
       case 'points':
-        setActiveTab('dhurata');
+        resetRewardsRoute();
+        goToTab('dhurata', returnTab);
         return;
       default:
         return;
@@ -601,7 +691,7 @@ export default function HomeScreen() {
               </View>
               <Text style={styles.scoinsBalance}>{(card?.points ?? 0).toLocaleString()} 🟡</Text>
               <Text style={styles.scoinsSubtitle}>SCoins të grumbulluara</Text>
-              <TouchableOpacity style={styles.spendBtn} activeOpacity={0.8} onPress={() => setActiveTab('dhurata')}>
+              <TouchableOpacity style={styles.spendBtn} activeOpacity={0.8} onPress={() => goToTab('dhurata')}>
                 <Text style={styles.spendBtnText}>Shpenzo Pikët</Text>
                 <ArrowRight size={11} color={Colors.brandGreenDeep} strokeWidth={3} />
               </TouchableOpacity>
@@ -654,12 +744,12 @@ export default function HomeScreen() {
 
         {/* ── Oferta pranë teje (Businesses) ───────────────────────────── */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Oferta pranë teje</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={styles.offersHeaderInfo}>
+            <Text style={styles.sectionTitle}>Oferta pranë teje</Text>
             <TouchableOpacity
               onPress={handleFindNearMe}
               activeOpacity={0.8}
-              style={[styles.nearMePill, userCoords ? styles.nearMePillActive : null]}
+              style={[styles.nearMePill, styles.nearMePillBelowTitle, userCoords ? styles.nearMePillActive : null]}
             >
               {locLoading ? (
                 <ActivityIndicator size={11} color={userCoords ? '#fff' : Colors.brandGreenText} />
@@ -670,10 +760,10 @@ export default function HomeScreen() {
                 {locLoading ? 'Duke kërkuar...' : userCoords ? 'Pranë Teje ✓' : 'Gjej Afër Meje'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => openOffers()}>
-              <Text style={styles.seeAll}>Shiko të gjitha</Text>
-            </TouchableOpacity>
           </View>
+          <TouchableOpacity onPress={() => openOffers()}>
+            <Text style={styles.seeAll}>Shiko të gjitha</Text>
+          </TouchableOpacity>
         </View>
         {offersLoading ? (
           <View style={styles.offerLoader}>
@@ -686,10 +776,10 @@ export default function HomeScreen() {
             keyExtractor={biz => biz.id}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.hList}
-            renderItem={({ item: biz, index }) => (
+            renderItem={({ item: biz }) => (
               <TouchableOpacity
                 style={styles.bizCard}
-                onPress={() => { setStoryIndex(index); setStoryVisible(true); }}
+                onPress={() => openBusinessStories(realBusinesses, biz.id)}
                 activeOpacity={0.92}
               >
                 {/* Image */}
@@ -770,7 +860,7 @@ export default function HomeScreen() {
               renderItem={({ item: biz }) => (
                 <TouchableOpacity
                   style={styles.bizCard}
-                  onPress={() => { setOffersInitialBusiness(biz); setActiveTab('perfitimet'); }}
+                  onPress={() => openBusinessStories(topRecommended, biz.id)}
                   activeOpacity={0.92}
                 >
                   <View style={styles.bizImageWrap}>
@@ -824,7 +914,7 @@ export default function HomeScreen() {
             {courses[0] && (
             <TouchableOpacity
               style={[styles.bentoLeft, { backgroundColor: '#F0F9FF', borderColor: '#E0F2FE' }]}
-              onPress={() => setActiveItem(courses[0])}
+              onPress={() => openCardCarousel(courses, courses[0].id)}
               activeOpacity={0.9}
             >
               <View style={styles.bentoIconCircle}>
@@ -844,7 +934,7 @@ export default function HomeScreen() {
               {courses[1] && (
               <TouchableOpacity
                 style={[styles.bentoSmall, { backgroundColor: '#FFF7ED', borderColor: '#FFEDD5' }]}
-                onPress={() => setActiveItem(courses[1])}
+                onPress={() => openCardCarousel(courses, courses[1].id)}
                 activeOpacity={0.9}
               >
                 <View style={styles.bentoSmallRow}>
@@ -862,7 +952,7 @@ export default function HomeScreen() {
               {courses[2] && (
               <TouchableOpacity
                 style={[styles.bentoSmall, { backgroundColor: '#F5F3FF', borderColor: '#EDE9FE' }]}
-                onPress={() => setActiveItem(courses[2])}
+                onPress={() => openCardCarousel(courses, courses[2].id)}
                 activeOpacity={0.9}
               >
                 <View style={styles.bentoSmallRow}>
@@ -889,7 +979,7 @@ export default function HomeScreen() {
           keyExtractor={item => item.id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.hList}
-          renderItem={({ item }) => <GenericCard item={item} onPress={() => setActiveItem(item)} />}
+          renderItem={({ item }) => <GenericCard item={item} onPress={() => openCardCarousel(opportunities, item.id)} />}
         />
 
         {/* ── Startup & Ide ─────────────────────────────────────────────── */}
@@ -900,7 +990,7 @@ export default function HomeScreen() {
           keyExtractor={item => item.id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.hList}
-          renderItem={({ item }) => <GenericCard item={item} onPress={() => setActiveItem(item)} />}
+          renderItem={({ item }) => <GenericCard item={item} onPress={() => openCardCarousel(startups, item.id)} />}
         />
 
         {/* ── ACT4Shkodra ──────────────────────────────────────────────── */}
@@ -911,29 +1001,56 @@ export default function HomeScreen() {
           keyExtractor={item => item.id}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.hList}
-          renderItem={({ item }) => <GenericCard item={item} onPress={() => setActiveItem(item)} />}
+          renderItem={({ item }) => <GenericCard item={item} onPress={() => openCardCarousel(act4, item.id)} />}
         />
 
-        {/* ── KVR Lajme (vertical stack — horizontal card row) ─────── */}
-        <SectionHeader title="KVR — Zëri i Rinisë" onSeeAll={() => openKVR()} />
-        <View style={styles.kvrList}>
-          {kvr.map((item: CardItem) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.kvrCard}
-              onPress={() => setActiveItem(item)}
-              activeOpacity={0.92}
-            >
-              <View style={styles.kvrImageWrap}>
-                <Image source={{ uri: item.img }} style={styles.kvrImage} resizeMode="cover" />
-              </View>
-              <View style={styles.kvrBody}>
-                <Text style={[styles.kvrType, { color: item.badgeColor }]}>{item.discount}</Text>
-                <Text style={styles.kvrTitle} numberOfLines={2}>{item.title}</Text>
-                <Text style={styles.kvrMeta}>{item.meta}</Text>
-              </View>
+        {/* ── KVR Lajme (editorial carousel) ───────────────────────── */}
+        <View style={styles.kvrSectionWrap}>
+          <View style={styles.kvrSectionHeader}>
+            <View>
+              <Text style={styles.kvrSectionEyebrow}>Njoftime & Evente</Text>
+              <Text style={styles.kvrSectionTitle}>KVR — Zëri i Rinisë</Text>
+            </View>
+            <TouchableOpacity style={styles.kvrSectionLink} onPress={() => openKVR()} activeOpacity={0.8}>
+              <Text style={styles.kvrSectionLinkText}>Shiko të gjitha</Text>
             </TouchableOpacity>
-          ))}
+          </View>
+
+          <FlatList
+            data={kvr}
+            horizontal
+            keyExtractor={item => item.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.kvrList}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                style={[
+                  styles.kvrCard,
+                  index === kvr.length - 1 ? styles.kvrCardLast : null,
+                ]}
+                onPress={() => openCardCarousel(kvr, item.id)}
+                activeOpacity={0.94}
+              >
+                <View style={styles.kvrBody}>
+                  <View style={styles.kvrTypeBadge}>
+                    <Text style={[styles.kvrTypeBadgeText, { color: item.badgeColor }]}>{item.discount}</Text>
+                  </View>
+                  <Text style={styles.kvrTitle} numberOfLines={3}>{item.title}</Text>
+                  <Text style={styles.kvrMeta}>{item.meta}</Text>
+                </View>
+
+                <View style={styles.kvrPosterWrap}>
+                  <Image source={{ uri: item.img }} style={styles.kvrImage} resizeMode="cover" />
+                  <LinearGradient
+                    colors={['rgba(15,23,42,0.04)', 'rgba(15,23,42,0.18)']}
+                    style={styles.kvrPosterOverlay}
+                  />
+                </View>
+              </TouchableOpacity>
+            )}
+          />
         </View>
 
       </ScrollView>
@@ -954,7 +1071,11 @@ export default function HomeScreen() {
 
       {activeTab === 'perfitimet' && (
         <OffersNavigator
-          onExit={() => { setActiveTab('home'); setOffersInitialBusiness(undefined); refetchOffers(); }}
+          onExit={() => {
+            resetOffersRoute();
+            exitTab('perfitimet');
+            refetchOffers();
+          }}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialList={offersInitialList}
           initialBusiness={offersInitialBusiness}
@@ -963,7 +1084,10 @@ export default function HomeScreen() {
 
       {activeTab === 'kurset' && (
         <CoursesNavigator
-          onExit={() => setActiveTab('home')}
+          onExit={() => {
+            resetCoursesRoute();
+            exitTab('kurset');
+          }}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialList={coursesInitialList}
           initialCourse={coursesInitialCourse}
@@ -972,7 +1096,10 @@ export default function HomeScreen() {
 
       {activeTab === 'mundesit' && (
         <OpportunitiesNavigator
-          onExit={() => setActiveTab('home')}
+          onExit={() => {
+            resetJobsRoute();
+            exitTab('mundesit');
+          }}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialList={jobsInitialList}
           initialTypeSlug={jobsInitialTypeSlug}
@@ -982,7 +1109,10 @@ export default function HomeScreen() {
 
       {activeTab === 'kvr' && (
         <KVRNavigator
-          onExit={() => setActiveTab('home')}
+          onExit={() => {
+            resetKvrRoute();
+            exitTab('kvr');
+          }}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialList={kvrInitialList}
           initialActivityId={kvrInitialArticleId}
@@ -991,7 +1121,10 @@ export default function HomeScreen() {
 
       {activeTab === 'act4' && (
         <ActNavigator
-          onExit={() => setActiveTab('home')}
+          onExit={() => {
+            resetAct4Route();
+            exitTab('act4');
+          }}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialActivityId={act4InitialActivityId}
         />
@@ -999,7 +1132,10 @@ export default function HomeScreen() {
 
       {activeTab === 'startupet' && (
         <StartupNavigator
-          onExit={() => setActiveTab('home')}
+          onExit={() => {
+            resetStartupRoute();
+            exitTab('startupet');
+          }}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialList={startupsInitialList}
           initialItemId={startupsInitialItemId}
@@ -1007,14 +1143,57 @@ export default function HomeScreen() {
       )}
 
       {activeTab === 'dhurata' && (
-        <RewardsScreen bottomInset={TAB_BAR_HEIGHT + tabBarBottom} onBack={() => setActiveTab('home')} />
+        <RewardsScreen
+          bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
+          onBack={() => {
+            resetRewardsRoute();
+            exitTab('dhurata');
+          }}
+          onOpenLiveRaffle={() => goToTab('shortiLive', 'dhurata')}
+          initialRaffleId={rewardsInitialRaffleId}
+          initialRewardTarget={rewardsInitialRewardTarget}
+          onConsumeInitialSelection={resetRewardsRoute}
+        />
+      )}
+
+      {activeTab === 'shortiLive' && (
+        <LiveRaffleScreen
+          bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
+          onBack={() => exitTab('shortiLive')}
+        />
       )}
 
       {activeTab === 'profil' && (
         <ProfileScreen
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
-          onBack={() => setActiveTab('home')}
+          onBack={() => exitTab('profil')}
           onSettings={() => setShowSettings(true)}
+          onOpenApplication={(jobId) => {
+            setTabReturnTarget('mundesit', 'profil');
+            openJobProfile(jobId);
+          }}
+          onOpenCourse={(courseId) => {
+            setTabReturnTarget('kurset', 'profil');
+            openCourseProfile(courseId);
+          }}
+          onOpenStartupIdea={() => {
+            setTabReturnTarget('startupet', 'profil');
+            openStartups();
+          }}
+          onOpenAct4History={(activityId) => {
+            setTabReturnTarget('act4', 'profil');
+            openAct4Profile(activityId);
+          }}
+          onOpenRaffleEntry={(raffleId) => {
+            setRewardsInitialRewardTarget(undefined);
+            setRewardsInitialRaffleId(raffleId);
+            goToTab('dhurata', 'profil');
+          }}
+          onOpenLoyaltyRedemption={(businessPostId, rewardUid) => {
+            setRewardsInitialRaffleId(undefined);
+            setRewardsInitialRewardTarget({ businessPostId, rewardUid });
+            goToTab('dhurata', 'profil');
+          }}
         />
       )}
 
@@ -1031,7 +1210,14 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Përfitimet */}
-        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('perfitimet')}>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => {
+            resetOffersRoute();
+            setTabReturnTarget('perfitimet');
+            setActiveTab('perfitimet');
+          }}
+        >
           <Tag size={24} color={activeTab === 'perfitimet' ? Colors.tabActive : Colors.tabInactive} strokeWidth={activeTab === 'perfitimet' ? 2.5 : 2} />
           <Text style={[styles.tabLabel, { color: activeTab === 'perfitimet' ? Colors.tabActive : Colors.tabInactive, fontFamily: activeTab === 'perfitimet' ? Typography.fontBold : Typography.fontMedium }]}>Përfito</Text>
         </TouchableOpacity>
@@ -1044,13 +1230,26 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Dhurata */}
-        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('dhurata')}>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => {
+            resetRewardsRoute();
+            setTabReturnTarget('dhurata');
+            setActiveTab('dhurata');
+          }}
+        >
           <Gift size={24} color={activeTab === 'dhurata' ? Colors.tabActive : Colors.tabInactive} strokeWidth={activeTab === 'dhurata' ? 2.5 : 2} />
           <Text style={[styles.tabLabel, { color: activeTab === 'dhurata' ? Colors.tabActive : Colors.tabInactive, fontFamily: activeTab === 'dhurata' ? Typography.fontBold : Typography.fontMedium }]}>Dhurata</Text>
         </TouchableOpacity>
 
         {/* Profile */}
-        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('profil')}>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={() => {
+            setTabReturnTarget('profil');
+            setActiveTab('profil');
+          }}
+        >
           <User size={24} color={activeTab === 'profil' ? Colors.tabActive : Colors.tabInactive} strokeWidth={activeTab === 'profil' ? 2.5 : 2} />
           <Text style={[styles.tabLabel, { color: activeTab === 'profil' ? Colors.tabActive : Colors.tabInactive, fontFamily: activeTab === 'profil' ? Typography.fontBold : Typography.fontMedium }]}>Profili</Text>
         </TouchableOpacity>
@@ -1060,10 +1259,13 @@ export default function HomeScreen() {
       {/* ════════════════════════════════════════════════════════════════
           SMART MODAL — full screen story overlay
       ════════════════════════════════════════════════════════════════ */}
-      <SmartModal
-        item={activeItem}
-        onClose={() => setActiveItem(null)}
+      <CardStoryModal
+        visible={!!activeCarousel}
+        items={activeCarousel?.items ?? []}
+        initialIndex={activeCarousel?.initialIndex ?? 0}
+        onClose={() => setActiveCarousel(null)}
         onAction={(item) => {
+          setActiveCarousel(null);
           if (item.type === 'kurs') {
             openCourseProfile(item.id);
           }
@@ -1081,7 +1283,16 @@ export default function HomeScreen() {
           }
         }}
       />
-      <StoryModal visible={storyVisible} stories={realBusinesses} initialIndex={storyIndex} onClose={() => setStoryVisible(false)} onViewProfile={(biz) => { setOffersInitialBusiness(biz); setActiveTab('perfitimet'); }} />
+      <StoryModal
+        visible={storyVisible}
+        stories={activeStories}
+        initialIndex={storyIndex}
+        onClose={() => setStoryVisible(false)}
+        onViewProfile={(biz) => {
+          setStoryVisible(false);
+          openOfferProfile(biz);
+        }}
+      />
       <DigitalCardModal visible={cardVisible} onClose={() => setCardVisible(false)} />
 
       {/* ════════════════════════════════════════════════════════════════
@@ -1533,6 +1744,10 @@ const styles = StyleSheet.create({
   nearMeTextActive: {
     color: '#fff',
   },
+  nearMePillBelowTitle: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
 
   // ── Section header ───────────────────────────────────────────────────────────
   sectionHeader: {
@@ -1541,6 +1756,10 @@ const styles = StyleSheet.create({
     alignItems:       'flex-end',
     paddingHorizontal: Spacing.xxl,
     marginBottom:     Spacing.lg,
+  },
+  offersHeaderInfo: {
+    flex: 1,
+    paddingRight: Spacing.md,
   },
   sectionTitle: {
     fontFamily: Typography.fontExtraBold,
@@ -1783,61 +2002,110 @@ const styles = StyleSheet.create({
     marginTop:   -4,
   },
 
-  // ── KVR vertical list ────────────────────────────────────────────────────────
-  kvrList: {
-    paddingHorizontal: Spacing.xxl,
-    gap:               12,
+  // ── KVR editorial carousel ──────────────────────────────────────────────────
+  kvrSectionWrap: {
+    marginHorizontal: Spacing.xxl,
+    marginTop:        6,
+    marginBottom:     Spacing.lg,
+    paddingBottom:    6,
   },
-  kvrCard: {
+  kvrSectionHeader: {
     flexDirection:   'row',
     alignItems:      'center',
-    gap:             14,
-    backgroundColor: Colors.white,
-    borderRadius:    Radius.xxl,
-    padding:         12,
-    borderWidth:     1,
-    borderColor:     Colors.borderLight,
-    shadowColor:     '#000',
-    shadowOpacity:   0.05,
-    shadowRadius:    10,
-    shadowOffset:    { width: 0, height: 3 },
-    elevation:       2,
+    justifyContent:  'space-between',
+    marginBottom:    14,
   },
-  kvrImageWrap: {
-    width:        80,
-    height:       80,
-    borderRadius: 14,
-    overflow:     'hidden',
-    flexShrink:   0,
-    borderWidth:  1,
-    borderColor:  Colors.borderLight,
+  kvrSectionEyebrow: {
+    fontFamily:    Typography.fontExtraBold,
+    fontSize:      10,
+    textTransform: 'uppercase',
+    letterSpacing: 1.3,
+    color:         '#64748B',
+    marginBottom:  3,
+  },
+  kvrSectionTitle: {
+    fontFamily: Typography.fontBold,
+    fontSize:   16,
+    color:      Colors.textPrimary,
+  },
+  kvrSectionLink: {
+    paddingHorizontal: 12,
+    paddingVertical:   8,
+    borderRadius:      Radius.full,
+    backgroundColor:   '#eef6ff',
+  },
+  kvrSectionLinkText: {
+    fontFamily: Typography.fontBold,
+    fontSize:   12,
+    color:      '#0ea5e9',
+  },
+  kvrList: {
+    paddingTop:  2,
+    paddingLeft: 2,
+    paddingRight: 10,
+    paddingBottom: 8,
+  },
+  kvrCard: {
+    width:           296,
+    marginRight:     14,
+    marginBottom:    4,
+    overflow:        'hidden',
+    backgroundColor: Colors.white,
+    borderRadius:    28,
+    padding:         16,
+    shadowColor:     '#0f172a',
+    shadowOpacity:   0.08,
+    shadowRadius:    14,
+    shadowOffset:    { width: 0, height: 4 },
+    elevation:       3,
+  },
+  kvrCardLast: {
+    marginRight: 0,
+  },
+  kvrPosterWrap: {
+    width:           '100%',
+    height:          210,
+    borderRadius:    22,
+    overflow:        'hidden',
+    backgroundColor: '#f8fafc',
+    marginTop:       16,
   },
   kvrImage: {
     width:  '100%',
     height: '100%',
   },
-  kvrBody: {
-    flex:           1,
-    justifyContent: 'center',
+  kvrPosterOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
-  kvrType: {
+  kvrTypeBadge: {
+    alignSelf:         'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical:   6,
+    borderRadius:      Radius.full,
+    backgroundColor:   '#f8fafc',
+    marginBottom:      14,
+  },
+  kvrTypeBadgeText: {
     fontFamily:    Typography.fontExtraBold,
     fontSize:      10,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
-    marginBottom:  4,
+  },
+  kvrBody: {
+    minHeight: 118,
   },
   kvrTitle: {
     fontFamily:   Typography.fontBold,
-    fontSize:     Typography.base,
+    fontSize:     28,
     color:        Colors.textPrimary,
-    lineHeight:   20,
-    marginBottom: 4,
+    lineHeight:   30,
+    marginBottom: 10,
   },
   kvrMeta: {
     fontFamily: Typography.fontMedium,
-    fontSize:   11,
+    fontSize:   12,
     color:      Colors.textSecondary,
+    lineHeight: 18,
   },
 
   // ── Chat wrapper ─────────────────────────────────────────────────────────────

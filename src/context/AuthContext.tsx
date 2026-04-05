@@ -7,13 +7,20 @@
 import React, {
   createContext, useContext, useEffect, useState, useCallback,
 } from 'react';
-import { getToken, fetchMe, logout as apiLogout } from '../services/api';
+import {
+  ApiError,
+  getToken,
+  fetchMe,
+  logout as apiLogout,
+  subscribeToAuthErrors,
+} from '../services/api';
 import { StudentCard } from '../types';
 
 interface AuthContextValue {
   isLoading:   boolean;
   isLoggedIn:  boolean;
   card:        StudentCard | null;
+  authNotice:  string | null;
   onLoginSuccess: (card: StudentCard) => void;
   onLogout:    () => Promise<void>;
   refreshCard: () => Promise<void>;
@@ -25,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading,  setIsLoading]  = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [card,       setCard]       = useState<StudentCard | null>(null);
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
 
   // On mount: check if a valid token is stored and fetch the student card
   useEffect(() => {
@@ -36,8 +44,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCard(me);
           setIsLoggedIn(true);
         }
-      } catch (_) {
+      } catch (err) {
         // Token expired or invalid — clear it silently
+        if (err instanceof ApiError && err.code === 'no_card') {
+          setAuthNotice('Kjo llogari nuk ka nje karte aktive per momentin.');
+        }
         await apiLogout();
       } finally {
         setIsLoading(false);
@@ -45,26 +56,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
+  useEffect(() => subscribeToAuthErrors((message) => {
+    setCard(null);
+    setIsLoggedIn(false);
+    setAuthNotice(message);
+    setIsLoading(false);
+  }), []);
+
   const onLoginSuccess = useCallback((studentCard: StudentCard) => {
     setCard(studentCard);
     setIsLoggedIn(true);
+    setAuthNotice(null);
   }, []);
 
   const onLogout = useCallback(async () => {
     await apiLogout();
     setCard(null);
     setIsLoggedIn(false);
+    setAuthNotice(null);
   }, []);
 
   const refreshCard = useCallback(async () => {
     try {
       const me = await fetchMe();
       setCard(me);
-    } catch (_) {}
+      setAuthNotice(null);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'no_card') {
+        setCard(null);
+        setIsLoggedIn(false);
+        setAuthNotice('Kjo llogari nuk ka nje karte aktive per momentin.');
+        await apiLogout();
+      }
+    }
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isLoading, isLoggedIn, card, onLoginSuccess, onLogout, refreshCard }}>
+    <AuthContext.Provider value={{ isLoading, isLoggedIn, card, authNotice, onLoginSuccess, onLogout, refreshCard }}>
       {children}
     </AuthContext.Provider>
   );

@@ -12,6 +12,7 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { ActActivity } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchAct4Single, volunteerAct4 } from '../../services/api';
+import ScreenState from '../../components/ScreenState';
 
 interface Props {
   activityId: string;
@@ -62,8 +63,8 @@ export default function ActProfileScreen({ activityId, onBack, bottomInset }: Pr
       await volunteerAct4(Number(activity.id), activity.title);
       setJoined(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Regjistrimi deshtoi. Provo perseri.';
-      Alert.alert('Regjistrimi nuk u krye', message);
+      const message = err instanceof Error ? err.message : 'Regjistrimi nuk u krye. Provo perseri.';
+      Alert.alert('Gabim', message);
     } finally {
       setSubmitting(false);
     }
@@ -83,10 +84,13 @@ export default function ActProfileScreen({ activityId, onBack, bottomInset }: Pr
         <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.75}>
           <ChevronLeft size={20} color={Colors.textPrimary} strokeWidth={2.5} />
         </TouchableOpacity>
-        <Text style={styles.errorTitle}>Aktiviteti nuk u ngarkua.</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={reload} activeOpacity={0.85}>
-          <Text style={styles.retryBtnText}>Provo perseri</Text>
-        </TouchableOpacity>
+        <ScreenState
+          icon="error"
+          title="Aktiviteti nuk u ngarkua"
+          message="Provo perseri per te pare detajet e aktivitetit."
+          actionLabel="Provo perseri"
+          onAction={reload}
+        />
       </View>
     );
   }
@@ -184,24 +188,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll: { flex: 1 },
   centered: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xxl, gap: 16 },
-  errorTitle: {
-    fontFamily: Typography.fontBold,
-    fontSize: Typography.lg,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  retryBtn: {
-    backgroundColor: '#0aa8a7',
-    borderRadius: Radius.xl,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  retryBtnText: {
-    fontFamily: Typography.fontBold,
-    fontSize: Typography.base,
-    color: '#fff',
-  },
-
   header: {
     backgroundColor: Colors.white,
     paddingHorizontal: Spacing.xxl,

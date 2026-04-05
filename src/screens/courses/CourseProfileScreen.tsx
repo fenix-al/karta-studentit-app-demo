@@ -7,6 +7,7 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { CourseItem } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { enrollCourse, fetchKurs } from '../../services/api';
+import ScreenState from '../../components/ScreenState';
 
 interface Props { course: CourseItem; onBack: () => void; bottomInset: number; }
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800';
@@ -81,7 +82,18 @@ export default function CourseProfileScreen({ course, onBack, bottomInset }: Pro
         </View>
 
         {loading ? <View style={styles.centered}><ActivityIndicator size="large" color="#e30613" /></View> : null}
-        {error ? <View style={styles.centered}><Text style={styles.errorText}>⚠️ {error}</Text></View> : null}
+        {error ? (
+          <View style={styles.centered}>
+            <ScreenState
+              icon="error"
+              title="Gabim ne ngarkim"
+              message={error}
+              actionLabel="Provo perseri"
+              onAction={reload}
+              compact
+            />
+          </View>
+        ) : null}
 
         <View style={styles.mainInfo}>
           <Text style={styles.courseTitle}>{item.title}</Text>
@@ -130,7 +142,7 @@ function InfoRow({ icon, label, value, bg }: { icon: React.ReactNode; label: str
 function stripHtml(input: string) { return input.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(); }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.surfaceBg }, scroll: { flex: 1 }, centered: { paddingVertical: 32, alignItems: 'center' }, errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary },
+  root: { flex: 1, backgroundColor: Colors.surfaceBg }, scroll: { flex: 1 }, centered: { paddingVertical: 32, alignItems: 'center' },
   overlayHeader: { position: 'absolute', left: Spacing.lg, right: Spacing.lg, zIndex: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, overlayBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.85)', justifyContent: 'center', alignItems: 'center' },
   hero: { height: 280 }, heroImage: { width: '100%', height: '100%' }, heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.20)' },
   floatingBadgeWrap: { paddingHorizontal: Spacing.xxl, marginTop: -20, zIndex: 10 }, floatingBadge: { alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.md, borderWidth: 2, borderColor: Colors.white }, floatingBadgeText: { color: '#fff', fontFamily: Typography.fontExtraBold, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 },

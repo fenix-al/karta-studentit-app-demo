@@ -28,7 +28,7 @@ export default function StartupNavigator({ onExit, bottomInset, initialList, ini
     initialItemId
       ? [{ name: 'profile', itemId: initialItemId }]
       : initialList
-      ? [{ name: 'hub' }, { name: 'list', title: initialList, type: titleToType(initialList) }]
+      ? [{ name: 'list', title: initialList, type: titleToType(initialList) }]
       : [{ name: 'hub' }],
   );
 

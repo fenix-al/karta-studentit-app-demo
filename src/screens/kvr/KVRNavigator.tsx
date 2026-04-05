@@ -21,12 +21,12 @@ export default function KVRNavigator({ onExit, bottomInset, initialList, initial
 
   useEffect(() => {
     if (initialActivityId) {
-      setStack([{ name: 'hub' }, { name: 'profile', activityId: initialActivityId }]);
+      setStack([{ name: 'profile', activityId: initialActivityId }]);
       return;
     }
 
     if (initialList) {
-      setStack([{ name: 'hub' }, { name: 'list', title: initialList.title, catId: initialList.catId }]);
+      setStack([{ name: 'list', title: initialList.title, catId: initialList.catId }]);
       return;
     }
 

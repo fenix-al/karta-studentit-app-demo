@@ -15,14 +15,15 @@ import { Eye, EyeOff, GraduationCap } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
-import { login, fetchMe } from '../../services/api';
+import { ApiError, fetchMe, login, logout } from '../../services/api';
 import { StudentCard } from '../../types';
 
 interface Props {
   onSuccess: (card: StudentCard) => void;
+  notice?: string | null;
 }
 
-export default function LoginScreen({ onSuccess }: Props) {
+export default function LoginScreen({ onSuccess, notice }: Props) {
   const insets = useSafeAreaInsets();
 
   const [username,    setUsername]    = useState('');
@@ -49,11 +50,16 @@ export default function LoginScreen({ onSuccess }: Props) {
       const card = await fetchMe();
       onSuccess(card);
     } catch (err: any) {
+      if (err instanceof ApiError && err.code === 'no_card') {
+        await logout();
+        Alert.alert('Nuk disponohet', 'Kjo llogari nuk ka nje karte aktive per momentin.');
+        return;
+      }
       const msg: string = err?.message ?? 'Ndodhi një gabim. Provo përsëri.';
       if (msg.toLowerCase().includes('fjalëkalim') || msg.toLowerCase().includes('password')) {
         setPassError(msg);
       } else {
-        Alert.alert('Gabim hyrjeje', msg);
+        Alert.alert('Gabim', msg);
       }
     } finally {
       setIsLoading(false);
@@ -88,6 +94,12 @@ export default function LoginScreen({ onSuccess }: Props) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Hyrja në llogari</Text>
           <Text style={styles.cardSub}>Përdor kredencialet e dhëna nga bashkia.</Text>
+
+          {!!notice && (
+            <View style={styles.noticeBox}>
+              <Text style={styles.noticeText}>{notice}</Text>
+            </View>
+          )}
 
           {/* Username */}
           <View style={styles.fieldWrap}>
@@ -213,6 +225,21 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     color: Colors.textMuted,
     marginBottom: Spacing.xl,
+    lineHeight: 18,
+  },
+  noticeBox: {
+    backgroundColor: '#fff7ed',
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 12,
+    marginBottom: Spacing.lg,
+  },
+  noticeText: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.sm,
+    color: '#9a3412',
     lineHeight: 18,
   },
 

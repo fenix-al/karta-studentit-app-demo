@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   Switch, Alert, StyleSheet,
@@ -18,7 +18,7 @@ interface Props {
   onLogout?:   () => void;
 }
 
-// ── Shared row component ──────────────────────────────────────────────────────
+// â”€â”€ Shared row component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SettingRow({
   icon, iconBg, iconColor, title,
   rightElement, isLast = false, isDestructive = false, onPress,
@@ -64,7 +64,7 @@ export default function SettingsScreen({ onBack, bottomInset, onLogout }: Props)
   const [notifEnabled, setNotifEnabled] = useState(true);
 
   const confirmLogout = () =>
-    Alert.alert('Dil nga llogaria', 'Jeni të sigurt që dëshironi të dilni?', [
+    Alert.alert('Kujdes', 'Jeni te sigurt qe deshironi te dilni nga llogaria?', [
       { text: 'Anulo', style: 'cancel' },
       { text: 'Dil', style: 'destructive', onPress: onLogout },
     ]);
@@ -73,12 +73,12 @@ export default function SettingsScreen({ onBack, bottomInset, onLogout }: Props)
   return (
     <View style={styles.root}>
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.75}>
           <ChevronLeft size={20} color={Colors.textPrimary} strokeWidth={2.5} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cilësimet</Text>
+        <Text style={styles.headerTitle}>CilÃ«simet</Text>
         <View style={styles.iconBtn} />
       </View>
 
@@ -88,20 +88,20 @@ export default function SettingsScreen({ onBack, bottomInset, onLogout }: Props)
         contentContainerStyle={[styles.content, { paddingBottom: bottomInset + 32 }]}
       >
 
-        {/* ── Llogaria Ime ─────────────────────────────────────────────────── */}
+        {/* â”€â”€ Llogaria Ime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Text style={styles.groupLabel}>Llogaria Ime</Text>
         <View style={styles.group}>
           <SettingRow
             icon={<User size={16} color="#0284c7" strokeWidth={2} />}
             iconBg="#e0f2fe" iconColor="#0284c7"
-            title="Të dhënat personale"
-            onPress={() => Alert.alert('Të dhënat personale')}
+            title="TÃ« dhÃ«nat personale"
+            onPress={() => Alert.alert('Nuk disponohet', 'Kjo faqe do te shtohet se shpejti.')}
           />
           <SettingRow
             icon={<Lock size={16} color="#d97706" strokeWidth={2} />}
             iconBg="#fffbeb" iconColor="#d97706"
-            title="Siguria & Fjalëkalimi"
-            onPress={() => Alert.alert('Siguria')}
+            title="Siguria & FjalÃ«kalimi"
+            onPress={() => Alert.alert('Nuk disponohet', 'Kjo faqe do te shtohet se shpejti.')}
           />
           <SettingRow
             icon={<Bell size={16} color="#e11d48" strokeWidth={2} />}
@@ -119,31 +119,31 @@ export default function SettingsScreen({ onBack, bottomInset, onLogout }: Props)
           />
         </View>
 
-        {/* ── Ndihmë & Informacion ─────────────────────────────────────────── */}
-        <Text style={styles.groupLabel}>Ndihmë & Informacion</Text>
+        {/* â”€â”€ NdihmÃ« & Informacion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <Text style={styles.groupLabel}>NdihmÃ« & Informacion</Text>
         <View style={styles.group}>
           <SettingRow
             icon={<HelpCircle size={16} color="#0d9488" strokeWidth={2} />}
             iconBg="#f0fdfa" iconColor="#0d9488"
-            title="Qendra e Ndihmës (FAQ)"
+            title="Qendra e NdihmÃ«s (FAQ)"
             onPress={() => {}}
           />
           <SettingRow
             icon={<FileText size={16} color="#64748b" strokeWidth={2} />}
             iconBg="#f8fafc" iconColor="#64748b"
-            title="Kushtet e Përdorimit"
+            title="Kushtet e PÃ«rdorimit"
             onPress={() => {}}
           />
           <SettingRow
             icon={<Shield size={16} color="#64748b" strokeWidth={2} />}
             iconBg="#f8fafc" iconColor="#64748b"
-            title="Politikat e Privatësisë"
+            title="Politikat e PrivatÃ«sisÃ«"
             isLast
             onPress={() => {}}
           />
         </View>
 
-        {/* ── Zona e Rrezikut ───────────────────────────────────────────────── */}
+        {/* â”€â”€ Zona e Rrezikut â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <View style={styles.group}>
           <SettingRow
             icon={<LogOut size={16} color="#e11d48" strokeWidth={2} />}
@@ -155,10 +155,10 @@ export default function SettingsScreen({ onBack, bottomInset, onLogout }: Props)
           />
         </View>
 
-        {/* ── Footer ───────────────────────────────────────────────────────── */}
+        {/* â”€â”€ Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <View style={styles.footer}>
-          <Text style={styles.footerTitle}>Karta e Studentit Shkodër</Text>
-          <Text style={styles.footerSub}>Versioni 2.0.1 • Ndërtuar nga Bashkia</Text>
+          <Text style={styles.footerTitle}>Karta e Studentit ShkodÃ«r</Text>
+          <Text style={styles.footerSub}>Versioni 2.0.1 â€¢ NdÃ«rtuar nga Bashkia</Text>
         </View>
 
       </ScrollView>
@@ -231,3 +231,4 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontMedium, fontSize: 11, color: Colors.textMuted,
   },
 });
+

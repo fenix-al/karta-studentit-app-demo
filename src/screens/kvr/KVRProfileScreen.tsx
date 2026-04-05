@@ -9,6 +9,7 @@ import { ChevronLeft, Share2, Calendar, MapPin } from 'lucide-react-native';
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchKvrSingle } from '../../services/api';
+import ScreenState from '../../components/ScreenState';
 
 const NAVY = '#003366';
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=800';
@@ -67,11 +68,13 @@ export default function KVRProfileScreen({ activityId, onBack, bottomInset }: Pr
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={styles.emptyTitle}>Nuk u ngarkua artikulli</Text>
-          <Text style={styles.emptyText}>Provo perseri per te pare lajmin e KVR.</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={reload}>
-            <Text style={styles.retryText}>Provo Perseri</Text>
-          </TouchableOpacity>
+          <ScreenState
+            icon="error"
+            title="Nuk u ngarkua artikulli"
+            message="Provo perseri per te pare lajmin e KVR."
+            actionLabel="Provo perseri"
+            onAction={reload}
+          />
         </View>
       ) : (
         <ScrollView
@@ -133,31 +136,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.xxl, gap: 12 },
-  emptyTitle: {
-    fontFamily: Typography.fontExtraBold,
-    fontSize: Typography.xl,
-    color: Colors.textPrimary,
-    textAlign: 'center',
-  },
-  emptyText: {
-    fontFamily: Typography.fontMedium,
-    fontSize: Typography.md,
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
-  retryBtn: {
-    backgroundColor: '#e30613',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: Radius.full,
-    marginTop: 4,
-  },
-  retryText: {
-    fontFamily: Typography.fontBold,
-    fontSize: Typography.base,
-    color: '#fff',
-  },
-
   header: {
     backgroundColor: Colors.white,
     paddingHorizontal: Spacing.xxl,

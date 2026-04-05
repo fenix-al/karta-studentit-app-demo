@@ -3,18 +3,26 @@ import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, ActivityIn
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { ChevronLeft, RefreshCw, Gift, Ticket, Trophy, Crown, ArrowDownCircle, ArrowUpCircle, X } from 'lucide-react-native';
+import { ChevronLeft, RefreshCw, Gift, Ticket, Trophy, Crown, ArrowDownCircle, ArrowUpCircle, Radio, X } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
 import { useFetch } from '../hooks/useFetch';
-import { enterRaffle, fetchLoyalty, fetchPoints, fetchRaffles, LoyaltyApiBusiness, LoyaltyApiReward, RaffleApiItem, redeemLoyaltyReward } from '../services/api';
+import { enterRaffle, fetchCurrentLiveRaffle, fetchLoyalty, fetchPoints, fetchRaffles, LoyaltyApiBusiness, LoyaltyApiReward, RaffleApiItem, redeemLoyaltyReward } from '../services/api';
+import ScreenState from '../components/ScreenState';
 
-interface Props { bottomInset: number; onBack?: () => void; }
+interface Props {
+  bottomInset: number;
+  onBack?: () => void;
+  onOpenLiveRaffle?: () => void;
+  initialRaffleId?: number;
+  initialRewardTarget?: { businessPostId: number; rewardUid: string };
+  onConsumeInitialSelection?: () => void;
+}
 type ModalItem = { kind: 'raffle'; raffle: RaffleApiItem } | { kind: 'reward'; business: LoyaltyApiBusiness; reward: LoyaltyApiReward };
 const FALLBACK_RAFFLE_IMAGE = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80';
 
-export default function RewardsScreen({ bottomInset, onBack }: Props) {
+export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, initialRaffleId, initialRewardTarget, onConsumeInitialSelection }: Props) {
   const insets = useSafeAreaInsets();
   const { card, refreshCard } = useAuth();
   const [selected, setSelected] = useState<ModalItem | null>(null);
@@ -23,6 +31,7 @@ export default function RewardsScreen({ bottomInset, onBack }: Props) {
   const points = useFetch(() => fetchPoints());
   const loyalty = useFetch(() => fetchLoyalty());
   const raffles = useFetch(() => fetchRaffles());
+  const liveRaffle = useFetch(() => fetchCurrentLiveRaffle());
 
   const claimable = useMemo(
     () => (loyalty.data ?? []).flatMap((b) => b.rewards.filter((r) => r.one_time && r.unlocked && !r.redeemed).map((r) => ({ business: b, reward: r }))),
@@ -34,9 +43,43 @@ export default function RewardsScreen({ bottomInset, onBack }: Props) {
   const openRaffles = raffles.data ?? [];
   const loading = points.loading || loyalty.loading || raffles.loading;
   const error = points.error || loyalty.error || raffles.error;
+  const currentLiveSession = liveRaffle.data?.session ?? null;
+
+  const consumeInitialSelection = React.useCallback(() => {
+    onConsumeInitialSelection?.();
+  }, [onConsumeInitialSelection]);
+
+  React.useEffect(() => {
+    if (selected || loading) return;
+
+    if (initialRaffleId) {
+      const raffle = openRaffles.find((item) => item.id === initialRaffleId);
+      if (raffle) {
+        setSelected({ kind: 'raffle', raffle });
+        consumeInitialSelection();
+        return;
+      }
+    }
+
+    if (initialRewardTarget) {
+      const business = (loyalty.data ?? []).find(
+        (item) => item.business_post_id === initialRewardTarget.businessPostId,
+      );
+      const reward = business?.rewards.find((item) => item.uid === initialRewardTarget.rewardUid);
+      if (business && reward) {
+        setSelected({ kind: 'reward', business, reward });
+        consumeInitialSelection();
+        return;
+      }
+    }
+
+    if (initialRaffleId || initialRewardTarget) {
+      consumeInitialSelection();
+    }
+  }, [consumeInitialSelection, initialRaffleId, initialRewardTarget, loyalty.data, loading, openRaffles, selected]);
 
   const refreshAll = async () => {
-    await Promise.all([points.reload(), loyalty.reload(), raffles.reload(), refreshCard()]);
+    await Promise.all([points.reload(), loyalty.reload(), raffles.reload(), liveRaffle.reload(), refreshCard()]);
   };
 
   const onConfirm = async () => {
@@ -111,6 +154,28 @@ export default function RewardsScreen({ bottomInset, onBack }: Props) {
               )) : <Empty text="Nuk ke ende shperblime direkte te zhbllokuara." />}
             </SectionPad>
 
+            {currentLiveSession ? (
+              <>
+                <Section title="Shorti Live" meta={currentLiveSession.status.toUpperCase()} />
+                <SectionPad>
+                  <TouchableOpacity style={s.liveCard} activeOpacity={0.92} onPress={onOpenLiveRaffle}>
+                    <LinearGradient colors={['#082f49', '#0f172a']} style={s.liveGradient}>
+                      <View style={s.liveBadge}>
+                        <Radio size={12} color="#38bdf8" />
+                        <Text style={s.liveBadgeText}>{currentLiveSession.status === 'live' ? 'LIVE TANI' : currentLiveSession.status === 'countdown' ? 'COUNTDOWN' : currentLiveSession.status.toUpperCase()}</Text>
+                      </View>
+                      <Text style={s.liveTitle}>{currentLiveSession.raffle_title}</Text>
+                      <Text style={s.liveDesc}>{currentLiveSession.raffle_excerpt || 'Hape shortin live, bashkohu dhe zgjidh kutine tende.'}</Text>
+                      <View style={s.liveFooter}>
+                        <Text style={s.liveFooterText}>Raundi {currentLiveSession.current_round}</Text>
+                        <Text style={s.liveFooterLink}>Hape live raffle</Text>
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </SectionPad>
+              </>
+            ) : null}
+
             <Section title="Shortet e hapura" meta={`${openRaffles.length} aktive`} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hlist}>
               {openRaffles.length ? openRaffles.map((raffle) => (
@@ -128,7 +193,7 @@ export default function RewardsScreen({ bottomInset, onBack }: Props) {
                     </Text>
                   </View>
                 </TouchableOpacity>
-              )) : <View style={s.inlineEmpty}><Empty text="Nuk ka shorte aktive per momentin." /></View>}
+              )) : <View style={s.inlineEmpty}><Empty text="Nuk ka shorte aktive per momentin." actionLabel="Kthehu ne Home" onPress={onBack} /></View>}
             </ScrollView>
 
             <Section title="Progresi ne biznese" meta={`${progressBusinesses.length} biznese`} />
@@ -160,7 +225,7 @@ export default function RewardsScreen({ bottomInset, onBack }: Props) {
                     </View>
                   ))}
                 </View>
-              )) : <Empty text="Nuk ka ende progres lojaliteti." />}
+              )) : <Empty text="Nuk ka ende progres lojaliteti." actionLabel="Kthehu ne Home" onPress={onBack} />}
             </SectionPad>
 
             <Section title="Levizjet e fundit" meta={`${transactions.length} te fundit`} />
@@ -178,7 +243,7 @@ export default function RewardsScreen({ bottomInset, onBack }: Props) {
                     {tx.type === 'earn' ? '+' : ''}{formatPoints(tx.points)}
                   </Text>
                 </View>
-              )) : <Empty text="Nuk ka ende levizje pikesh." />}
+              )) : <Empty text="Nuk ka ende levizje pikesh." actionLabel="Kthehu ne Home" onPress={onBack} />}
             </SectionPad>
           </>
         ) : null}
@@ -193,22 +258,37 @@ function Section({ title, meta }: { title: string; meta: string }) {
   return <View style={s.section}><Text style={s.sectionTitle}>{title}</Text><Text style={s.sectionMeta}>{meta}</Text></View>;
 }
 function SectionPad({ children }: { children: React.ReactNode }) { return <View style={s.pad}>{children}</View>; }
-function Empty({ text }: { text: string }) { return <View style={s.empty}><Text style={s.emptyText}>{text}</Text></View>; }
+function Empty({ text, actionLabel, onPress }: { text: string; actionLabel?: string; onPress?: () => void }) {
+  return (
+    <ScreenState
+      icon="empty"
+      message={text}
+      actionLabel={actionLabel}
+      onAction={onPress}
+      compact
+    />
+  );
+}
 
 function MessageBox({ text, button, onPress, loading }: { text: string; button?: string; onPress?: () => void; loading?: boolean }) {
   return (
-    <View style={s.message}>
-      {loading ? <ActivityIndicator size="small" color={Colors.textMuted} /> : null}
-      <Text style={s.messageText}>{text}</Text>
-      {button && onPress ? <TouchableOpacity style={s.retry} onPress={onPress}><Text style={s.retryText}>{button}</Text></TouchableOpacity> : null}
-    </View>
+    <ScreenState
+      icon={loading ? 'empty' : 'error'}
+      message={text}
+      actionLabel={button}
+      onAction={onPress}
+      loading={loading}
+      compact
+    />
   );
 }
 
 function RewardsModal({ item, loading, onClose, onConfirm }: { item: ModalItem | null; loading: boolean; onClose: () => void; onConfirm: () => void }) {
   if (!item) return null;
   const raffle = item.kind === 'raffle' ? item.raffle : null;
-  const disabled = item.kind === 'raffle' ? (!raffle!.can_afford || raffle!.has_entered) : false;
+  const disabled = item.kind === 'raffle'
+    ? (!raffle!.can_afford || raffle!.has_entered)
+    : !!item.reward.redeemed;
   return (
     <Modal visible animationType="fade" transparent statusBarTranslucent>
       <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFillObject} />
@@ -227,7 +307,13 @@ function RewardsModal({ item, loading, onClose, onConfirm }: { item: ModalItem |
             <View style={m.costBox}><Text style={m.costLabel}>{item.kind === 'raffle' ? 'Kostoja' : 'Pragu'}</Text><Text style={m.cost}>{formatPoints(item.kind === 'raffle' ? raffle!.points_cost : item.reward.threshold)}</Text></View>
             <TouchableOpacity style={[m.btn, disabled && m.btnDisabled]} disabled={disabled || loading} onPress={onConfirm}>
               {loading ? <ActivityIndicator size="small" color="#fff" /> : <Gift size={16} color="#fff" />}
-              <Text style={m.btnText}>{item.kind === 'raffle' ? (raffle!.has_entered ? 'Je regjistruar tashme' : raffle!.can_afford ? 'Konfirmo pjesemarrjen' : 'Nuk ke pike te mjaftueshme') : 'Konfirmo terheqjen'}</Text>
+              <Text style={m.btnText}>
+                {item.kind === 'raffle'
+                  ? (raffle!.has_entered ? 'Je regjistruar tashme' : raffle!.can_afford ? 'Konfirmo pjesemarrjen' : 'Nuk ke pike te mjaftueshme')
+                  : item.reward.redeemed
+                    ? 'Shperblimi eshte terhequr'
+                    : 'Konfirmo terheqjen'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -251,6 +337,7 @@ const s = StyleSheet.create({
   section: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', paddingHorizontal: Spacing.xxl, marginBottom: Spacing.md }, sectionTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xxl, color: Colors.textPrimary }, sectionMeta: { fontFamily: Typography.fontBold, fontSize: Typography.sm, color: '#0ea5e9' },
   message: { backgroundColor: Colors.white, borderRadius: Radius.xl, padding: Spacing.xl, borderWidth: 1, borderColor: Colors.borderLight, alignItems: 'center', gap: 10 }, messageText: { fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textMuted, textAlign: 'center' }, retry: { backgroundColor: '#0f172a', paddingHorizontal: Spacing.xl, paddingVertical: 10, borderRadius: Radius.lg }, retryText: { fontFamily: Typography.fontBold, fontSize: Typography.sm, color: '#fff' },
   claimCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: Colors.white, borderRadius: Radius.xxl, padding: Spacing.lg, borderWidth: 1, borderColor: '#fed7aa', marginBottom: 12 }, claimMedia: { width: 58, height: 58, borderRadius: 18, backgroundColor: '#fff7ed', borderWidth: 1, borderColor: '#ffedd5', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }, claimLogo: { width: '100%', height: '100%' }, claimTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.lg, color: Colors.textPrimary, marginBottom: 2 }, claimSub: { fontFamily: Typography.fontBold, fontSize: Typography.sm, color: '#c2410c', marginBottom: 2 }, claimMeta: { fontFamily: Typography.fontMedium, fontSize: 10, color: Colors.textMuted }, claimPill: { backgroundColor: '#0f172a', borderRadius: Radius.full, paddingHorizontal: 12, paddingVertical: 8 }, claimPillText: { fontFamily: Typography.fontBold, fontSize: 10, color: '#fff', textTransform: 'uppercase' },
+  liveCard: { borderRadius: Radius.xxl + 4, overflow: 'hidden', shadowColor: '#082f49', shadowOpacity: 0.16, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 6 }, liveGradient: { padding: Spacing.xl, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' }, liveBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(125,211,252,0.26)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: Radius.full, marginBottom: 14 }, liveBadgeText: { fontFamily: Typography.fontExtraBold, fontSize: 10, color: '#e0f2fe', textTransform: 'uppercase', letterSpacing: 0.6 }, liveTitle: { fontFamily: Typography.fontExtraBold, fontSize: 24, color: '#fff', marginBottom: 8, lineHeight: 28 }, liveDesc: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: '#cbd5e1', lineHeight: 20 }, liveFooter: { marginTop: Spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, liveFooterText: { fontFamily: Typography.fontBold, fontSize: Typography.sm, color: '#7dd3fc' }, liveFooterLink: { fontFamily: Typography.fontBold, fontSize: Typography.sm, color: '#fff' },
   hlist: { paddingHorizontal: Spacing.xxl, gap: 14, paddingBottom: Spacing.md }, inlineEmpty: { width: 280 }, raffleCard: { width: 272, backgroundColor: Colors.white, borderRadius: Radius.xxl + 2, overflow: 'hidden', borderWidth: 1, borderColor: Colors.borderLight, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 }, raffleMedia: { height: 160, backgroundColor: Colors.borderLight }, raffleImg: { width: '100%', height: '100%' }, raffleOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(2,6,23,0.36)' }, badge: { position: 'absolute', top: 12, left: 12, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.sm, backgroundColor: 'rgba(255,255,255,0.18)' }, badgeDone: { backgroundColor: 'rgba(16,185,129,0.95)' }, badgeText: { color: '#fff', fontFamily: Typography.fontExtraBold, fontSize: 10, textTransform: 'uppercase' }, raffleTitle: { position: 'absolute', bottom: 12, left: 12, right: 12, fontFamily: Typography.fontExtraBold, fontSize: Typography.lg, color: '#fff', lineHeight: 21 }, raffleBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg }, raffleCost: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xl, color: '#92400e' }, raffleCostLabel: { fontFamily: Typography.fontBold, fontSize: 9, color: Colors.textMuted, textTransform: 'uppercase' }, raffleAction: { fontFamily: Typography.fontBold, fontSize: 10, color: '#0369a1', textTransform: 'uppercase' }, raffleActionMuted: { color: Colors.textMuted },
   progressBusiness: { backgroundColor: Colors.white, borderRadius: Radius.xxl + 4, borderWidth: 1, borderColor: '#d1fae5', padding: Spacing.xl, marginBottom: Spacing.lg }, progressHead: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.lg }, progressLogo: { width: 56, height: 56, borderRadius: 18, backgroundColor: '#ecfdf5', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }, progressName: { fontFamily: Typography.fontExtraBold, fontSize: Typography.lg, color: Colors.textPrimary, marginBottom: 2 }, progressScans: { fontFamily: Typography.fontBold, fontSize: Typography.xs, color: Colors.textMuted, textTransform: 'uppercase' }, loyalPill: { backgroundColor: '#dcfce7', borderWidth: 1, borderColor: '#bbf7d0', paddingHorizontal: 10, paddingVertical: 6, borderRadius: Radius.full }, loyalPillText: { fontFamily: Typography.fontBold, fontSize: 9, color: '#166534', textTransform: 'uppercase' },
   progressCard: { backgroundColor: Colors.surfaceBg, borderRadius: Radius.xl, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.borderLight, marginBottom: 10 }, progressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 12 }, progressRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }, progressTitle: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: Colors.textPrimary, flexShrink: 1 }, progressThreshold: { fontFamily: Typography.fontBold, fontSize: 10, color: Colors.textMuted }, track: { height: 6, backgroundColor: '#e2e8f0', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }, fill: { height: '100%', borderRadius: 3 }, progressMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }, progressMeta: { fontFamily: Typography.fontBold, fontSize: Typography.sm, color: Colors.textMuted }, progressState: { fontFamily: Typography.fontMedium, fontSize: 10, color: Colors.textSecondary, textAlign: 'right', flex: 1 },

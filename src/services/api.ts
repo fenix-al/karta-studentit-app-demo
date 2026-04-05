@@ -8,9 +8,70 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { SK_API, JWT_ENDPOINT } from '../constants/config';
-import { NotificationApiItem, ProfileApplicationApiItem, ProfileCourseApiItem, ProfileHistoryApiItem, StudentCard } from '../types';
+import {
+  LiveRaffleCurrentApiResponse,
+  LiveRaffleEventsApiResponse,
+  LiveRaffleStateApiResponse,
+  NotificationApiItem,
+  ProfileAct4HistoryApiItem,
+  ProfileApplicationApiItem,
+  ProfileCourseApiItem,
+  ProfileHistoryApiItem,
+  ProfileLoyaltyRedemptionApiItem,
+  ProfileRaffleEntryApiItem,
+  ProfileStartupIdeaApiItem,
+  StudentCard,
+} from '../types';
 
 export const TOKEN_KEY = 'sk_jwt_token';
+
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+const authErrorListeners = new Set<(message: string) => void>();
+
+export function subscribeToAuthErrors(listener: (message: string) => void): () => void {
+  authErrorListeners.add(listener);
+  return () => authErrorListeners.delete(listener);
+}
+
+function emitAuthError(message: string) {
+  authErrorListeners.forEach((listener) => listener(message));
+}
+
+function isAuthStatus(status: number) {
+  return status === 401 || status === 403;
+}
+
+function isJwtErrorCode(code?: string) {
+  if (!code) return false;
+  return code.startsWith('jwt_') || code === 'forbidden' || code === 'rest_forbidden';
+}
+
+function friendlyApiMessage(status: number, code?: string, fallback?: string) {
+  if (code === 'no_card') {
+    return 'Nuk u gjet nje karte aktive per kete llogari.';
+  }
+  if (code === 'not_found') {
+    return 'Ky element nuk eshte me i disponueshem.';
+  }
+  if (isAuthStatus(status) || isJwtErrorCode(code)) {
+    return 'Sesioni ka skaduar. Ju lutem hyni perseri.';
+  }
+  if (status === 404) {
+    return 'Permbajtja nuk u gjet.';
+  }
+  return fallback || `HTTP ${status}`;
+}
 
 // ── Platform-safe storage (SecureStore on native, AsyncStorage on web) ─────────
 
@@ -50,7 +111,18 @@ async function publicFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${SK_API}${path}`, {
     headers: { 'Content-Type': 'application/json' },
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    let message = `HTTP ${res.status}`;
+    let code: string | undefined;
+    try {
+      const body = await res.json();
+      message = friendlyApiMessage(res.status, body?.code, body?.message || message);
+      code = body?.code;
+    } catch (_) {
+      message = friendlyApiMessage(res.status, undefined, message);
+    }
+    throw new ApiError(message, res.status, code);
+  }
   return res.json() as Promise<T>;
 }
 
@@ -66,11 +138,19 @@ async function apiFetch<T>(
 
   if (!res.ok) {
     let message = `HTTP ${res.status}`;
+    let code: string | undefined;
     try {
       const body = await res.json();
-      message = body?.message || message;
+      message = friendlyApiMessage(res.status, body?.code, body?.message || message);
+      code = body?.code;
     } catch (_) {}
-    throw new Error(message);
+
+    if (isAuthStatus(res.status) || isJwtErrorCode(code)) {
+      await removeToken();
+      emitAuthError('Sesioni juaj ka skaduar. Ju lutem hyni perseri.');
+    }
+
+    throw new ApiError(message, res.status, code);
   }
 
   return res.json() as Promise<T>;
@@ -193,6 +273,44 @@ export async function enterRaffle(
 }
 
 // ── Offers / Businesses ───────────────────────────────────────────────────────
+
+export async function fetchCurrentLiveRaffle(): Promise<LiveRaffleCurrentApiResponse> {
+  return apiFetch<LiveRaffleCurrentApiResponse>('/live-raffles/current');
+}
+
+export async function fetchLiveRaffleState(sessionId: number): Promise<LiveRaffleStateApiResponse> {
+  return apiFetch<LiveRaffleStateApiResponse>(`/live-raffles/${sessionId}/state`);
+}
+
+export async function fetchLiveRaffleEvents(
+  sessionId: number,
+  limit = 30,
+): Promise<LiveRaffleEventsApiResponse> {
+  return apiFetch<LiveRaffleEventsApiResponse>(`/live-raffles/${sessionId}/events?limit=${limit}`);
+}
+
+export async function joinLiveRaffle(
+  sessionId: number,
+): Promise<{ success: boolean }> {
+  return apiFetch(`/live-raffles/${sessionId}/join`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function pickLiveRaffleBox(
+  sessionId: number,
+  roundNo: number,
+  boxNumber: number,
+): Promise<{ success: boolean; round_no: number; box_number: number; picked_at: string }> {
+  return apiFetch(`/live-raffles/${sessionId}/pick`, {
+    method: 'POST',
+    body: JSON.stringify({
+      round_no: roundNo,
+      box_number: boxNumber,
+    }),
+  });
+}
 
 export async function fetchOffers(params?: {
   category?: string;
@@ -348,6 +466,22 @@ export async function fetchMyApplications(): Promise<ProfileApplicationApiItem[]
 
 export async function fetchMyCourses(): Promise<ProfileCourseApiItem[]> {
   return apiFetch<ProfileCourseApiItem[]>('/me/courses');
+}
+
+export async function fetchMyStartupIdeas(): Promise<ProfileStartupIdeaApiItem[]> {
+  return apiFetch<ProfileStartupIdeaApiItem[]>('/me/startup-ideas');
+}
+
+export async function fetchMyAct4History(): Promise<ProfileAct4HistoryApiItem[]> {
+  return apiFetch<ProfileAct4HistoryApiItem[]>('/me/act4-history');
+}
+
+export async function fetchMyRaffles(): Promise<ProfileRaffleEntryApiItem[]> {
+  return apiFetch<ProfileRaffleEntryApiItem[]>('/me/raffles');
+}
+
+export async function fetchMyLoyaltyRedemptions(): Promise<ProfileLoyaltyRedemptionApiItem[]> {
+  return apiFetch<ProfileLoyaltyRedemptionApiItem[]>('/me/loyalty-redemptions');
 }
 
 export async function fetchMyNotifications(): Promise<{ items: NotificationApiItem[]; unread_count: number }> {

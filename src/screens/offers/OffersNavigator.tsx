@@ -19,9 +19,9 @@ interface Props {
 export default function OffersNavigator({ onExit, bottomInset, initialList, initialBusiness }: Props) {
   const [stack, setStack] = useState<Screen[]>(
     initialBusiness
-      ? [{ name: 'hub' }, { name: 'profile', business: initialBusiness }]
+      ? [{ name: 'profile', business: initialBusiness }]
       : initialList
-        ? [{ name: 'hub' }, { name: 'list', title: initialList }]
+        ? [{ name: 'list', title: initialList }]
         : [{ name: 'hub' }]
   );
   const current = stack[stack.length - 1];

@@ -7,29 +7,58 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Settings, ChevronLeft, Award, MessageSquare, Send,
-  Briefcase, BookOpen, History,
+  Briefcase, BookOpen, History, Rocket, Heart,
   CheckCircle, Clock, Gift, MapPin,
 } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
 import { useFetch } from '../hooks/useFetch';
-import { fetchMyApplications, fetchMyCourses, fetchMyHistory, postSuggestion } from '../services/api';
 import {
+  fetchMyAct4History,
+  fetchMyApplications,
+  fetchMyCourses,
+  fetchMyHistory,
+  fetchMyLoyaltyRedemptions,
+  fetchMyRaffles,
+  fetchMyStartupIdeas,
+  postSuggestion,
+} from '../services/api';
+import {
+  ProfileAct4HistoryApiItem,
   ProfileApplication,
   ProfileCourse,
   ProfileCourseApiItem,
   ProfileHistoryApiItem,
+  ProfileLoyaltyRedemptionApiItem,
+  ProfileRaffleEntryApiItem,
+  ProfileStartupIdeaApiItem,
   ScanHistoryEntry,
 } from '../types';
+import ScreenState from '../components/ScreenState';
 
 interface Props {
   bottomInset:  number;
   onBack?:      () => void;
   onSettings?:  () => void;
+  onOpenApplication?: (jobId: string) => void;
+  onOpenCourse?: (courseId: string) => void;
+  onOpenStartupIdea?: () => void;
+  onOpenAct4History?: (activityId: string) => void;
+  onOpenRaffleEntry?: (raffleId: number) => void;
+  onOpenLoyaltyRedemption?: (businessPostId: number, rewardUid: string) => void;
 }
 
-type ActivityTab = 'aplikimet' | 'kurset' | 'historiku';
+type ActivityTab =
+  | 'aplikimet'
+  | 'kurset'
+  | 'historiku'
+  | 'startup'
+  | 'act4'
+  | 'raffles'
+  | 'loyalty';
+
+type BadgeTone = 'green' | 'amber' | 'red' | 'slate' | 'sky';
 
 const TOPICS = [
   { value: 'problem', label: 'Raporto nje problem/biznes' },
@@ -37,7 +66,17 @@ const TOPICS = [
   { value: 'tjeter',  label: 'Dicka tjeter' },
 ];
 
-export default function ProfileScreen({ bottomInset, onBack, onSettings }: Props) {
+export default function ProfileScreen({
+  bottomInset,
+  onBack,
+  onSettings,
+  onOpenApplication,
+  onOpenCourse,
+  onOpenStartupIdea,
+  onOpenAct4History,
+  onOpenRaffleEntry,
+  onOpenLoyaltyRedemption,
+}: Props) {
   const insets = useSafeAreaInsets();
   const { card } = useAuth();
 
@@ -64,6 +103,30 @@ export default function ProfileScreen({ bottomInset, onBack, onSettings }: Props
     loading: coursesLoading,
     error: coursesError,
   } = useFetch(() => fetchMyCourses());
+
+  const {
+    data: startupIdeasData,
+    loading: startupIdeasLoading,
+    error: startupIdeasError,
+  } = useFetch(() => fetchMyStartupIdeas());
+
+  const {
+    data: act4HistoryData,
+    loading: act4HistoryLoading,
+    error: act4HistoryError,
+  } = useFetch(() => fetchMyAct4History());
+
+  const {
+    data: rafflesData,
+    loading: rafflesLoading,
+    error: rafflesError,
+  } = useFetch(() => fetchMyRaffles());
+
+  const {
+    data: loyaltyRedemptionsData,
+    loading: loyaltyRedemptionsLoading,
+    error: loyaltyRedemptionsError,
+  } = useFetch(() => fetchMyLoyaltyRedemptions());
 
   const topicLabel = TOPICS.find((t) => t.value === topic)?.label ?? '-- Zgjidh Teme --';
 
@@ -103,6 +166,56 @@ export default function ProfileScreen({ bottomInset, onBack, onSettings }: Props
     [coursesData],
   );
 
+  const startupIdeas = useMemo(
+    () => (startupIdeasData ?? []).map((idea: ProfileStartupIdeaApiItem) => ({
+      id: idea.idea_id,
+      title: idea.title,
+      helpNeeded: idea.help_needed || 'Ide startup',
+      description: idea.description,
+      date: formatDate(idea.created_at),
+      status: mapStartupStatusLabel(idea.status),
+      tone: mapStartupStatusTone(idea.status) as BadgeTone,
+    })),
+    [startupIdeasData],
+  );
+
+  const act4History = useMemo(
+    () => (act4HistoryData ?? []).map((item: ProfileAct4HistoryApiItem) => ({
+      id: item.id,
+      activityId: item.activity_id,
+      title: item.title,
+      date: formatDate(item.date),
+      status: item.status === 'attended' ? 'Pjesemarrese' : 'E regjistruar',
+      tone: (item.status === 'attended' ? 'green' : 'sky') as BadgeTone,
+    })),
+    [act4HistoryData],
+  );
+
+  const raffleEntries = useMemo(
+    () => (rafflesData ?? []).map((entry: ProfileRaffleEntryApiItem) => ({
+      id: entry.entry_id,
+      raffleId: entry.raffle_id,
+      title: entry.title,
+      date: formatDate(entry.entry_date),
+      cost: entry.points_cost,
+      status: entry.status === 'closed' ? 'I mbyllur' : 'Aktiv',
+      tone: (entry.status === 'closed' ? 'slate' : 'amber') as BadgeTone,
+    })),
+    [rafflesData],
+  );
+
+  const loyaltyRedemptions = useMemo(
+    () => (loyaltyRedemptionsData ?? []).map((item: ProfileLoyaltyRedemptionApiItem) => ({
+      id: item.redemption_id,
+      businessPostId: item.business_post_id,
+      rewardUid: item.reward_uid,
+      business: item.business_name,
+      reward: item.reward_title,
+      date: formatDate(item.redeemed_at),
+    })),
+    [loyaltyRedemptionsData],
+  );
+
   const scanCount = card?.total_scans ?? history.length;
   const volunteerActivities = card?.act4_activities_count ?? 0;
 
@@ -115,7 +228,7 @@ export default function ProfileScreen({ bottomInset, onBack, onSettings }: Props
     setIsSubmitting(true);
     try {
       const res = await postSuggestion(topic, suggestion.trim());
-      Alert.alert('Faleminderit!', res.msg || 'Sugjerimi u dergua me sukses.');
+      Alert.alert('U krye', res.msg || 'Sugjerimi u dergua me sukses.');
       setSuggestion('');
       setTopic('');
     } catch (err: any) {
@@ -258,6 +371,10 @@ export default function ProfileScreen({ bottomInset, onBack, onSettings }: Props
             { key: 'aplikimet' as ActivityTab, label: 'Aplikimet', Icon: Briefcase },
             { key: 'kurset' as ActivityTab, label: 'Kurset Rinore', Icon: BookOpen },
             { key: 'historiku' as ActivityTab, label: 'Skanimet', Icon: History },
+            { key: 'startup' as ActivityTab, label: 'Startup Ideas', Icon: Rocket },
+            { key: 'act4' as ActivityTab, label: 'ACT4', Icon: Heart },
+            { key: 'raffles' as ActivityTab, label: 'Shortet', Icon: Gift },
+            { key: 'loyalty' as ActivityTab, label: 'Shperblimet', Icon: Award },
           ].map(({ key, label, Icon }) => (
             <TouchableOpacity
               key={key}
@@ -279,7 +396,13 @@ export default function ProfileScreen({ bottomInset, onBack, onSettings }: Props
             emptyText="Nuk ka aplikime te ruajtura per momentin."
           >
             {applications.map((app) => (
-              <View key={app.id} style={s.listCard}>
+              <TouchableOpacity
+                key={app.id}
+                style={s.listCard}
+                activeOpacity={0.85}
+                onPress={() => onOpenApplication?.(String(app.id))}
+                disabled={!onOpenApplication}
+              >
                 <View style={{ flex: 1 }}>
                   <Text style={s.listTitle}>{app.title}</Text>
                   <View style={s.listMeta}>
@@ -308,7 +431,7 @@ export default function ProfileScreen({ bottomInset, onBack, onSettings }: Props
                     {app.status}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </TabState>
         )}
@@ -321,7 +444,13 @@ export default function ProfileScreen({ bottomInset, onBack, onSettings }: Props
             emptyText="Nuk ka kurse te regjistruara per momentin."
           >
             {courses.map((c) => (
-              <View key={c.id} style={s.listCard}>
+              <TouchableOpacity
+                key={c.id}
+                style={s.listCard}
+                activeOpacity={0.85}
+                onPress={() => onOpenCourse?.(String(c.id))}
+                disabled={!onOpenCourse}
+              >
                 <View style={{ flex: 1 }}>
                   <Text style={s.listTitle}>{c.title}</Text>
                   <View style={s.listMeta}>
@@ -337,7 +466,7 @@ export default function ProfileScreen({ bottomInset, onBack, onSettings }: Props
                     {c.status}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           </TabState>
         )}
@@ -360,6 +489,134 @@ export default function ProfileScreen({ bottomInset, onBack, onSettings }: Props
                 </View>
                 <Text style={s.histDate}>{h.date}</Text>
               </View>
+            ))}
+          </TabState>
+        )}
+
+        {activeTab === 'startup' && (
+          <TabState
+            loading={startupIdeasLoading}
+            error={startupIdeasError}
+            empty={startupIdeas.length === 0}
+            emptyText="Nuk ka ide startup te ruajtura per momentin."
+            emptyActionLabel="Shko te Startup"
+            onEmptyAction={onOpenStartupIdea}
+          >
+            {startupIdeas.map((idea) => (
+              <TouchableOpacity
+                key={idea.id}
+                style={s.listCardColumn}
+                activeOpacity={0.85}
+                onPress={() => onOpenStartupIdea?.()}
+                disabled={!onOpenStartupIdea}
+              >
+                <View style={s.listCardHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.listTitle}>{idea.title}</Text>
+                    <Text style={s.listSubText}>{idea.helpNeeded}</Text>
+                  </View>
+                  <View style={[s.badge, badgeToneStyle(idea.tone).container]}>
+                    <Text style={[s.badgeText, badgeToneStyle(idea.tone).text]}>{idea.status}</Text>
+                  </View>
+                </View>
+                <Text style={s.listBodyText} numberOfLines={3}>{idea.description}</Text>
+                <Text style={s.histDateInline}>{idea.date}</Text>
+              </TouchableOpacity>
+            ))}
+          </TabState>
+        )}
+
+        {activeTab === 'act4' && (
+          <TabState
+            loading={act4HistoryLoading}
+            error={act4HistoryError}
+            empty={act4History.length === 0}
+            emptyText="Nuk ka histori ACT4 per momentin."
+            emptyActionLabel="Kthehu ne Home"
+            onEmptyAction={onBack}
+          >
+            {act4History.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={s.listCard}
+                activeOpacity={0.85}
+                onPress={() => item.activityId > 0 && onOpenAct4History?.(String(item.activityId))}
+                disabled={!onOpenAct4History || item.activityId <= 0}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={s.listTitle}>{item.title}</Text>
+                  <Text style={s.listMetaText}>{item.date}</Text>
+                </View>
+                <View style={[s.badge, badgeToneStyle(item.tone).container]}>
+                  <Text style={[s.badgeText, badgeToneStyle(item.tone).text]}>{item.status}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </TabState>
+        )}
+
+        {activeTab === 'raffles' && (
+          <TabState
+            loading={rafflesLoading}
+            error={rafflesError}
+            empty={raffleEntries.length === 0}
+            emptyText="Nuk ka pjesemarrje ne shorte per momentin."
+            emptyActionLabel="Kthehu ne Home"
+            onEmptyAction={onBack}
+          >
+            {raffleEntries.map((entry) => (
+              <TouchableOpacity
+                key={entry.id}
+                style={s.listCard}
+                activeOpacity={0.85}
+                onPress={() => onOpenRaffleEntry?.(entry.raffleId)}
+                disabled={!onOpenRaffleEntry}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={s.listTitle}>{entry.title}</Text>
+                  <View style={s.listMeta}>
+                    <Gift size={10} color={Colors.textMuted} strokeWidth={2} />
+                    <Text style={s.listMetaText}>{entry.cost} pike</Text>
+                    <Clock size={10} color={Colors.textMuted} strokeWidth={2} />
+                    <Text style={s.listMetaText}>{entry.date}</Text>
+                  </View>
+                </View>
+                <View style={[s.badge, badgeToneStyle(entry.tone).container]}>
+                  <Text style={[s.badgeText, badgeToneStyle(entry.tone).text]}>{entry.status}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </TabState>
+        )}
+
+        {activeTab === 'loyalty' && (
+          <TabState
+            loading={loyaltyRedemptionsLoading}
+            error={loyaltyRedemptionsError}
+            empty={loyaltyRedemptions.length === 0}
+            emptyText="Nuk ka terheqje shperblimesh loyalty per momentin."
+            emptyActionLabel="Kthehu ne Home"
+            onEmptyAction={onBack}
+          >
+            {loyaltyRedemptions.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={s.listCardColumn}
+                activeOpacity={0.85}
+                onPress={() => onOpenLoyaltyRedemption?.(item.businessPostId, item.rewardUid)}
+                disabled={!onOpenLoyaltyRedemption}
+              >
+                <View style={s.listCardHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.listTitle}>{item.reward}</Text>
+                    <Text style={s.listSubText}>{item.business}</Text>
+                  </View>
+                  <View style={[s.badge, s.badgeGreen]}>
+                    <Text style={[s.badgeText, { color: '#059669' }]}>Terhequr</Text>
+                  </View>
+                </View>
+                <Text style={s.histDateInline}>{item.date}</Text>
+              </TouchableOpacity>
             ))}
           </TabState>
         )}
@@ -391,36 +648,49 @@ function TabState({
   error,
   empty,
   emptyText,
+  emptyActionLabel,
+  onEmptyAction,
   children,
 }: {
   loading: boolean;
   error: string | null;
   empty: boolean;
   emptyText: string;
+  emptyActionLabel?: string;
+  onEmptyAction?: () => void;
   children: React.ReactNode;
 }) {
   if (loading) {
     return (
-      <View style={s.feedbackBox}>
-        <ActivityIndicator size="small" color={Colors.textMuted} />
-        <Text style={s.feedbackText}>Duke ngarkuar...</Text>
-      </View>
+      <ScreenState
+        icon="empty"
+        message="Duke ngarkuar..."
+        loading
+        compact
+      />
     );
   }
 
   if (error) {
     return (
-      <View style={s.feedbackBox}>
-        <Text style={s.feedbackText}>Gabim: {error}</Text>
-      </View>
+      <ScreenState
+        icon="error"
+        title="Gabim ne ngarkim"
+        message={error}
+        compact
+      />
     );
   }
 
   if (empty) {
     return (
-      <View style={s.feedbackBox}>
-        <Text style={s.feedbackText}>{emptyText}</Text>
-      </View>
+      <ScreenState
+        icon="empty"
+        message={emptyText}
+        actionLabel={emptyActionLabel}
+        onAction={onEmptyAction}
+        compact
+      />
     );
   }
 
@@ -451,6 +721,36 @@ function mapCourseStatusLabel(status: string): string {
   if (normalized === 'completed') return 'Perfunduar';
   if (normalized === 'active') return 'Ne zhvillim';
   return 'E regjistruar';
+}
+
+function mapStartupStatusTone(status: string): 'green' | 'amber' | 'slate' {
+  const normalized = status.trim().toLowerCase();
+  if (['kontaktuar', 'contacted', 'approved', 'accepted'].includes(normalized)) return 'green';
+  if (['pending', 'ne pritje'].includes(normalized)) return 'amber';
+  return 'slate';
+}
+
+function mapStartupStatusLabel(status: string): string {
+  const normalized = status.trim().toLowerCase();
+  if (['kontaktuar', 'contacted'].includes(normalized)) return 'Kontaktuar';
+  if (['approved', 'accepted'].includes(normalized)) return 'Pranuar';
+  if (['rejected', 'refused', 'declined'].includes(normalized)) return 'Refuzuar';
+  return 'Ne pritje';
+}
+
+function badgeToneStyle(tone: BadgeTone) {
+  switch (tone) {
+    case 'green':
+      return { container: s.badgeGreen, text: { color: '#059669' } };
+    case 'amber':
+      return { container: s.badgeAmber, text: { color: '#92400e' } };
+    case 'red':
+      return { container: s.badgeRed, text: { color: '#be123c' } };
+    case 'sky':
+      return { container: s.badgeSky, text: { color: '#0369a1' } };
+    default:
+      return { container: s.badgeSlate, text: { color: '#475569' } };
+  }
 }
 
 function formatDate(value: string): string {
@@ -632,7 +932,22 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 }, elevation: 1,
   },
+  listCardColumn: {
+    backgroundColor: Colors.white, borderRadius: Radius.xl,
+    padding: Spacing.lg, borderWidth: 1, borderColor: Colors.borderLight,
+    marginBottom: 10,
+    shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 }, elevation: 1,
+  },
+  listCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 8,
+  },
   listTitle: { fontFamily: Typography.fontBold, fontSize: Typography.md, color: Colors.textPrimary, marginBottom: 4 },
+  listSubText: { fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textSecondary },
+  listBodyText: { fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textMuted, lineHeight: 20 },
   listMeta: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
   listMetaText: { fontFamily: Typography.fontMedium, fontSize: 10, color: Colors.textMuted },
   badge: {
@@ -652,6 +967,7 @@ const s = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', flexShrink: 0,
   },
   histDate: { fontFamily: Typography.fontMedium, fontSize: 9, color: Colors.textMuted, flexShrink: 0, textAlign: 'right' },
+  histDateInline: { fontFamily: Typography.fontMedium, fontSize: 10, color: Colors.textMuted, marginTop: 10 },
   pickerOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
@@ -673,22 +989,5 @@ const s = StyleSheet.create({
   pickerOptionActive: {},
   pickerOptionText: {
     fontFamily: Typography.fontMedium, fontSize: Typography.md, color: Colors.textPrimary,
-  },
-  feedbackBox: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    padding: Spacing.xl,
-    borderWidth: 1,
-    borderColor: Colors.borderLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  feedbackText: {
-    fontFamily: Typography.fontMedium,
-    fontSize: Typography.sm,
-    color: Colors.textMuted,
-    textAlign: 'center',
   },
 });

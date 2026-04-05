@@ -21,9 +21,9 @@ interface Props {
 export default function OpportunitiesNavigator({ onExit, bottomInset, initialList, initialTypeSlug, initialJob }: Props) {
   const [stack, setStack] = useState<Screen[]>(
     initialJob
-      ? [{ name: 'hub' }, { name: 'profile', job: initialJob }]
+      ? [{ name: 'profile', job: initialJob }]
       : initialList
-      ? [{ name: 'hub' }, { name: 'list', title: initialList, typeSlug: initialTypeSlug }]
+      ? [{ name: 'list', title: initialList, typeSlug: initialTypeSlug }]
       : [{ name: 'hub' }]
   );
 

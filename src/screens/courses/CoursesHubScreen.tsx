@@ -8,6 +8,7 @@ import { CourseCategory, CourseItem } from '../../types';
 import { HOW_IT_WORKS } from '../../data/mockData';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchKursCategories, fetchKurset } from '../../services/api';
+import ScreenState from '../../components/ScreenState';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800';
 
@@ -121,12 +122,27 @@ export default function CoursesHubScreen({ onBack, onList, onProfile, bottomInse
             <View style={styles.centered}><ActivityIndicator size="large" color="#e30613" /></View>
           ) : error ? (
             <View style={styles.centered}>
-              <Text style={styles.errorText}>⚠️ {error}</Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={reload}><Text style={styles.retryText}>Provo Perseri</Text></TouchableOpacity>
+              <ScreenState
+                icon="error"
+                title="Gabim ne ngarkim"
+                message={error}
+                actionLabel="Provo perseri"
+                onAction={reload}
+              />
             </View>
           ) : (
             <View style={styles.courseListWrap}>
-              {courses.map((course) => <CourseCard key={course.id} course={course} onPress={() => onProfile(course)} />)}
+              {courses.length ? (
+                courses.map((course) => <CourseCard key={course.id} course={course} onPress={() => onProfile(course)} />)
+              ) : (
+                <ScreenState
+                  icon="empty"
+                  title="Nuk ka kurse"
+                  message="Kur te publikohen kurse te reja, do te shfaqen ketu."
+                  actionLabel="Kthehu ne Home"
+                  onAction={onBack}
+                />
+              )}
             </View>
           )}
         </View>
@@ -163,7 +179,6 @@ export function CourseCard({ course, onPress }: { course: CourseItem; onPress: (
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg }, scroll: { flex: 1 }, centered: { paddingVertical: 40, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary }, retryBtn: { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full }, retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
   header: { backgroundColor: Colors.white, paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.borderLight, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.lg }, headerSub: { fontFamily: Typography.fontBold, fontSize: Typography.xs, color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2 }, headerTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xxl, color: Colors.textPrimary },
   iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.borderLight, justifyContent: 'center', alignItems: 'center' },

@@ -75,7 +75,7 @@ export default function ActHubScreen({ onBack, onList, onProfile, bottomInset }:
     if (selected.length === 0) return;
 
     if (!activities.length) {
-      Alert.alert('Nuk ka aktivitete', 'Sapo te publikohet nje aktivitet i ri, mund te regjistroheni edhe nga ky formular.');
+      Alert.alert('Nuk disponohet', 'Sapo te publikohet nje aktivitet i ri, mund te regjistroheni edhe nga ky formular.');
       return;
     }
 
@@ -84,8 +84,8 @@ export default function ActHubScreen({ onBack, onList, onProfile, bottomInset }:
       await volunteerAct4(Number(activities[0].id), selected.join(', '));
       setSubmitted(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Regjistrimi deshtoi. Provo perseri.';
-      Alert.alert('Regjistrimi nuk u krye', message);
+      const message = err instanceof Error ? err.message : 'Regjistrimi nuk u krye. Provo perseri.';
+      Alert.alert('Gabim', message);
     } finally {
       setSubmitting(false);
     }

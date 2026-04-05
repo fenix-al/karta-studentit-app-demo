@@ -13,6 +13,7 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { KvrActivity } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchKvr, fetchKvrCategories } from '../../services/api';
+import ScreenState from '../../components/ScreenState';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=800';
 const NAVY = '#003366';
@@ -147,10 +148,13 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
             </View>
           ) : categoryError ? (
             <View style={styles.centered}>
-              <Text style={styles.errorText}>Nuk u ngarkuan kategorite e KVR.</Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={reloadCategories}>
-                <Text style={styles.retryText}>Provo Perseri</Text>
-              </TouchableOpacity>
+              <ScreenState
+                icon="error"
+                title="Gabim ne ngarkim"
+                message="Kategorite e KVR nuk u ngarkuan dot."
+                actionLabel="Provo perseri"
+                onAction={reloadCategories}
+              />
             </View>
           ) : categories.length ? (
             <ScrollView
@@ -180,7 +184,13 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
             </ScrollView>
           ) : (
             <View style={styles.centered}>
-              <Text style={styles.errorText}>Nuk ka kategori te publikuara per momentin.</Text>
+              <ScreenState
+                icon="empty"
+                title="Nuk ka kategori"
+                message="Nuk ka kategori te publikuara per momentin."
+                actionLabel="Kthehu ne Home"
+                onAction={onBack}
+              />
             </View>
           )}
         </View>
@@ -205,10 +215,13 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
             </View>
           ) : feedError ? (
             <View style={styles.centered}>
-              <Text style={styles.errorText}>Nuk u ngarkuan postimet e KVR.</Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={reloadFeed}>
-                <Text style={styles.retryText}>Provo Perseri</Text>
-              </TouchableOpacity>
+              <ScreenState
+                icon="error"
+                title="Gabim ne ngarkim"
+                message="Postimet e KVR nuk u ngarkuan dot."
+                actionLabel="Provo perseri"
+                onAction={reloadFeed}
+              />
             </View>
           ) : (
             <ScrollView
@@ -216,9 +229,22 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.hList}
             >
-              {activities.map((item) => (
-                <KVRActivityCard key={item.id} activity={item} onPress={() => onProfile(item.id)} />
-              ))}
+              {activities.length ? (
+                activities.map((item) => (
+                  <KVRActivityCard key={item.id} activity={item} onPress={() => onProfile(item.id)} />
+                ))
+              ) : (
+                <View style={styles.inlineState}>
+                  <ScreenState
+                    icon="empty"
+                    title="Nuk ka postime"
+                    message="Kur te publikohen lajme te reja te KVR, do te shfaqen ketu."
+                    actionLabel="Kthehu ne Home"
+                    onAction={onBack}
+                    compact
+                  />
+                </View>
+              )}
             </ScrollView>
           )}
         </View>
@@ -258,9 +284,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll: { flex: 1 },
   centered: { paddingVertical: 40, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary, textAlign: 'center' },
-  retryBtn: { backgroundColor: RED, paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full },
-  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
+  inlineState: { width: 280 },
 
   header: {
     backgroundColor: Colors.white,

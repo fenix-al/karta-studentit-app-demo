@@ -8,6 +8,7 @@ import { CourseCategory, CourseItem } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchKursCategories, fetchKurset } from '../../services/api';
 import { CourseCard } from './CoursesHubScreen';
+import ScreenState from '../../components/ScreenState';
 
 const mapCourse = (k: any): CourseItem => ({
   id: String(k.id),
@@ -84,8 +85,23 @@ export default function CoursesListScreen({ title, categorySlug, onBack, onProfi
         <View style={styles.centered}><ActivityIndicator size="large" color="#e30613" /></View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={styles.errorText}>⚠️ {error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={reload}><Text style={styles.retryText}>Provo Perseri</Text></TouchableOpacity>
+          <ScreenState
+            icon="error"
+            title="Gabim ne ngarkim"
+            message={error}
+            actionLabel="Provo perseri"
+            onAction={reload}
+          />
+        </View>
+      ) : courses.length === 0 ? (
+        <View style={styles.centered}>
+          <ScreenState
+            icon="empty"
+            title="Nuk ka kurse"
+            message="Nuk ka kurse te publikuara ne kete kategori."
+            actionLabel="Kthehu ne Home"
+            onAction={onBack}
+          />
         </View>
       ) : (
         <FlatList
@@ -102,7 +118,6 @@ export default function CoursesListScreen({ title, categorySlug, onBack, onProfi
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg }, centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  errorText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary }, retryBtn: { backgroundColor: '#e30613', paddingHorizontal: 20, paddingVertical: 10, borderRadius: Radius.full }, retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
   header: { backgroundColor: Colors.white, paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.borderLight, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.lg }, iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.borderLight, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   headerTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xxl, color: Colors.textPrimary, flex: 1 }, searchBar: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: Colors.surfaceBg, borderRadius: Radius.xl, paddingHorizontal: Spacing.lg, paddingVertical: 14, borderWidth: 1, borderColor: Colors.border }, searchPlaceholder: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textMuted, flex: 1 },

@@ -10,6 +10,7 @@ import { StartupItem } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchStartups } from '../../services/api';
 import { StartupCard } from './StartupHubScreen';
+import ScreenState from '../../components/ScreenState';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800';
 
@@ -75,10 +76,23 @@ export default function StartupListScreen({ title, initialType, onBack, onProfil
         </View>
       ) : error ? (
         <View style={styles.centered}>
-          <Text style={styles.emptyText}>Ngarkimi deshtoi. Provo perseri.</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={reload} activeOpacity={0.8}>
-            <Text style={styles.retryText}>Provo perseri</Text>
-          </TouchableOpacity>
+          <ScreenState
+            icon="error"
+            title="Gabim ne ngarkim"
+            message="Lista nuk u ngarkua dot."
+            actionLabel="Provo perseri"
+            onAction={reload}
+          />
+        </View>
+      ) : items.length === 0 ? (
+        <View style={styles.centered}>
+          <ScreenState
+            icon="startup"
+            title="Nuk ka startup te publikuara"
+            message="Kur te shtohen postime te reja, ato do te shfaqen ketu."
+            actionLabel="Kthehu ne Home"
+            onAction={onBack}
+          />
         </View>
       ) : (
         <FlatList
@@ -130,13 +144,4 @@ const styles = StyleSheet.create({
   },
 
   list: { padding: Spacing.xxl, gap: 20 },
-  emptyText: { fontFamily: Typography.fontMedium, fontSize: Typography.md, color: Colors.textMuted, textAlign: 'center' },
-  retryBtn: {
-    marginTop: 12,
-    backgroundColor: '#10b981',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: Radius.full,
-  },
-  retryText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
 });

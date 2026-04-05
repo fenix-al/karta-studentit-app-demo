@@ -125,7 +125,7 @@ export default function NotificationsScreen({ onBack, onOpenNotification }: Prop
       await markAllNotificationsRead();
     } catch {
       setItems((data?.items ?? []).map(mapNotification));
-      Alert.alert('Gabim', 'Njoftimet nuk u përditësuan dot. Provo përsëri.');
+      Alert.alert('Gabim', 'Njoftimet nuk u perditesuan dot. Provo perseri.');
     }
   }
 
@@ -143,7 +143,7 @@ export default function NotificationsScreen({ onBack, onOpenNotification }: Prop
       await markNotificationRead(Number(id));
     } catch {
       setItems((data?.items ?? []).map(mapNotification));
-      Alert.alert('Gabim', 'Njoftimi nuk u shënua dot si i lexuar.');
+      Alert.alert('Gabim', 'Njoftimi nuk u shenua dot si i lexuar. Provo perseri.');
     }
     onOpenNotification?.(target);
   }
@@ -156,7 +156,7 @@ export default function NotificationsScreen({ onBack, onOpenNotification }: Prop
       await deleteNotification(Number(id));
     } catch {
       setItems(previousItems);
-      Alert.alert('Gabim', 'Njoftimi nuk u fshi dot. Provo përsëri.');
+      Alert.alert('Gabim', 'Njoftimi nuk u fshi dot. Provo perseri.');
     }
   }
 

@@ -20,9 +20,9 @@ interface Props {
 export default function CoursesNavigator({ onExit, bottomInset, initialList, initialCourse }: Props) {
   const [stack, setStack] = useState<Screen[]>(
     initialCourse
-      ? [{ name: 'hub' }, { name: 'profile', course: initialCourse }]
+      ? [{ name: 'profile', course: initialCourse }]
       : initialList
-      ? [{ name: 'hub' }, { name: 'list', title: initialList }]
+      ? [{ name: 'list', title: initialList }]
       : [{ name: 'hub' }]
   );
 
