@@ -29,7 +29,13 @@
     "plugins": [
       "expo-font",
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Lejo aksesin te kamera per te perdorur skanerin e QR."
+        }
+      ]
     ]
   }
 }

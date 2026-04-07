@@ -9,6 +9,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { SK_API, JWT_ENDPOINT } from '../constants/config';
 import {
+  BizCampaign,
+  BizProfile,
+  BizTopStudent,
   LiveRaffleCurrentApiResponse,
   LiveRaffleLaunchUrlResponse,
   NotificationApiItem,
@@ -193,6 +196,60 @@ export async function logout(): Promise<void> {
 
 export async function fetchMe(): Promise<StudentCard> {
   return apiFetch<StudentCard>('/me');
+}
+
+// ── Role detection ────────────────────────────────────────────────────────────
+// Used during login and app startup to determine which home screen to show.
+// Does NOT use apiFetch — intentionally bypasses the removeToken side effect.
+// A 403 from /sk/v1/me means "wrong role, not bad token" when /biz/me succeeds.
+
+export type UserRole = 'student' | 'business';
+
+export type RoleDetectionResult =
+  | { role: 'student';  studentCard: StudentCard }
+  | { role: 'business'; bizProfile:  BizProfile  }
+  | { role: 'no_card' }   // valid student token, but no card linked yet
+  | null;                 // missing token, network failure, or unknown role
+
+export async function detectUserRole(): Promise<RoleDetectionResult> {
+  const token = await getToken();
+  if (!token) return null;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+
+  // Try student endpoint first
+  try {
+    const res = await fetch(`${SK_API}/me`, { headers });
+    if (res.ok) {
+      const data = await res.json() as StudentCard;
+      return { role: 'student', studentCard: data };
+    }
+    if (res.status === 404) {
+      try {
+        const body = await res.json();
+        if (body?.code === 'no_card') return { role: 'no_card' };
+      } catch (_) {}
+    }
+    // 403 = valid token but wrong role — fall through to try business
+    // Any other non-403 status = unexpected; abort
+    if (res.status !== 403) return null;
+  } catch (_) {
+    return null; // network failure
+  }
+
+  // Try business endpoint (only when student returned 403)
+  try {
+    const res = await fetch(`${SK_API}/biz/me`, { headers });
+    if (res.ok) {
+      const data = await res.json() as BizProfile;
+      return { role: 'business', bizProfile: data };
+    }
+  } catch (_) {}
+
+  return null;
 }
 
 // ── Points ────────────────────────────────────────────────────────────────────
@@ -513,5 +570,33 @@ export async function postSuggestion(
   return apiFetch('/me/suggestion', {
     method: 'POST',
     body: JSON.stringify({ topic, message }),
+  });
+}
+
+// ── Business Panel ────────────────────────────────────────────────────────────
+// All endpoints require a JWT token issued to a user with the
+// `business_partner` WordPress role. Calling these with a student token
+// returns 403. Calling without a token returns 401.
+
+export async function fetchBizMe(): Promise<BizProfile> {
+  return apiFetch<BizProfile>('/biz/me');
+}
+
+export async function fetchBizTopStudents(): Promise<BizTopStudent[]> {
+  return apiFetch<BizTopStudent[]>('/biz/top-students');
+}
+
+export async function fetchBizCampaigns(): Promise<BizCampaign[]> {
+  return apiFetch<BizCampaign[]>('/biz/campaigns');
+}
+
+export async function postBizCampaign(
+  titulli:    string,
+  lloji:      string,
+  pershkrimi: string,
+): Promise<{ success: boolean; id: number; msg: string }> {
+  return apiFetch('/biz/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({ titulli, lloji, pershkrimi }),
   });
 }

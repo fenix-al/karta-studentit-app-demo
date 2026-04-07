@@ -12,13 +12,21 @@ import {
 } from '@expo-google-fonts/poppins';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-import HomeScreen   from './src/screens/HomeScreen';
-import LoginScreen  from './src/screens/auth/LoginScreen';
-import { Colors }   from './src/constants/Theme';
+import HomeScreen    from './src/screens/HomeScreen';
+import BizHomeScreen from './src/screens/biz/BizHomeScreen';
+import LoginScreen   from './src/screens/auth/LoginScreen';
+import { Colors }    from './src/constants/Theme';
 
 // ── Inner component — consumes AuthContext (must be inside AuthProvider) ──────
 function AppNavigator() {
-  const { isLoading, isLoggedIn, onLoginSuccess, authNotice } = useAuth();
+  const {
+    isLoading,
+    isLoggedIn,
+    role,
+    onStudentLoginSuccess,
+    onBizLoginSuccess,
+    authNotice,
+  } = useAuth();
 
   if (isLoading) {
     return (
@@ -29,9 +37,16 @@ function AppNavigator() {
   }
 
   if (!isLoggedIn) {
-    return <LoginScreen onSuccess={onLoginSuccess} notice={authNotice} />;
+    return (
+      <LoginScreen
+        onStudentSuccess={onStudentLoginSuccess}
+        onBizSuccess={onBizLoginSuccess}
+        notice={authNotice}
+      />
+    );
   }
 
+  if (role === 'business') return <BizHomeScreen />;
   return <HomeScreen />;
 }
 

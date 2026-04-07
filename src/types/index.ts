@@ -450,3 +450,40 @@ export interface NotificationApiItem {
   is_read:    boolean;
   created_at: string;
 }
+
+// ── Business Panel ────────────────────────────────────────────────────────────
+// Mirrors the exact response shapes returned by /sk/v1/biz/* REST endpoints.
+
+export interface BizProfile {
+  user_id:    number;
+  name:       string;
+  initials:   string;           // e.g. "KR" — max 2 chars
+  logo:       string | null;
+  adresa:     string;
+  telefon:    string;
+  zbritja:    string;           // active offer text, e.g. "50% Zbritje"
+  post_id:    number | null;    // linked sk_biznese CPT post ID
+  is_partner: boolean;          // true when a published sk_biznese post is linked
+  stats: {
+    sot:   number;   // scans today
+    muaj:  number;   // scans this month
+    total: number;   // all-time scans
+    unik:  number;   // distinct students scanned
+  };
+}
+
+export interface BizTopStudent {
+  card_id:    number;
+  name:       string;
+  nim:        string;
+  scan_count: number;
+}
+
+export interface BizCampaign {
+  id:          number;
+  titulli:     string;
+  lloji:       string;
+  statusi:     'pending' | 'approved' | 'rejected';
+  admin_notes: string | null;
+  created_at:  string;
+}

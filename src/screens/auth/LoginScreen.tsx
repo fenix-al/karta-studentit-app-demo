@@ -1,7 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // LOGIN SCREEN — Karta e Studentit App
 // JWT-based login against WordPress /wp-json/jwt-auth/v1/token.
-// On success: fetches /sk/v1/me → passes StudentCard up via onSuccess.
+// After login, detectUserRole() determines whether the account is a student
+// or business partner — then routes accordingly via onStudentSuccess / onBizSuccess.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
@@ -15,15 +16,16 @@ import { Eye, EyeOff, GraduationCap } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
-import { ApiError, fetchMe, login, logout } from '../../services/api';
-import { StudentCard } from '../../types';
+import { detectUserRole, login, logout } from '../../services/api';
+import { BizProfile, StudentCard } from '../../types';
 
 interface Props {
-  onSuccess: (card: StudentCard) => void;
+  onStudentSuccess: (card: StudentCard) => void;
+  onBizSuccess:     (biz: BizProfile)   => void;
   notice?: string | null;
 }
 
-export default function LoginScreen({ onSuccess, notice }: Props) {
+export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: Props) {
   const insets = useSafeAreaInsets();
 
   const [username,    setUsername]    = useState('');
@@ -46,15 +48,25 @@ export default function LoginScreen({ onSuccess, notice }: Props) {
     if (!validate()) return;
     setIsLoading(true);
     try {
+      // Step 1: obtain JWT token (stored automatically by login())
       await login(username.trim(), password);
-      const card = await fetchMe();
-      onSuccess(card);
-    } catch (err: any) {
-      if (err instanceof ApiError && err.code === 'no_card') {
+
+      // Step 2: detect role via raw fetch — avoids apiFetch's removeToken side effect
+      const result = await detectUserRole();
+
+      if (result?.role === 'student') {
+        onStudentSuccess(result.studentCard);
+      } else if (result?.role === 'business') {
+        onBizSuccess(result.bizProfile);
+      } else if (result?.role === 'no_card') {
         await logout();
         Alert.alert('Nuk disponohet', 'Kjo llogari nuk ka nje karte aktive per momentin.');
-        return;
+      } else {
+        // null — token stored but role unrecognised (should not normally occur)
+        await logout();
+        Alert.alert('Gabim', 'Kjo llogari nuk ka akses në aplikacion.');
       }
+    } catch (err: any) {
       const msg: string = err?.message ?? 'Ndodhi një gabim. Provo përsëri.';
       if (msg.toLowerCase().includes('fjalëkalim') || msg.toLowerCase().includes('password')) {
         setPassError(msg);
