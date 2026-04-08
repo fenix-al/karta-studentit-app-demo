@@ -11,6 +11,7 @@ import { SK_API, JWT_ENDPOINT } from '../constants/config';
 import {
   BizCampaign,
   BizProfile,
+  BizScanResponse,
   BizTopStudent,
   LiveRaffleCurrentApiResponse,
   LiveRaffleLaunchUrlResponse,
@@ -30,12 +31,14 @@ export const TOKEN_KEY = 'sk_jwt_token';
 export class ApiError extends Error {
   status: number;
   code?: string;
+  details?: any;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, details?: any) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -65,6 +68,9 @@ function friendlyApiMessage(status: number, code?: string, fallback?: string) {
   }
   if (code === 'not_found') {
     return 'Ky element nuk eshte me i disponueshem.';
+  }
+  if (code === 'scan_cooldown_active') {
+    return fallback || 'Ky student eshte skanuar se fundi nga ky biznes.';
   }
   if (isAuthStatus(status) || isJwtErrorCode(code)) {
     return 'Sesioni ka skaduar. Ju lutem hyni perseri.';
@@ -116,14 +122,16 @@ async function publicFetch<T>(path: string): Promise<T> {
   if (!res.ok) {
     let message = `HTTP ${res.status}`;
     let code: string | undefined;
+    let details: any;
     try {
       const body = await res.json();
+      details = body;
       message = friendlyApiMessage(res.status, body?.code, body?.message || message);
       code = body?.code;
     } catch (_) {
       message = friendlyApiMessage(res.status, undefined, message);
     }
-    throw new ApiError(message, res.status, code);
+    throw new ApiError(message, res.status, code, details);
   }
   return res.json() as Promise<T>;
 }
@@ -141,8 +149,10 @@ async function apiFetch<T>(
   if (!res.ok) {
     let message = `HTTP ${res.status}`;
     let code: string | undefined;
+    let details: any;
     try {
       const body = await res.json();
+      details = body;
       message = friendlyApiMessage(res.status, body?.code, body?.message || message);
       code = body?.code;
     } catch (_) {}
@@ -152,7 +162,7 @@ async function apiFetch<T>(
       emitAuthError('Sesioni juaj ka skaduar. Ju lutem hyni perseri.');
     }
 
-    throw new ApiError(message, res.status, code);
+    throw new ApiError(message, res.status, code, details);
   }
 
   return res.json() as Promise<T>;
@@ -598,5 +608,12 @@ export async function postBizCampaign(
   return apiFetch('/biz/campaigns', {
     method: 'POST',
     body: JSON.stringify({ titulli, lloji, pershkrimi }),
+  });
+}
+
+export async function postBizScan(token: string): Promise<BizScanResponse> {
+  return apiFetch<BizScanResponse>('/scan', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
   });
 }

@@ -23,7 +23,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import {
+  CameraView,
+  useCameraPermissions,
+  type BarcodeScanningResult,
+} from 'expo-camera';
 import {
   Home,
   QrCode,
@@ -40,8 +44,14 @@ import {
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { useAuth } from '../../context/AuthContext';
-import { fetchBizTopStudents, fetchBizCampaigns, postBizCampaign } from '../../services/api';
-import { BizCampaign, BizTopStudent } from '../../types';
+import {
+  ApiError,
+  fetchBizTopStudents,
+  fetchBizCampaigns,
+  postBizCampaign,
+  postBizScan,
+} from '../../services/api';
+import { BizCampaign, BizScanResponse, BizTopStudent } from '../../types';
 
 type Tab = 'dashboard' | 'scanner' | 'promo' | 'chat' | 'profile';
 
@@ -63,8 +73,48 @@ function fmtDate(mysql: string): string {
   return d.length === 3 ? `${d[2]}/${d[1]}/${d[0]}` : mysql;
 }
 
+function extractScanToken(rawValue: string): string | null {
+  const value = rawValue.trim();
+  if (!value) return null;
+
+  const kartaMatch = value.match(/\/karta\/([A-Za-z0-9_-]+)/i);
+  if (kartaMatch?.[1]) return kartaMatch[1];
+
+  try {
+    const parsed = new URL(value);
+    const queryToken = parsed.searchParams.get('token')?.trim();
+    if (queryToken) return queryToken;
+
+    const pathToken = parsed.pathname.match(/\/karta\/([A-Za-z0-9_-]+)/i)?.[1];
+    if (pathToken) return pathToken;
+
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    const lastSegment = segments[segments.length - 1];
+    if (lastSegment && /^[A-Za-z0-9_-]+$/.test(lastSegment)) return lastSegment;
+  } catch (_) {
+    // Not a URL; continue with raw token fallback.
+  }
+
+  if (/^[A-Za-z0-9_-]+$/.test(value)) return value;
+  return null;
+}
+
+type ScannerCapture = {
+  type: string;
+  rawValue: string;
+  token: string;
+};
+
+function formatCountdown(totalSeconds: number | null): string {
+  if (totalSeconds == null || totalSeconds <= 0) return '00:00:00';
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return [hours, minutes, seconds].map(part => String(part).padStart(2, '0')).join(':');
+}
+
 export default function BizHomeScreen() {
-  const { bizProfile, onLogout } = useAuth();
+  const { bizProfile, onLogout, refreshCard } = useAuth();
   const insets = useSafeAreaInsets();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -91,6 +141,12 @@ export default function BizHomeScreen() {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError,      setFormError]      = useState('');
   const [formSuccess,    setFormSuccess]    = useState('');
+  const [scannerCapture, setScannerCapture] = useState<ScannerCapture | null>(null);
+  const [scannerError,   setScannerError]   = useState('');
+  const [scanSubmitting, setScanSubmitting] = useState(false);
+  const [scanResult,     setScanResult]     = useState<BizScanResponse | null>(null);
+  const [scanSubmitError, setScanSubmitError] = useState('');
+  const [cooldownRemaining, setCooldownRemaining] = useState<number | null>(null);
 
   // Lazy-load campaigns on first visit to promo tab
   const campaignsLoadedRef = useRef(false);
@@ -103,6 +159,22 @@ export default function BizHomeScreen() {
       .then(data => { setCampaigns(data); setCampaignsLoading(false); })
       .catch(() => { setCampaignsError(true); setCampaignsLoading(false); });
   }, [activeTab]);
+
+  useEffect(() => {
+    if (cooldownRemaining == null || cooldownRemaining <= 0) {
+      if (cooldownRemaining === 0) setCooldownRemaining(null);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setCooldownRemaining(current => {
+        if (current == null || current <= 1) return null;
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [cooldownRemaining]);
 
   const handleCampaignSubmit = async () => {
     if (!formTitulli.trim() || !formPershkrimi.trim()) {
@@ -125,6 +197,61 @@ export default function BizHomeScreen() {
       setFormError(err?.message ?? 'Ndodhi një gabim. Provo përsëri.');
     } finally {
       setFormSubmitting(false);
+    }
+  };
+
+  const resetScannerCapture = () => {
+    setScannerCapture(null);
+    setScannerError('');
+    setScanResult(null);
+    setScanSubmitError('');
+    setCooldownRemaining(null);
+  };
+
+  const handleBarcodeScanned = (result: BarcodeScanningResult) => {
+    if (scannerCapture) return;
+
+    const rawValue = result.data?.trim() ?? '';
+    const token = extractScanToken(rawValue);
+
+    if (!token) {
+      setScannerError('Kodi u lexua, por tokeni nuk u nxor. Provo nje QR tjeter.');
+      return;
+    }
+
+    setScannerError('');
+    setScanResult(null);
+    setScanSubmitError('');
+    setCooldownRemaining(null);
+    setScannerCapture({
+      type: result.type,
+      rawValue,
+      token,
+    });
+  };
+
+  const handleScanSubmit = async () => {
+    if (!scannerCapture?.token || scanSubmitting) return;
+
+    setScanSubmitting(true);
+    setScanSubmitError('');
+
+    try {
+      const response = await postBizScan(scannerCapture.token);
+      setScanResult(response);
+      setCooldownRemaining(response.retry_after_seconds ?? null);
+      await refreshCard();
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'scan_cooldown_active') {
+        const cooldownData = error.details?.data as BizScanResponse | undefined;
+        if (cooldownData) {
+          setScanResult(cooldownData);
+          setCooldownRemaining(cooldownData.retry_after_seconds ?? null);
+        }
+      }
+      setScanSubmitError(error instanceof Error ? error.message : 'Ndodhi nje gabim. Provo perseri.');
+    } finally {
+      setScanSubmitting(false);
     }
   };
 
@@ -332,12 +459,97 @@ export default function BizHomeScreen() {
           </View>
         )}
 
+        {(scannerCapture || scannerError) && (
+          <View style={styles.scannerInfoCard}>
+            <Text style={styles.scannerInfoTitle}>
+              {scannerCapture ? 'QR u lexua' : 'QR nuk u kuptua'}
+            </Text>
+
+            {scannerCapture ? (
+              <>
+                <Text style={styles.scannerInfoText}>
+                  Tipi: {scannerCapture.type} {'\u2022'} Tokeni u nxor me sukses dhe
+                  eshte gati per verifikim.
+                </Text>
+                <View style={styles.scannerResultBox}>
+                  <Text style={styles.scannerResultLabel}>Token</Text>
+                  <Text style={styles.scannerResultValue}>{scannerCapture.token}</Text>
+                  <Text style={styles.scannerResultLabel}>Vlera e lexuar</Text>
+                  <Text style={styles.scannerResultRaw}>{scannerCapture.rawValue}</Text>
+                </View>
+
+                {scanResult?.msg ? (
+                  <View style={[
+                    styles.scanStatusBox,
+                    scanSubmitError ? styles.scanStatusErrorBox : styles.scanStatusSuccessBox,
+                  ]}>
+                    <Text style={[
+                      styles.scanStatusText,
+                      scanSubmitError ? styles.scanStatusErrorText : styles.scanStatusSuccessText,
+                    ]}>
+                      {scanSubmitError || scanResult.msg}
+                    </Text>
+                    {cooldownRemaining != null && (
+                      <Text style={styles.scanCooldownText}>
+                        Gati perseri pas {formatCountdown(cooldownRemaining)}
+                      </Text>
+                    )}
+                    {scanResult.student ? (
+                      <Text style={styles.scanMetaText}>
+                        {scanResult.student} • {scanResult.nim}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
+
+                <TouchableOpacity
+                  style={[
+                    styles.scannerPrimaryBtn,
+                    (scanSubmitting || cooldownRemaining != null) && styles.formBtnDisabled,
+                  ]}
+                  onPress={handleScanSubmit}
+                  activeOpacity={0.85}
+                  disabled={scanSubmitting || cooldownRemaining != null}
+                >
+                  <Text style={styles.scannerPrimaryBtnText}>
+                    {scanSubmitting
+                      ? 'Duke Verifikuar...'
+                      : cooldownRemaining != null
+                        ? `Gati pas ${formatCountdown(cooldownRemaining)}`
+                        : 'Verifiko Karten'}
+                  </Text>
+                </TouchableOpacity>
+
+                {scanSubmitError && !scanResult?.msg ? (
+                  <View style={[styles.scanStatusBox, styles.scanStatusErrorBox]}>
+                    <Text style={[styles.scanStatusText, styles.scanStatusErrorText]}>
+                      {scanSubmitError}
+                    </Text>
+                  </View>
+                ) : null}
+              </>
+            ) : (
+              <Text style={styles.scannerInfoText}>{scannerError}</Text>
+            )}
+
+            <TouchableOpacity
+              style={styles.scannerSecondaryBtn}
+              onPress={resetScannerCapture}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.scannerSecondaryBtnText}>Skano Perseri</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.cameraShell}>
           {isPermissionReady ? (
             <CameraView
               style={styles.cameraPreview}
               facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
               mute
+              onBarcodeScanned={handleBarcodeScanned}
             >
               <View style={styles.cameraOverlay}>
                 <View style={styles.scannerFrame} />
@@ -999,6 +1211,20 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontBold,
     color: '#fff',
   },
+  scannerSecondaryBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.surfaceBg,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  scannerSecondaryBtnText: {
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontBold,
+    color: Colors.textPrimary,
+  },
   scannerHintText: {
     fontSize: Typography.sm,
     fontFamily: Typography.fontMedium,
@@ -1039,6 +1265,69 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  scannerResultBox: {
+    backgroundColor: Colors.surfaceBg,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    padding: Spacing.lg,
+    gap: 6,
+  },
+  scannerResultLabel: {
+    fontSize: Typography.xs,
+    fontFamily: Typography.fontBold,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  scannerResultValue: {
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontExtraBold,
+    color: '#003366',
+  },
+  scannerResultRaw: {
+    fontSize: Typography.xs,
+    fontFamily: Typography.fontMedium,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  scanStatusBox: {
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  scanStatusSuccessBox: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#a7f3d0',
+  },
+  scanStatusErrorBox: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+  },
+  scanStatusText: {
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontBold,
+    lineHeight: 20,
+  },
+  scanStatusSuccessText: {
+    color: '#065f46',
+  },
+  scanStatusErrorText: {
+    color: '#991b1b',
+  },
+  scanCooldownText: {
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontExtraBold,
+    color: '#003366',
+  },
+  scanMetaText: {
+    fontSize: Typography.xs,
+    fontFamily: Typography.fontMedium,
+    color: Colors.textSecondary,
+    lineHeight: 18,
   },
   cameraPlaceholder: {
     minHeight: 420,

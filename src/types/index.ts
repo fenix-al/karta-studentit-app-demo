@@ -487,3 +487,19 @@ export interface BizCampaign {
   admin_notes: string | null;
   created_at:  string;
 }
+
+export interface BizScanResponse {
+  student: string;
+  emri: string;
+  mbiemeri: string;
+  nim: string;
+  nr_karte: string;
+  foto: string | null;
+  msg: string;
+  scan_count?: number;
+  last_scan_at?: string;
+  next_allowed_at?: string;
+  cooldown_seconds?: number;
+  retry_after_seconds?: number;
+  cooldown_active?: boolean;
+}

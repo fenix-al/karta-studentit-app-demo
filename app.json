@@ -12,7 +12,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vini01.kartastudentitapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +25,11 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -36,6 +44,12 @@
           "cameraPermission": "Lejo aksesin te kamera per te perdorur skanerin e QR."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "bd83788c-2c95-4a0f-a48c-64ae4d228727"
+      }
+    },
+    "owner": "vini01"
   }
 }
