@@ -1076,7 +1076,6 @@ export default function HomeScreen() {
           onExit={() => {
             resetOffersRoute();
             exitTab('perfitimet');
-            refetchOffers();
           }}
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           initialList={offersInitialList}

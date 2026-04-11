@@ -12,7 +12,7 @@
 //   Chat tab          → future scope (no backend)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -39,7 +39,6 @@ import {
   Calendar,
   Award,
   Shield,
-  MessageCircle,
 } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
@@ -53,7 +52,7 @@ import {
 } from '../../services/api';
 import { BizCampaign, BizScanResponse, BizTopStudent } from '../../types';
 
-type Tab = 'dashboard' | 'scanner' | 'promo' | 'chat' | 'profile';
+type Tab = 'dashboard' | 'scanner' | 'promo' | 'profile';
 
 // Approx bottom nav visible height — used to pad ScrollView content
 const NAV_VISIBLE_HEIGHT = 64;
@@ -113,6 +112,66 @@ function formatCountdown(totalSeconds: number | null): string {
   return [hours, minutes, seconds].map(part => String(part).padStart(2, '0')).join(':');
 }
 
+function getScannerSubmitErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    switch (error.code) {
+      case 'not_found':
+        return 'Ky QR nuk i perket asnje karte studenti ne sistem.';
+      case 'expired':
+        return 'Karta e studentit ka skaduar dhe nuk mund te pranohet.';
+      case 'inactive':
+        return 'Karta e studentit nuk eshte aktive dhe nuk mund te pranohet.';
+      case 'scan_cooldown_active':
+        return error.message;
+      case 'missing_token':
+        return 'Tokeni i QR mungon. Provo nje kod tjeter.';
+      default:
+        return error.message || 'Ndodhi nje gabim ne server. Provo perseri.';
+    }
+  }
+
+  return error instanceof Error
+    ? 'Nuk u lidhem me serverin. Kontrollo internetin dhe provo perseri.'
+    : 'Ndodhi nje gabim i papritur. Provo perseri.';
+}
+
+function getScannerErrorResult(error: ApiError): BizScanResponse | null {
+  const data = error.details?.data as Partial<BizScanResponse> | undefined;
+  if (!data) return null;
+
+  const student = typeof data.student === 'string'
+    ? data.student
+    : [data.emri, data.mbiemeri].filter(Boolean).join(' ').trim();
+
+  if (!student || typeof data.nim !== 'string') return null;
+
+  return {
+    student,
+    emri: typeof data.emri === 'string' ? data.emri : '',
+    mbiemeri: typeof data.mbiemeri === 'string' ? data.mbiemeri : '',
+    nim: data.nim,
+    nr_karte: typeof data.nr_karte === 'string' ? data.nr_karte : '',
+    foto: typeof data.foto === 'string' ? data.foto : null,
+    msg: getScannerSubmitErrorMessage(error),
+    last_scan_at: typeof data.last_scan_at === 'string' ? data.last_scan_at : undefined,
+    next_allowed_at: typeof data.next_allowed_at === 'string' ? data.next_allowed_at : undefined,
+    cooldown_seconds: typeof data.cooldown_seconds === 'number' ? data.cooldown_seconds : undefined,
+    retry_after_seconds: typeof data.retry_after_seconds === 'number' ? data.retry_after_seconds : undefined,
+    cooldown_active: typeof data.cooldown_active === 'boolean' ? data.cooldown_active : undefined,
+    scan_count: typeof data.scan_count === 'number' ? data.scan_count : undefined,
+  };
+}
+
+function formatBizOffer(value: string): string {
+  const offer = value.trim();
+  if (!offer) return '—';
+
+  if (/%|zbritje|ofert|falas/i.test(offer)) return offer;
+  if (/^\d+$/.test(offer)) return `${offer}%`;
+
+  return offer;
+}
+
 export default function BizHomeScreen() {
   const { bizProfile, onLogout, refreshCard } = useAuth();
   const insets = useSafeAreaInsets();
@@ -123,11 +182,23 @@ export default function BizHomeScreen() {
   const [topStudentsLoading, setTopStudentsLoading] = useState(true);
   const [topStudentsError,   setTopStudentsError]   = useState(false);
 
-  useEffect(() => {
-    fetchBizTopStudents()
-      .then(data => { setTopStudents(data); setTopStudentsLoading(false); })
-      .catch(() => { setTopStudentsError(true); setTopStudentsLoading(false); });
+  const loadTopStudents = useCallback(async (showLoader = true) => {
+    if (showLoader) setTopStudentsLoading(true);
+    setTopStudentsError(false);
+
+    try {
+      const data = await fetchBizTopStudents();
+      setTopStudents(data);
+    } catch (_) {
+      setTopStudentsError(true);
+    } finally {
+      if (showLoader) setTopStudentsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadTopStudents();
+  }, [loadTopStudents]);
 
   // ── Promo tab state ─────────────────────────────────────────────────────────
   const [campaigns,        setCampaigns]        = useState<BizCampaign[]>([]);
@@ -147,18 +218,30 @@ export default function BizHomeScreen() {
   const [scanResult,     setScanResult]     = useState<BizScanResponse | null>(null);
   const [scanSubmitError, setScanSubmitError] = useState('');
   const [cooldownRemaining, setCooldownRemaining] = useState<number | null>(null);
+  const [scanRequiresReset, setScanRequiresReset] = useState(false);
 
   // Lazy-load campaigns on first visit to promo tab
   const campaignsLoadedRef = useRef(false);
 
+  const loadCampaigns = useCallback(async () => {
+    setCampaignsLoading(true);
+    setCampaignsError(false);
+
+    try {
+      const data = await fetchBizCampaigns();
+      setCampaigns(data);
+    } catch (_) {
+      setCampaignsError(true);
+    } finally {
+      setCampaignsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab !== 'promo' || campaignsLoadedRef.current) return;
     campaignsLoadedRef.current = true;
-    setCampaignsLoading(true);
-    fetchBizCampaigns()
-      .then(data => { setCampaigns(data); setCampaignsLoading(false); })
-      .catch(() => { setCampaignsError(true); setCampaignsLoading(false); });
-  }, [activeTab]);
+    loadCampaigns();
+  }, [activeTab, loadCampaigns]);
 
   useEffect(() => {
     if (cooldownRemaining == null || cooldownRemaining <= 0) {
@@ -206,6 +289,7 @@ export default function BizHomeScreen() {
     setScanResult(null);
     setScanSubmitError('');
     setCooldownRemaining(null);
+    setScanRequiresReset(false);
   };
 
   const handleBarcodeScanned = (result: BarcodeScanningResult) => {
@@ -223,6 +307,7 @@ export default function BizHomeScreen() {
     setScanResult(null);
     setScanSubmitError('');
     setCooldownRemaining(null);
+    setScanRequiresReset(false);
     setScannerCapture({
       type: result.type,
       rawValue,
@@ -240,16 +325,24 @@ export default function BizHomeScreen() {
       const response = await postBizScan(scannerCapture.token);
       setScanResult(response);
       setCooldownRemaining(response.retry_after_seconds ?? null);
-      await refreshCard();
+      setScanRequiresReset(true);
+      await Promise.allSettled([
+        refreshCard(),
+        loadTopStudents(false),
+      ]);
     } catch (error) {
-      if (error instanceof ApiError && error.code === 'scan_cooldown_active') {
-        const cooldownData = error.details?.data as BizScanResponse | undefined;
-        if (cooldownData) {
-          setScanResult(cooldownData);
-          setCooldownRemaining(cooldownData.retry_after_seconds ?? null);
+      if (error instanceof ApiError) {
+        const errorResult = getScannerErrorResult(error);
+        if (errorResult) {
+          setScanResult(errorResult);
+          setCooldownRemaining(errorResult.retry_after_seconds ?? null);
+        }
+
+        if (['missing_token', 'not_found', 'expired', 'inactive', 'scan_cooldown_active'].includes(error.code ?? '')) {
+          setScanRequiresReset(true);
         }
       }
-      setScanSubmitError(error instanceof Error ? error.message : 'Ndodhi nje gabim. Provo perseri.');
+      setScanSubmitError(getScannerSubmitErrorMessage(error));
     } finally {
       setScanSubmitting(false);
     }
@@ -296,7 +389,7 @@ export default function BizHomeScreen() {
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Statistikat Kryesore</Text>
           <View style={styles.periodPill}>
-            <Text style={styles.periodPillText}>Këtë Muaj</Text>
+            <Text style={styles.periodPillText}>Në Kohë Reale</Text>
           </View>
         </View>
 
@@ -341,7 +434,7 @@ export default function BizHomeScreen() {
 
       {/* ── Top students — real data from /biz/top-students ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🏆 Top Klientë (Studentë)</Text>
+        <Text style={styles.sectionTitle}>Top Klientët Kryesorë</Text>
 
         {topStudentsLoading && (
           <View style={styles.comingCard}>
@@ -353,6 +446,13 @@ export default function BizHomeScreen() {
         {!topStudentsLoading && topStudentsError && (
           <View style={styles.comingCard}>
             <Text style={styles.comingText}>Nuk u ngarkua lista. Provo përsëri.</Text>
+            <TouchableOpacity
+              style={[styles.scannerSecondaryBtn, styles.retryInlineBtn]}
+              onPress={() => { loadTopStudents(); }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.scannerSecondaryBtnText}>Provo përsëri</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -415,6 +515,16 @@ export default function BizHomeScreen() {
   const renderScanner = () => {
     const isPermissionReady = cameraPermission?.granted === true;
     const canAskAgain = cameraPermission?.canAskAgain !== false;
+    const scanHasResolvedResult = !!(scanResult?.msg || scanSubmitError);
+    const scanStatusIsError = !!scanSubmitError;
+    const scanActionDisabled = scanSubmitting || cooldownRemaining != null || scanRequiresReset;
+    const scanActionLabel = scanSubmitting
+      ? 'Duke verifikuar...'
+      : cooldownRemaining != null
+        ? `Prit ${formatCountdown(cooldownRemaining)}`
+        : scanRequiresReset
+          ? 'Skano QR tjetër'
+          : 'Verifiko Karten';
 
     return (
       <ScrollView
@@ -426,8 +536,8 @@ export default function BizHomeScreen() {
           <QrCode size={28} color="#003366" strokeWidth={2} />
           <Text style={styles.scannerTitle}>Skaneri i QR</Text>
           <Text style={styles.scannerSub}>
-            Lejo kamerën për të përgatitur skanimin. Verifikimi dhe dërgimi i skanimit
-            do të lidhen në hapin tjetër.
+            Lejo kamerën, skano QR-në e studentit dhe verifiko menjëherë vlefshmërinë
+            e kartës nga ky ekran.
           </Text>
         </View>
 
@@ -436,7 +546,7 @@ export default function BizHomeScreen() {
             <Text style={styles.scannerInfoTitle}>Akses te kamera</Text>
             <Text style={styles.scannerInfoText}>
               {cameraPermission
-                ? 'Ky hap kërkon leje për kamerën që të hapet pamja e skanerit.'
+                ? 'Ky funksion kërkon leje për kamerën që të lexosh QR-në e studentit.'
                 : 'Po kontrollohen lejet e kamerës për këtë pajisje.'}
             </Text>
 
@@ -452,8 +562,8 @@ export default function BizHomeScreen() {
 
             {cameraPermission && !cameraPermission.granted && !canAskAgain && (
               <Text style={styles.scannerHintText}>
-                Leja është refuzuar në nivel pajisjeje. Aktivizoje nga cilësimet dhe hap
-                sërish këtë tab.
+                Kamera është bllokuar nga cilësimet e pajisjes. Aktivizoje nga Settings
+                dhe pastaj kthehu te ky ekran për të vazhduar skanimin.
               </Text>
             )}
           </View>
@@ -468,8 +578,8 @@ export default function BizHomeScreen() {
             {scannerCapture ? (
               <>
                 <Text style={styles.scannerInfoText}>
-                  Tipi: {scannerCapture.type} {'\u2022'} Tokeni u nxor me sukses dhe
-                  eshte gati per verifikim.
+                  Tipi: {scannerCapture.type} {'\u2022'} QR u lexua me sukses dhe është
+                  gati për verifikim.
                 </Text>
                 <View style={styles.scannerResultBox}>
                   <Text style={styles.scannerResultLabel}>Token</Text>
@@ -478,25 +588,40 @@ export default function BizHomeScreen() {
                   <Text style={styles.scannerResultRaw}>{scannerCapture.rawValue}</Text>
                 </View>
 
-                {scanResult?.msg ? (
+                {scanHasResolvedResult ? (
                   <View style={[
                     styles.scanStatusBox,
-                    scanSubmitError ? styles.scanStatusErrorBox : styles.scanStatusSuccessBox,
+                    scanStatusIsError ? styles.scanStatusErrorBox : styles.scanStatusSuccessBox,
                   ]}>
                     <Text style={[
                       styles.scanStatusText,
-                      scanSubmitError ? styles.scanStatusErrorText : styles.scanStatusSuccessText,
+                      scanStatusIsError ? styles.scanStatusErrorText : styles.scanStatusSuccessText,
                     ]}>
-                      {scanSubmitError || scanResult.msg}
+                      {scanSubmitError || scanResult?.msg}
                     </Text>
                     {cooldownRemaining != null && (
                       <Text style={styles.scanCooldownText}>
-                        Gati perseri pas {formatCountdown(cooldownRemaining)}
+                        Skanimi tjetër lejohet pas {formatCountdown(cooldownRemaining)}
                       </Text>
                     )}
-                    {scanResult.student ? (
+                    {scanResult?.student ? (
                       <Text style={styles.scanMetaText}>
                         {scanResult.student} • {scanResult.nim}
+                      </Text>
+                    ) : null}
+                    {scanResult?.nr_karte ? (
+                      <Text style={styles.scanMetaText}>
+                        Nr. kartës: {scanResult.nr_karte}
+                      </Text>
+                    ) : null}
+                    {!scanStatusIsError && typeof scanResult?.scan_count === 'number' ? (
+                      <Text style={styles.scanMetaText}>
+                        Ky student është skanuar {scanResult.scan_count} herë nga biznesi juaj.
+                      </Text>
+                    ) : null}
+                    {scanStatusIsError && cooldownRemaining != null ? (
+                      <Text style={styles.scanMetaText}>
+                        Bllokimi 5-orësh është ende aktiv për këtë student.
                       </Text>
                     ) : null}
                   </View>
@@ -505,18 +630,14 @@ export default function BizHomeScreen() {
                 <TouchableOpacity
                   style={[
                     styles.scannerPrimaryBtn,
-                    (scanSubmitting || cooldownRemaining != null) && styles.formBtnDisabled,
+                    scanActionDisabled && styles.formBtnDisabled,
                   ]}
                   onPress={handleScanSubmit}
                   activeOpacity={0.85}
-                  disabled={scanSubmitting || cooldownRemaining != null}
+                  disabled={scanActionDisabled}
                 >
                   <Text style={styles.scannerPrimaryBtnText}>
-                    {scanSubmitting
-                      ? 'Duke Verifikuar...'
-                      : cooldownRemaining != null
-                        ? `Gati pas ${formatCountdown(cooldownRemaining)}`
-                        : 'Verifiko Karten'}
+                    {scanActionLabel}
                   </Text>
                 </TouchableOpacity>
 
@@ -537,7 +658,7 @@ export default function BizHomeScreen() {
               onPress={resetScannerCapture}
               activeOpacity={0.85}
             >
-              <Text style={styles.scannerSecondaryBtnText}>Skano Perseri</Text>
+              <Text style={styles.scannerSecondaryBtnText}>Skano QR tjetër</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -554,8 +675,8 @@ export default function BizHomeScreen() {
               <View style={styles.cameraOverlay}>
                 <View style={styles.scannerFrame} />
                 <Text style={styles.cameraOverlayText}>
-                  Pamja e kamerës është gati. Lidhja me leximin dhe dërgimin e QR do të
-                  shtohet në hapin tjetër.
+                  Vendose QR-në brenda kornizës. Sapo të lexohet, karta mund të
+                  verifikohet menjëherë.
                 </Text>
               </View>
             </CameraView>
@@ -564,8 +685,7 @@ export default function BizHomeScreen() {
               <QrCode size={56} color={Colors.textMuted} strokeWidth={1.5} />
               <Text style={styles.placeholderTitle}>Pamja e kamerës</Text>
               <Text style={styles.placeholderSub}>
-                Jep lejen e kamerës për të aktivizuar këtë zonë pa ndryshuar ende
-                rrjedhën e skanimit.
+                Jep lejen e kamerës për të aktivizuar skanimin e QR në këtë ekran.
               </Text>
             </View>
           )}
@@ -679,6 +799,13 @@ export default function BizHomeScreen() {
       {!campaignsLoading && campaignsError && (
         <View style={styles.comingCard}>
           <Text style={styles.comingText}>Nuk u ngarkua lista. Provo përsëri.</Text>
+          <TouchableOpacity
+            style={[styles.scannerSecondaryBtn, styles.retryInlineBtn]}
+            onPress={() => { loadCampaigns(); }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.scannerSecondaryBtnText}>Provo përsëri</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -720,17 +847,6 @@ export default function BizHomeScreen() {
 
   // ── CHAT ───────────────────────────────────────────────────────────────────
 
-  const renderChat = () => (
-    <View style={styles.placeholderScreen}>
-      <MessageCircle size={56} color={Colors.textMuted} strokeWidth={1.5} />
-      <Text style={styles.placeholderTitle}>Mesazhet</Text>
-      <Text style={styles.placeholderSub}>
-        Bisedoni me stafin e Bashkisë Shkodër.{'\n'}
-        Funksionalitet i ardhshëm.
-      </Text>
-    </View>
-  );
-
   // ── PROFILE ────────────────────────────────────────────────────────────────
 
   const renderProfile = () => (
@@ -759,10 +875,10 @@ export default function BizHomeScreen() {
 
       {/* Info rows */}
       <View style={styles.infoCard}>
-        {[
+        {[ 
           { label: 'Adresa',    value: bizProfile.adresa  || '—' },
           { label: 'Telefon',   value: bizProfile.telefon || '—' },
-          { label: 'Zbritja',   value: bizProfile.zbritja ? `${bizProfile.zbritja}%` : '—' },
+          { label: 'Oferta aktive', value: formatBizOffer(bizProfile.zbritja) },
         ].map((row, i, arr) => (
           <View key={row.label} style={[styles.infoRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}>
             <Text style={styles.infoLabel}>{row.label}</Text>
@@ -789,7 +905,6 @@ export default function BizHomeScreen() {
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'scanner'   && renderScanner()}
         {activeTab === 'promo'     && renderPromo()}
-        {activeTab === 'chat'      && renderChat()}
         {activeTab === 'profile'   && renderProfile()}
       </View>
 
@@ -840,22 +955,6 @@ export default function BizHomeScreen() {
           ]}>
             <QrCode size={28} color="#fff" strokeWidth={2.5} />
           </View>
-        </TouchableOpacity>
-
-        {/* Mesazhet */}
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setActiveTab('chat')}
-          activeOpacity={0.7}
-        >
-          <MessageCircle
-            size={24}
-            color={activeTab === 'chat' ? '#003366' : Colors.tabInactive}
-            strokeWidth={activeTab === 'chat' ? 2.5 : 2}
-          />
-          <Text style={[styles.navLabel, activeTab === 'chat' && styles.navLabelActive]}>
-            Mesazhet
-          </Text>
         </TouchableOpacity>
 
         {/* Profili */}
@@ -1224,6 +1323,10 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     fontFamily: Typography.fontBold,
     color: Colors.textPrimary,
+  },
+  retryInlineBtn: {
+    alignSelf: 'center',
+    marginTop: Spacing.md,
   },
   scannerHintText: {
     fontSize: Typography.sm,
