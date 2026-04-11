@@ -178,18 +178,28 @@ export interface LoginResponse {
 }
 
 export async function login(username: string, password: string): Promise<LoginResponse> {
-  const res = await fetch(JWT_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(JWT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+  } catch (_) {
+    throw new Error('Nuk u arrit serveri. Provo perseri.');
+  }
 
   if (!res.ok) {
-    let message = 'Kredencialet janë të gabuara.';
+    let code: string | undefined;
+    let message = 'Fjalekalim gabim';
     try {
       const body = await res.json();
-      if (body?.message) message = body.message;
+      code = body?.code;
+      if (body?.message && !isAuthStatus(res.status)) message = body.message;
     } catch (_) {}
+    if (isAuthStatus(res.status) || code === 'incorrect_password' || code === 'invalid_username') {
+      throw new Error('Fjalekalim gabim');
+    }
     throw new Error(message);
   }
 

@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, FlatList, TouchableOpacity,
   Image, ActivityIndicator, StyleSheet, TextInput, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, Search, Heart } from 'lucide-react-native';
+import { ChevronLeft, Search, Heart, X } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
@@ -43,11 +43,13 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   const insets = useSafeAreaInsets();
   const [activePill, setActivePill] = useState('all');
   const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [voteOverrides, setVoteOverrides] = useState<Record<string, { votes: number; recommended: boolean }>>({});
   const [data, setData] = useState<OffersHubPayload | null>(offersHubCache.offers);
   const [catData, setCatData] = useState<OffersCategoryItem[] | null>(offersHubCache.categories);
   const [loading, setLoading] = useState(!offersHubCache.offers || !offersHubCache.categories);
   const [error, setError] = useState<string | null>(null);
+  const searchInputRef = useRef<TextInput | null>(null);
 
   const load = useCallback(async (forceRefresh = false) => {
     if (!forceRefresh && offersHubCache.offers && offersHubCache.categories) {
@@ -84,6 +86,13 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      const timer = setTimeout(() => searchInputRef.current?.focus(), 120);
+      return () => clearTimeout(timer);
+    }
+  }, [searchOpen]);
 
   const reload = useCallback(async () => {
     await load(true);
@@ -199,26 +208,47 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-            <ChevronLeft size={20} color={Colors.textPrimary} strokeWidth={2.5} />
-          </TouchableOpacity>
-          <View>
-            <Text style={styles.headerSub}>Eksploro</Text>
-            <Text style={styles.headerTitle}>Perfitimet</Text>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+              <ChevronLeft size={20} color={Colors.textPrimary} strokeWidth={2.5} />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.headerSub}>Përfitimet</Text>
+              <Text style={styles.headerTitle}>Përfitimet</Text>
+            </View>
           </View>
+          <TouchableOpacity
+            style={styles.searchToggleBtn}
+            onPress={() => {
+              if (searchOpen && search.trim()) {
+                setSearch('');
+              }
+              setSearchOpen((prev) => !prev);
+            }}
+            activeOpacity={0.85}
+          >
+            {searchOpen ? (
+              <X size={18} color={Colors.textPrimary} strokeWidth={2.2} />
+            ) : (
+              <Search size={18} color={Colors.textPrimary} strokeWidth={2.2} />
+            )}
+          </TouchableOpacity>
         </View>
-        <View style={styles.searchBar}>
-          <Search size={14} color={Colors.textMuted} strokeWidth={2} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Kerko biznes, oferte..."
-            placeholderTextColor={Colors.textMuted}
-            value={search}
-            onChangeText={setSearch}
-            autoCorrect={false}
-          />
-          <Text style={styles.searchText}>Kerko biznes, oferte...</Text>
-        </View>
+
+        {searchOpen && (
+          <View style={styles.searchBar}>
+            <Search size={14} color={Colors.textMuted} strokeWidth={2} />
+            <TextInput
+              ref={searchInputRef}
+              style={styles.searchInput}
+              placeholder="Kërko biznes, ofertë..."
+              placeholderTextColor={Colors.textMuted}
+              value={search}
+              onChangeText={setSearch}
+              autoCorrect={false}
+            />
+          </View>
+        )}
       </View>
 
       <ScrollView
@@ -240,7 +270,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
         </View>
 
         <View style={styles.bannerWrap}>
-          <TouchableOpacity activeOpacity={0.9} onPress={() => onList('Te gjitha bizneset')}>
+          <TouchableOpacity activeOpacity={0.9} onPress={() => onList('Të gjitha bizneset')}>
             <LinearGradient
               colors={['#38bdf8', '#2563eb']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -253,7 +283,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
               <Text style={styles.bannerTitle}>
                 {allBiz.length > 0 ? `${allBiz.length}+ Biznese` : 'Bizneset'}
               </Text>
-              <Text style={styles.bannerSub}>Zbrit me karten tende te studentit</Text>
+              <Text style={styles.bannerSub}>Zbrit me kartën tënde të studentit</Text>
               <View style={styles.bannerDots}>
                 <View style={[styles.dot, { backgroundColor: '#fff' }]} />
                 <View style={[styles.dot, { backgroundColor: 'rgba(255,255,255,0.4)' }]} />
@@ -284,10 +314,10 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
 
         {!loading && visibleTopRated.length > 0 && (
           <HSection
-            title={search.trim() ? 'Rezultatet e kerkimit' : 'Me te rekomanduara'}
-            subtitle={search.trim() ? `${filteredBiz.length} biznese te gjetura` : (visibleTopRated[0]?.scans > 0 ? `Bazuar ne ${visibleTopRated.reduce((s, b) => s + b.scans, 0)} skanime reale` : undefined)}
+            title={search.trim() ? 'Rezultatet e kërkimit' : 'Më të rekomanduara'}
+            subtitle={search.trim() ? `${filteredBiz.length} biznese të gjetura` : (visibleTopRated[0]?.scans > 0 ? `Bazuar në ${visibleTopRated.reduce((s, b) => s + b.scans, 0)} skanime reale` : undefined)}
             data={visibleTopRated}
-            onSeeAll={() => onList('Te gjitha bizneset')}
+            onSeeAll={() => onList('Të gjitha bizneset')}
             onCard={onProfile}
             onToggleRecommend={handleToggleRecommend}
           />
@@ -295,9 +325,9 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
 
         {!loading && !search.trim() && visibleMostUsed.length > 0 && (
           <HSection
-            title="Me te perdorurat"
+            title="Më të përdorurat"
             data={visibleMostUsed}
-            onSeeAll={() => onList('Te gjitha bizneset')}
+            onSeeAll={() => onList('Të gjitha bizneset')}
             onCard={onProfile}
             onToggleRecommend={handleToggleRecommend}
           />
@@ -325,9 +355,9 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
 
         {!loading && !search.trim() && visibleOtherBiz.length > 0 && (
           <HSection
-            title="Partnere te tjere"
+            title="Partnerë të tjerë"
             data={visibleOtherBiz}
-            onSeeAll={() => onList('Te gjitha bizneset')}
+            onSeeAll={() => onList('Të gjitha bizneset')}
             onCard={onProfile}
             onToggleRecommend={handleToggleRecommend}
           />
@@ -369,7 +399,7 @@ function HSection({ title, subtitle, data, onSeeAll, onCard, onToggleRecommend }
           {subtitle ? <Text style={styles.sectionSub}>{subtitle}</Text> : null}
         </View>
         <TouchableOpacity style={styles.seeAllBtn} onPress={onSeeAll}>
-          <Text style={styles.seeAllText}>Shiko te gjitha</Text>
+          <Text style={styles.seeAllText}>Shiko të gjitha</Text>
         </TouchableOpacity>
       </View>
       <FlatList
@@ -431,8 +461,17 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 }, elevation: 3, zIndex: 20,
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.lg },
+  headerRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    gap: 14, marginBottom: Spacing.sm,
+  },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
   backBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.border,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  searchToggleBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.border,
     justifyContent: 'center', alignItems: 'center',
@@ -449,7 +488,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.border,
   },
   searchInput: { flex: 1, fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textPrimary, padding: 0 },
-  searchText: { display: 'none' },
 
   pillsSection: {
     backgroundColor: Colors.white, paddingVertical: Spacing.xl,

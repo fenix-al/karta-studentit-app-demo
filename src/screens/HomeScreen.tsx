@@ -745,13 +745,13 @@ export default function HomeScreen() {
         </View>
 
         {/* ── Oferta pranë teje (Businesses) ───────────────────────────── */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.offersHeaderInfo}>
-            <Text style={styles.sectionTitle}>Oferta pranë teje</Text>
+        <View style={styles.sectionHeaderStack}>
+          <Text style={styles.sectionTitle}>Oferta pranë teje</Text>
+          <View style={styles.sectionActionsRow}>
             <TouchableOpacity
               onPress={handleFindNearMe}
               activeOpacity={0.8}
-              style={[styles.nearMePill, styles.nearMePillBelowTitle, userCoords ? styles.nearMePillActive : null]}
+              style={[styles.nearMePill, userCoords ? styles.nearMePillActive : null]}
             >
               {locLoading ? (
                 <ActivityIndicator size={11} color={userCoords ? '#fff' : Colors.brandGreenText} />
@@ -762,10 +762,10 @@ export default function HomeScreen() {
                 {locLoading ? 'Duke kërkuar...' : userCoords ? 'Pranë Teje ✓' : 'Gjej Afër Meje'}
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.sectionLink} onPress={() => openOffers()} activeOpacity={0.8}>
+              <Text style={styles.sectionLinkText}>Të gjitha</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => openOffers()}>
-            <Text style={styles.seeAll}>Shiko të gjitha</Text>
-          </TouchableOpacity>
         </View>
         {offersLoading ? (
           <View style={styles.offerLoader}>
@@ -849,8 +849,8 @@ export default function HomeScreen() {
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Më të rekomanduarat</Text>
-              <TouchableOpacity onPress={() => openOffers()}>
-                <Text style={styles.seeAll}>Shiko të gjitha</Text>
+              <TouchableOpacity style={styles.sectionLink} onPress={() => openOffers()} activeOpacity={0.8}>
+                <Text style={styles.sectionLinkText}>Të gjitha</Text>
               </TouchableOpacity>
             </View>
             <FlatList
@@ -1013,8 +1013,8 @@ export default function HomeScreen() {
               <Text style={styles.kvrSectionEyebrow}>Njoftime & Evente</Text>
               <Text style={styles.kvrSectionTitle}>KVR — Zëri i Rinisë</Text>
             </View>
-            <TouchableOpacity style={styles.kvrSectionLink} onPress={() => openKVR()} activeOpacity={0.8}>
-              <Text style={styles.kvrSectionLinkText}>Shiko të gjitha</Text>
+            <TouchableOpacity style={styles.sectionLink} onPress={() => openKVR()} activeOpacity={0.8}>
+              <Text style={styles.sectionLinkText}>Të gjitha</Text>
             </TouchableOpacity>
           </View>
 
@@ -1362,8 +1362,6 @@ export default function HomeScreen() {
               { icon: <HandHeart     size={24} color="#f97316" strokeWidth={2} />, bg: '#fff7ed', label: 'Vullnetar',   onPress: () => { setIsUserMenuOpen(false); openAct4(); } },
               { icon: <Landmark      size={24} color="#475569" strokeWidth={2} />, bg: '#f1f5f9', label: 'KVR',          onPress: () => { setIsUserMenuOpen(false); openKVR(); } },
               { icon: <Gift          size={24} color="#f59e0b" strokeWidth={2} />, bg: '#fffbeb', label: 'Dhuratat',    onPress: () => { setIsUserMenuOpen(false); setActiveTab('dhurata'); } },
-              { icon: <FileText      size={24} color="#6366f1" strokeWidth={2} />, bg: '#eef2ff', label: 'Aplikimet',   onPress: () => { setIsUserMenuOpen(false); setActiveTab('profil'); } },
-              { icon: <Heart         size={24} color="#f43f5e" strokeWidth={2} />, bg: '#fff1f2', label: 'Të Ruajtura', onPress: () => setIsUserMenuOpen(false) },
               { icon: <MessageCircle size={24} color="#0ea5e9" strokeWidth={2} />, bg: '#f0f9ff', label: 'Suporti',     onPress: () => setIsUserMenuOpen(false) },
               { icon: <User          size={24} color="#334155" strokeWidth={2} />, bg: '#f8fafc', label: 'Profili Im',  onPress: () => { setIsUserMenuOpen(false); setActiveTab('profil'); } },
               { icon: <LogOut        size={24} color="#ef4444" strokeWidth={2} />, bg: '#fef2f2', label: 'Dil',          onPress: () => setIsUserMenuOpen(false) },
@@ -1412,8 +1410,8 @@ function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => vo
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <TouchableOpacity onPress={onSeeAll}>
-        <Text style={styles.seeAll}>Shiko të gjitha</Text>
+      <TouchableOpacity style={styles.sectionLink} onPress={onSeeAll} activeOpacity={0.8}>
+        <Text style={styles.sectionLinkText}>Të gjitha</Text>
       </TouchableOpacity>
     </View>
   );
@@ -1762,16 +1760,23 @@ const styles = StyleSheet.create({
   nearMeTextActive: {
     color: '#fff',
   },
-  nearMePillBelowTitle: {
-    alignSelf: 'flex-start',
+  // ── Section header ───────────────────────────────────────────────────────────
+  sectionHeaderStack: {
+    paddingHorizontal: Spacing.xxl,
+    marginBottom: Spacing.lg,
+  },
+  sectionActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
     marginTop: 8,
   },
-
-  // ── Section header ───────────────────────────────────────────────────────────
   sectionHeader: {
     flexDirection:    'row',
     justifyContent:   'space-between',
-    alignItems:       'flex-end',
+    alignItems:       'flex-start',
+    flexWrap:         'wrap',
     paddingHorizontal: Spacing.xxl,
     marginBottom:     Spacing.lg,
   },
@@ -1780,13 +1785,22 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.md,
   },
   sectionTitle: {
+    flexShrink: 1,
     fontFamily: Typography.fontExtraBold,
     fontSize:   Typography.xxl,
     color:      Colors.textPrimary,
   },
-  seeAll: {
+  sectionLink: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: Radius.full,
+    backgroundColor: '#eef6ff',
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  sectionLinkText: {
     fontFamily: Typography.fontBold,
-    fontSize:   Typography.md,
+    fontSize:   12,
     color:      '#0ea5e9',
   },
 
@@ -2045,17 +2059,6 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontBold,
     fontSize:   16,
     color:      Colors.textPrimary,
-  },
-  kvrSectionLink: {
-    paddingHorizontal: 12,
-    paddingVertical:   8,
-    borderRadius:      Radius.full,
-    backgroundColor:   '#eef6ff',
-  },
-  kvrSectionLinkText: {
-    fontFamily: Typography.fontBold,
-    fontSize:   12,
-    color:      '#0ea5e9',
   },
   kvrList: {
     paddingTop:  2,

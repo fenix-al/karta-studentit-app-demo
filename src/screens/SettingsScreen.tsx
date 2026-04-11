@@ -18,7 +18,7 @@ interface Props {
   onLogout?:   () => void;
 }
 
-// â”€â”€ Shared row component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Shared row component
 function SettingRow({
   icon, iconBg, iconColor, title,
   rightElement, isLast = false, isDestructive = false, onPress,
@@ -73,12 +73,12 @@ export default function SettingsScreen({ onBack, bottomInset, onLogout }: Props)
   return (
     <View style={styles.root}>
 
-      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.75}>
           <ChevronLeft size={20} color={Colors.textPrimary} strokeWidth={2.5} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>CilÃ«simet</Text>
+        <Text style={styles.headerTitle}>Cilësimet</Text>
         <View style={styles.iconBtn} />
       </View>
 
@@ -88,19 +88,19 @@ export default function SettingsScreen({ onBack, bottomInset, onLogout }: Props)
         contentContainerStyle={[styles.content, { paddingBottom: bottomInset + 32 }]}
       >
 
-        {/* â”€â”€ Llogaria Ime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* Llogaria Ime */}
         <Text style={styles.groupLabel}>Llogaria Ime</Text>
         <View style={styles.group}>
           <SettingRow
             icon={<User size={16} color="#0284c7" strokeWidth={2} />}
             iconBg="#e0f2fe" iconColor="#0284c7"
-            title="TÃ« dhÃ«nat personale"
+            title="Të dhënat personale"
             onPress={() => Alert.alert('Nuk disponohet', 'Kjo faqe do te shtohet se shpejti.')}
           />
           <SettingRow
             icon={<Lock size={16} color="#d97706" strokeWidth={2} />}
             iconBg="#fffbeb" iconColor="#d97706"
-            title="Siguria & FjalÃ«kalimi"
+            title="Siguria & Fjalëkalimi"
             onPress={() => Alert.alert('Nuk disponohet', 'Kjo faqe do te shtohet se shpejti.')}
           />
           <SettingRow
@@ -119,31 +119,31 @@ export default function SettingsScreen({ onBack, bottomInset, onLogout }: Props)
           />
         </View>
 
-        {/* â”€â”€ NdihmÃ« & Informacion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <Text style={styles.groupLabel}>NdihmÃ« & Informacion</Text>
+        {/* Ndihmë & Informacion */}
+        <Text style={styles.groupLabel}>Ndihmë & Informacion</Text>
         <View style={styles.group}>
           <SettingRow
             icon={<HelpCircle size={16} color="#0d9488" strokeWidth={2} />}
             iconBg="#f0fdfa" iconColor="#0d9488"
-            title="Qendra e NdihmÃ«s (FAQ)"
+            title="Qendra e Ndihmës (FAQ)"
             onPress={() => {}}
           />
           <SettingRow
             icon={<FileText size={16} color="#64748b" strokeWidth={2} />}
             iconBg="#f8fafc" iconColor="#64748b"
-            title="Kushtet e PÃ«rdorimit"
+            title="Kushtet e Përdorimit"
             onPress={() => {}}
           />
           <SettingRow
             icon={<Shield size={16} color="#64748b" strokeWidth={2} />}
             iconBg="#f8fafc" iconColor="#64748b"
-            title="Politikat e PrivatÃ«sisÃ«"
+            title="Politikat e Privatësisë"
             isLast
             onPress={() => {}}
           />
         </View>
 
-        {/* â”€â”€ Zona e Rrezikut â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* Zona e Rrezikut */}
         <View style={styles.group}>
           <SettingRow
             icon={<LogOut size={16} color="#e11d48" strokeWidth={2} />}
@@ -155,10 +155,10 @@ export default function SettingsScreen({ onBack, bottomInset, onLogout }: Props)
           />
         </View>
 
-        {/* â”€â”€ Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerTitle}>Karta e Studentit ShkodÃ«r</Text>
-          <Text style={styles.footerSub}>Versioni 2.0.1 â€¢ NdÃ«rtuar nga Bashkia</Text>
+          <Text style={styles.footerTitle}>Karta e Studentit Shkodër</Text>
+          <Text style={styles.footerSub}>Versioni 2.0.1 • Ndërtuar nga Bashkia</Text>
         </View>
 
       </ScrollView>

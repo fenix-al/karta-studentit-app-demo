@@ -1,17 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Image, StyleSheet, ActivityIndicator, Alert,
+  Image, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ChevronLeft, Share2, Heart, Calendar, MapPin, HandHeart, CheckCircle,
+  ChevronLeft, Share2, Heart, Calendar, MapPin,
 } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { ActActivity } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
-import { fetchAct4Single, volunteerAct4 } from '../../services/api';
+import { fetchAct4Single } from '../../services/api';
 import ScreenState from '../../components/ScreenState';
 
 interface Props {
@@ -20,7 +20,6 @@ interface Props {
   bottomInset: number;
 }
 
-const FOOTER_H = 110;
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800';
 
 function stripHtml(html: string): string {
@@ -29,8 +28,6 @@ function stripHtml(html: string): string {
 
 export default function ActProfileScreen({ activityId, onBack, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
-  const [joined, setJoined] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const { data, loading, error, reload } = useFetch(() => fetchAct4Single(Number(activityId)) as Promise<any>, [activityId]);
 
   const activity: ActActivity | null = useMemo(() => {
@@ -54,21 +51,6 @@ export default function ActProfileScreen({ activityId, onBack, bottomInset }: Pr
       content: data.content ?? '',
     };
   }, [data]);
-
-  const handleVolunteer = async () => {
-    if (!activity || joined || submitting) return;
-
-    try {
-      setSubmitting(true);
-      await volunteerAct4(Number(activity.id), activity.title);
-      setJoined(true);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Regjistrimi nuk u krye. Provo perseri.';
-      Alert.alert('Gabim', message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -114,7 +96,7 @@ export default function ActProfileScreen({ activityId, onBack, bottomInset }: Pr
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: bottomInset + FOOTER_H + 16 }}
+        contentContainerStyle={{ paddingBottom: bottomInset + 16 }}
       >
         <View style={styles.heroPad}>
           <View style={styles.heroWrap}>
@@ -162,24 +144,6 @@ export default function ActProfileScreen({ activityId, onBack, bottomInset }: Pr
           </View>
         </View>
       </ScrollView>
-
-      <View style={[styles.stickyFooter, { paddingBottom: bottomInset + 16 }]}>
-        <TouchableOpacity
-          style={[styles.joinBtn, joined && styles.joinBtnDone]}
-          activeOpacity={0.88}
-          onPress={handleVolunteer}
-        >
-          {joined
-            ? <CheckCircle size={20} color="#fff" strokeWidth={2.5} />
-            : <HandHeart size={20} color="#fff" strokeWidth={2} />}
-          <Text style={styles.joinBtnText}>
-            {joined ? 'Je Regjistruar ne Aktivitet' : (submitting ? 'Duke u regjistruar...' : 'Merr Pjese si Vullnetar')}
-          </Text>
-        </TouchableOpacity>
-        <Text style={styles.footerNote}>
-          Skanoni Karten kur te paraqiteni per te marre Pike Vullnetarizmi.
-        </Text>
-      </View>
     </View>
   );
 }
@@ -260,28 +224,4 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary, lineHeight: 24,
   },
 
-  stickyFooter: {
-    backgroundColor: 'rgba(255,255,255,0.97)',
-    paddingHorizontal: Spacing.xxl,
-    paddingTop: 16,
-    borderTopWidth: 1, borderTopColor: Colors.borderLight,
-    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 16,
-    shadowOffset: { width: 0, height: -6 }, elevation: 10,
-  },
-  joinBtn: {
-    backgroundColor: '#0aa8a7', borderRadius: Radius.xxl,
-    paddingVertical: 15, flexDirection: 'row',
-    justifyContent: 'center', alignItems: 'center', gap: 8,
-    shadowColor: '#0aa8a7', shadowOpacity: 0.25, shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 }, elevation: 5,
-  },
-  joinBtnDone: { backgroundColor: '#10b981', shadowColor: '#10b981' },
-  joinBtnText: {
-    fontFamily: Typography.fontExtraBold, fontSize: Typography.lg,
-    color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5,
-  },
-  footerNote: {
-    fontFamily: Typography.fontMedium, fontSize: 10,
-    color: Colors.textMuted, textAlign: 'center', marginTop: 8,
-  },
 });

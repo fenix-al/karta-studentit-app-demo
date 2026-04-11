@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -12,6 +12,7 @@ import {
 } from '@expo-google-fonts/poppins';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import ModernLoader from './src/components/ModernLoader';
 import HomeScreen    from './src/screens/HomeScreen';
 import BizHomeScreen from './src/screens/biz/BizHomeScreen';
 import LoginScreen   from './src/screens/auth/LoginScreen';
@@ -30,8 +31,12 @@ function AppNavigator() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.surfaceBg }}>
-        <ActivityIndicator size="large" color={Colors.brandGreen} />
+      <View style={{ flex: 1, backgroundColor: Colors.surfaceBg }}>
+        <ModernLoader
+          fullscreen
+          title="Po hapet aplikacioni"
+          subtitle="Po kontrollojme sesionin tuaj."
+        />
       </View>
     );
   }
@@ -61,8 +66,12 @@ export default function App() {
 
   if (!fontsLoaded && !fontError) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.surfaceBg }}>
-        <ActivityIndicator size="large" color={Colors.brandGreen} />
+      <View style={{ flex: 1, backgroundColor: Colors.surfaceBg }}>
+        <ModernLoader
+          fullscreen
+          title="Po pergatiten fontet"
+          subtitle="Aplikacioni po ngarkohet."
+        />
       </View>
     );
   }

@@ -309,8 +309,10 @@ export default function ProfileScreen({
               <Text style={s.statLabelEmerald}>Vullnetar</Text>
               <Award size={15} color="#059669" strokeWidth={2} />
             </View>
-            <Text style={s.statAct4Title}>Vullnetar</Text>
-            <Text style={s.statAct4Sub}>Pjesemarres ne {volunteerActivities} aktivitete.</Text>
+            <Text style={s.statBigEmerald}>
+              {volunteerActivities}
+            </Text>
+            <Text style={s.statHintEmerald}>Pjesemarrje ne aktivitete vullnetare.</Text>
           </LinearGradient>
         </View>
 
@@ -323,8 +325,8 @@ export default function ProfileScreen({
                 <MessageSquare size={20} color="#0ea5e9" strokeWidth={2} fill="#0ea5e9" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.voiceTitle}>Zeri Yt (Sugjerime)</Text>
-                <Text style={s.voiceSub}>Dergo nje mesazh direkt per stafin.</Text>
+                <Text style={s.voiceTitle}>Zëri Yt (Sugjerime)</Text>
+                <Text style={s.voiceSub}>Dërgo një mesazh direkt për stafin.</Text>
               </View>
             </View>
 
@@ -352,7 +354,7 @@ export default function ProfileScreen({
               ) : (
                 <>
                   <Send size={14} color="#fff" strokeWidth={2} />
-                  <Text style={s.sendBtnText}>Dergo Sugjerimin</Text>
+                  <Text style={s.sendBtnText}>Dërgo Sugjerimin</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -858,13 +860,9 @@ const s = StyleSheet.create({
     color: '#059669', textTransform: 'uppercase', letterSpacing: 0.8,
   },
   statBigAmber: { fontFamily: Typography.fontExtraBold, fontSize: Typography.h2, color: Colors.textPrimary, marginBottom: 8 },
-  statSmallAmber: { fontFamily: Typography.fontBold, fontSize: Typography.md, color: Colors.textMuted },
   statHintAmber: { fontFamily: Typography.fontMedium, fontSize: 10, color: Colors.textMuted },
-  statAct4Title: {
-    fontFamily: Typography.fontExtraBold, fontSize: Typography.sm,
-    color: '#064e3b', lineHeight: 16, marginBottom: 4,
-  },
-  statAct4Sub: { fontFamily: Typography.fontMedium, fontSize: 10, color: '#047857' },
+  statBigEmerald: { fontFamily: Typography.fontExtraBold, fontSize: Typography.h2, color: '#064e3b', marginBottom: 8 },
+  statHintEmerald: { fontFamily: Typography.fontMedium, fontSize: 10, color: '#047857' },
   voiceBorder: {
     borderRadius: Radius.xxl + 4, padding: 2,
     marginBottom: Spacing.xxxl,
