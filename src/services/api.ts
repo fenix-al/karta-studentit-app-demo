@@ -27,6 +27,7 @@ import {
 } from '../types';
 
 export const TOKEN_KEY = 'sk_jwt_token';
+const REMEMBERED_LOGIN_KEY = 'sk_remembered_login';
 
 export class ApiError extends Error {
   status: number;
@@ -106,6 +107,29 @@ async function removeToken(): Promise<void> {
   }
 }
 
+async function storeSecureValue(key: string, value: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(key, value);
+  } else {
+    await SecureStore.setItemAsync(key, value);
+  }
+}
+
+async function getSecureValue(key: string): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    return AsyncStorage.getItem(key);
+  }
+  return SecureStore.getItemAsync(key);
+}
+
+async function removeSecureValue(key: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.removeItem(key);
+  } else {
+    await SecureStore.deleteItemAsync(key);
+  }
+}
+
 async function authHeaders(): Promise<Record<string, string>> {
   const token = await getToken();
   return {
@@ -177,6 +201,13 @@ export interface LoginResponse {
   user_nicename:    string;
 }
 
+export interface RememberedLogin {
+  username: string;
+  password: string;
+  email?: string | null;
+  displayName?: string | null;
+}
+
 export async function login(username: string, password: string): Promise<LoginResponse> {
   let res: Response;
   try {
@@ -210,6 +241,32 @@ export async function login(username: string, password: string): Promise<LoginRe
 
 export async function logout(): Promise<void> {
   await removeToken();
+}
+
+export async function getRememberedLogin(): Promise<RememberedLogin | null> {
+  const raw = await getSecureValue(REMEMBERED_LOGIN_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<RememberedLogin>;
+    if (!parsed.username || !parsed.password) return null;
+    return {
+      username: parsed.username,
+      password: parsed.password,
+      email: parsed.email ?? null,
+      displayName: parsed.displayName ?? null,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+export async function saveRememberedLogin(loginData: RememberedLogin): Promise<void> {
+  await storeSecureValue(REMEMBERED_LOGIN_KEY, JSON.stringify(loginData));
+}
+
+export async function clearRememberedLogin(): Promise<void> {
+  await removeSecureValue(REMEMBERED_LOGIN_KEY);
 }
 
 // ── Student card ──────────────────────────────────────────────────────────────
@@ -390,6 +447,26 @@ export async function fetchBusinessCategories(): Promise<Array<{ id: number; slu
 }
 
 // ── Kurset (Courses) ──────────────────────────────────────────────────────────
+
+export interface AppPromotionApiItem {
+  id: number;
+  title: string;
+  subtitle?: string;
+  badge?: string;
+  cta_text?: string;
+  media_type: 'image' | 'video';
+  image_url?: string | null;
+  video_url?: string | null;
+  poster_url?: string | null;
+  target_url?: string;
+  linked_business_id?: number;
+  linked_business_title?: string;
+  sort_order?: number;
+}
+
+export async function fetchAppPromotions(): Promise<{ items: AppPromotionApiItem[] }> {
+  return publicFetch('/app-promotions');
+}
 
 export async function fetchKurset(params?: { category?: string; search?: string }) {
   const qs = new URLSearchParams(

@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, FlatList, TouchableOpacity,
-  Image, ActivityIndicator, StyleSheet, TextInput, Alert,
+  Image, ActivityIndicator, StyleSheet, TextInput, Alert, Linking, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronLeft, Search, Heart, X } from 'lucide-react-native';
+import { WebView } from 'react-native-webview';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
-import { fetchOffers, fetchBusinessCategories, recommendBusiness } from '../../services/api';
+import { fetchOffers, fetchBusinessCategories, recommendBusiness, fetchAppPromotions, AppPromotionApiItem } from '../../services/api';
 import { apiBizToBusiness } from '../../services/mappers';
 import ScreenState from '../../components/ScreenState';
 
@@ -31,32 +32,53 @@ type OffersCategoryItem = {
   icon?: string;
 };
 
+type AppPromotion = AppPromotionApiItem;
+
 let offersHubCache: {
   offers: OffersHubPayload | null;
   categories: OffersCategoryItem[] | null;
+  promotions: AppPromotion[] | null;
 } = {
   offers: null,
   categories: null,
+  promotions: null,
 };
 
 export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const [activePill, setActivePill] = useState('all');
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [voteOverrides, setVoteOverrides] = useState<Record<string, { votes: number; recommended: boolean }>>({});
   const [data, setData] = useState<OffersHubPayload | null>(offersHubCache.offers);
   const [catData, setCatData] = useState<OffersCategoryItem[] | null>(offersHubCache.categories);
+  const [promotions, setPromotions] = useState<AppPromotion[]>(offersHubCache.promotions ?? []);
+  const [activePromo, setActivePromo] = useState(0);
   const [loading, setLoading] = useState(!offersHubCache.offers || !offersHubCache.categories);
   const [error, setError] = useState<string | null>(null);
   const searchInputRef = useRef<TextInput | null>(null);
+  const promoListRef = useRef<FlatList<AppPromotion> | null>(null);
+  const promoWidth = Math.max(280, width - Spacing.xxl * 2);
 
   const load = useCallback(async (forceRefresh = false) => {
     if (!forceRefresh && offersHubCache.offers && offersHubCache.categories) {
       setData(offersHubCache.offers);
       setCatData(offersHubCache.categories);
+      setPromotions(offersHubCache.promotions ?? []);
       setLoading(false);
       setError(null);
+      try {
+        const promoResponse = await fetchAppPromotions();
+        const promoItems = Array.isArray(promoResponse?.items) ? promoResponse.items : [];
+        offersHubCache = {
+          ...offersHubCache,
+          promotions: promoItems,
+        };
+        setPromotions(promoItems);
+      } catch {
+        // Keep existing cached promos/fallback banner if promo refresh fails.
+      }
       return;
     }
 
@@ -69,13 +91,23 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
         fetchBusinessCategories(),
       ]);
 
+      let promoItems: AppPromotion[] = offersHubCache.promotions ?? [];
+      try {
+        const promoResponse = await fetchAppPromotions();
+        promoItems = Array.isArray(promoResponse?.items) ? promoResponse.items : [];
+      } catch {
+        promoItems = offersHubCache.promotions ?? [];
+      }
+
       offersHubCache = {
         offers: offers as OffersHubPayload,
         categories: categories as OffersCategoryItem[],
+        promotions: promoItems,
       };
 
       setData(offersHubCache.offers);
       setCatData(offersHubCache.categories);
+      setPromotions(offersHubCache.promotions ?? []);
     } catch (e: any) {
       setError(e?.message ?? 'Gabim ne ngarkimin e te dhenave.');
     } finally {
@@ -172,6 +204,40 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   const visibleOtherBiz = search.trim()
     ? filteredBiz.filter((biz) => otherBiz.some((item) => item.id === biz.id))
     : otherBiz;
+
+  useEffect(() => {
+    if (promotions.length <= 1) return;
+    const timer = setInterval(() => {
+      setActivePromo((prev) => {
+        const next = (prev + 1) % promotions.length;
+        promoListRef.current?.scrollToOffset({
+          offset: next * (promoWidth + 12),
+          animated: true,
+        });
+        return next;
+      });
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [promotions, promoWidth]);
+
+  const handlePromoPress = useCallback(async (promo: AppPromotion) => {
+    const linkedBusiness = promo.linked_business_id
+      ? allBiz.find((biz) => Number(biz.id) === Number(promo.linked_business_id))
+      : undefined;
+
+    if (linkedBusiness) {
+      onProfile(linkedBusiness);
+      return;
+    }
+
+    if (promo.target_url) {
+      try {
+        await Linking.openURL(promo.target_url);
+      } catch {
+        Alert.alert('Gabim', 'Nuk mund te hapet kjo faqe tani.');
+      }
+    }
+  }, [allBiz, onProfile]);
 
   async function handleToggleRecommend(biz: Business) {
     const current = voteOverrides[biz.id] ?? {
@@ -270,7 +336,43 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
         </View>
 
         <View style={styles.bannerWrap}>
-          <TouchableOpacity activeOpacity={0.9} onPress={() => onList('Të gjitha bizneset')}>
+          {promotions.length > 0 ? (
+            <>
+              <FlatList
+                ref={promoListRef}
+                data={promotions}
+                horizontal
+                keyExtractor={(item) => String(item.id)}
+                renderItem={({ item, index }) => (
+                  <PromoBannerCard
+                    item={item}
+                    width={promoWidth}
+                    isActive={index === activePromo}
+                    onPress={() => handlePromoPress(item)}
+                  />
+                )}
+                showsHorizontalScrollIndicator={false}
+                decelerationRate="fast"
+                snapToInterval={promoWidth + 12}
+                snapToAlignment="start"
+                disableIntervalMomentum
+                contentContainerStyle={styles.promoListContent}
+                onMomentumScrollEnd={(event) => {
+                  const nextIndex = Math.round(event.nativeEvent.contentOffset.x / (promoWidth + 12));
+                  setActivePromo(Math.max(0, Math.min(nextIndex, promotions.length - 1)));
+                }}
+              />
+              <View style={styles.bannerDots}>
+                {promotions.map((promo, index) => (
+                  <View
+                    key={promo.id}
+                    style={[styles.dot, index === activePromo ? styles.dotActive : styles.dotInactive]}
+                  />
+                ))}
+              </View>
+            </>
+          ) : (
+          <TouchableOpacity style={styles.bannerFallbackWrap} activeOpacity={0.9} onPress={() => onList('Të gjitha bizneset')}>
             <LinearGradient
               colors={['#38bdf8', '#2563eb']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -291,6 +393,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
               </View>
             </LinearGradient>
           </TouchableOpacity>
+          )}
         </View>
 
         {loading && (
@@ -383,6 +486,44 @@ function PillBtn({ id, name, active, onPress }: { id: string; name: string; acti
   return (
     <TouchableOpacity style={[styles.pill, active && styles.pillActive]} onPress={onPress} activeOpacity={0.8}>
       <Text style={[styles.pillText, active && styles.pillTextActive]}>{name}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function PromoBannerCard({
+  item,
+  width,
+  isActive,
+  onPress,
+}: {
+  item: AppPromotion;
+  width: number;
+  isActive: boolean;
+  onPress: () => void;
+}) {
+  const hasVideo = item.media_type === 'video' && !!item.video_url;
+  const mediaHtml = hasVideo
+    ? `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"></head><body style="margin:0;background:#0f172a;overflow:hidden;"><video src="${item.video_url}" poster="${item.poster_url ?? ''}" autoplay muted loop playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;background:#0f172a;"></video></body></html>`
+    : '';
+
+  return (
+    <TouchableOpacity style={[styles.promoCard, { width }]} activeOpacity={0.92} onPress={onPress}>
+      {hasVideo && isActive ? (
+        <WebView
+          pointerEvents="none"
+          source={{ html: mediaHtml }}
+          style={styles.promoMedia}
+          scrollEnabled={false}
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+        />
+      ) : (
+        <Image
+          source={{ uri: item.poster_url || item.image_url || 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?w=1200' }}
+          style={styles.promoMedia}
+          resizeMode="cover"
+        />
+      )}
     </TouchableOpacity>
   );
 }
@@ -506,9 +647,11 @@ const styles = StyleSheet.create({
   pillText: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: Colors.textPrimary },
   pillTextActive: { color: '#fff' },
 
-  bannerWrap: { paddingHorizontal: Spacing.xxl, marginBottom: Spacing.xxxl },
+  bannerWrap: { marginBottom: Spacing.xxxl },
+  promoListContent: { paddingHorizontal: Spacing.xxl, gap: 12 },
+  bannerFallbackWrap: { marginHorizontal: Spacing.xxl },
   banner: {
-    borderRadius: Radius.xxl + 4, padding: Spacing.xxl, overflow: 'hidden',
+    borderRadius: Radius.xxl + 4, padding: Spacing.xxl, overflow: 'hidden', minHeight: 210,
     shadowColor: '#0ea5e9', shadowOpacity: 0.2, shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 }, elevation: 6,
   },
@@ -527,8 +670,18 @@ const styles = StyleSheet.create({
     lineHeight: 34, marginBottom: 6, width: '70%',
   },
   bannerSub: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: '#bae6fd', marginBottom: Spacing.lg },
-  bannerDots: { flexDirection: 'row', gap: 6 },
-  dot: { width: 7, height: 7, borderRadius: 4 },
+  bannerDots: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 10 },
+  dot: { width: 6, height: 6, borderRadius: 999 },
+  dotActive: { backgroundColor: '#1d9bf0', opacity: 1 },
+  dotInactive: { backgroundColor: '#cbd5e1', opacity: 0.9 },
+  promoCard: {
+    height: 220, borderRadius: Radius.xxl + 4, overflow: 'hidden',
+    backgroundColor: Colors.white,
+    borderWidth: 1, borderColor: 'rgba(226,232,240,0.9)',
+    shadowColor: '#0f172a', shadowOpacity: 0.06, shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 }, elevation: 2,
+  },
+  promoMedia: { width: '100%', height: '100%', backgroundColor: Colors.white },
 
   hSection: { marginBottom: Spacing.xxxl },
   sectionHeader: {

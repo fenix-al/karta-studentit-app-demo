@@ -11,7 +11,10 @@ import {
   Alert,
   StyleSheet,
   TextInput,
+  Animated,
+  Easing,
 } from 'react-native';
+import { useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -122,10 +125,14 @@ type MainTab = 'home' | 'perfitimet' | 'dhurata' | 'shortiLive' | 'profil' | 'ku
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { onLogout, card } = useAuth();
+  const homeSearchInputRef = useRef<TextInput | null>(null);
+  const homeSearchAnim = useRef(new Animated.Value(0)).current;
 
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locLoading, setLocLoading] = useState(false);
   const [homeSearch, setHomeSearch] = useState('');
+  const [isHomeSearchOpen, setIsHomeSearchOpen] = useState(false);
+  const [currentHour, setCurrentHour] = useState(() => new Date().getHours());
 
   const { data: offersData, loading: offersLoading, reload: refetchOffers } = useFetch(
     () => fetchOffers(userCoords ? { lat: userCoords.lat, lng: userCoords.lng } : undefined),
@@ -583,6 +590,38 @@ export default function HomeScreen() {
     return results.slice(0, 12);
   }, [homeSearch, realBusinesses, courseItems, jobItems, startups, act4, kvr]);
 
+  useEffect(() => {
+    Animated.timing(homeSearchAnim, {
+      toValue: isHomeSearchOpen ? 1 : 0,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+
+    if (!isHomeSearchOpen) {
+      homeSearchInputRef.current?.blur();
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      homeSearchInputRef.current?.focus();
+    }, 120);
+
+    return () => clearTimeout(timeout);
+  }, [homeSearchAnim, isHomeSearchOpen]);
+
+  useEffect(() => {
+    const syncHour = () => setCurrentHour(new Date().getHours());
+    const interval = setInterval(syncHour, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const greetingText = useMemo(() => {
+    if (currentHour < 10) return 'Mirëmëngjesi!';
+    if (currentHour >= 20) return 'Mirëmbrëma!';
+    return 'Mirëdita!';
+  }, [currentHour]);
+
   // Bottom of tab bar = its own height + device safe area
   const tabBarBottom = insets.bottom;
 
@@ -615,39 +654,91 @@ export default function HomeScreen() {
       ════════════════════════════════════════════════════════════════ */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
 
-        {/* Left: avatar + greeting */}
-        <View style={styles.headerLeft}>
+        {/* Left: avatar + greeting or search */}
+        <View style={styles.headerMainRow}>
           <TouchableOpacity onPress={() => setIsUserMenuOpen(true)} activeOpacity={0.8}>
             <Image source={{ uri: card?.foto_url }} style={styles.avatar} />
           </TouchableOpacity>
-          <View>
-            <Text style={styles.greeting}>Mirëmëngjes!</Text>
-            <Text style={styles.userName}>{card ? card.emeri + ' ' + card.mbiemeri : ''}</Text>
-          </View>
+
+          {isHomeSearchOpen ? (
+            <Animated.View
+              style={[
+                styles.headerSearchInlineWrap,
+                {
+                  opacity: homeSearchAnim,
+                  transform: [
+                    {
+                      translateX: homeSearchAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [26, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <View style={styles.headerSearchBar}>
+                <Search size={15} color={Colors.textMuted} strokeWidth={2} />
+                <TextInput
+                  ref={homeSearchInputRef}
+                  style={styles.searchInput}
+                  placeholder="Kërko oferta, kurse..."
+                  placeholderTextColor={Colors.textMuted}
+                  value={homeSearch}
+                  onChangeText={setHomeSearch}
+                  autoCorrect={false}
+                  contextMenuHidden
+                  autoComplete="off"
+                  textContentType="none"
+                  importantForAutofill="no"
+                  returnKeyType="search"
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    setIsHomeSearchOpen(false);
+                    setHomeSearch('');
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <X size={16} color={Colors.textMuted} strokeWidth={2.2} />
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          ) : (
+            <Animated.View
+              style={[
+                styles.headerTextWrap,
+                {
+                  opacity: homeSearchAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 0.18],
+                  }),
+                },
+              ]}
+            >
+              <Text style={styles.greeting}>{greetingText}</Text>
+              <Text style={styles.userName}>{card ? card.emeri + ' ' + card.mbiemeri : ''}</Text>
+            </Animated.View>
+          )}
         </View>
 
-        {/* Right: notification bell */}
-        <TouchableOpacity style={styles.bellBtn} onPress={() => setShowNotifications(true)}>
-          <Bell size={20} color={Colors.textPrimary} strokeWidth={2} />
-          <View style={styles.notifDot} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {!isHomeSearchOpen ? (
+            <TouchableOpacity
+              style={styles.searchToggleBtn}
+              onPress={() => setIsHomeSearchOpen(true)}
+              activeOpacity={0.85}
+            >
+              <Search size={18} color={Colors.textPrimary} strokeWidth={2.2} />
+            </TouchableOpacity>
+          ) : null}
 
-      </View>
-
-      {/* Search bar — below header, still fixed */}
-      <View style={styles.searchWrap}>
-        <View style={styles.searchBar}>
-          <Search size={15} color={Colors.textMuted} strokeWidth={2} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Kërko oferta, kurse, startup..."
-            placeholderTextColor={Colors.textMuted}
-            value={homeSearch}
-            onChangeText={setHomeSearch}
-            autoCorrect={false}
-          />
-          <Text style={styles.searchPlaceholder}>Kërko oferta, kurse...</Text>
+          <TouchableOpacity style={styles.bellBtn} onPress={() => setShowNotifications(true)}>
+            <Bell size={20} color={Colors.textPrimary} strokeWidth={2} />
+            <View style={styles.notifDot} />
+          </TouchableOpacity>
         </View>
+
       </View>
 
       {/* ════════════════════════════════════════════════════════════════
@@ -658,7 +749,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + tabBarBottom + 24 }}
       >
-        {homeSearch.trim() ? (
+        {isHomeSearchOpen && homeSearch.trim() ? (
           <View style={styles.sectionPad}>
             <View style={styles.searchResultsCard}>
               <Text style={styles.searchResultsTitle}>Rezultatet e kërkimit</Text>
@@ -1452,10 +1543,16 @@ const styles = StyleSheet.create({
     backgroundColor:  Colors.surfaceBg,
     zIndex:           10,
   },
-  headerLeft: {
+  headerMainRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems:    'center',
     gap:           12,
+    minWidth: 0,
+  },
+  headerTextWrap: {
+    flexShrink: 1,
+    minWidth: 0,
   },
   avatar: {
     width:        48,
@@ -1463,6 +1560,27 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth:  1,
     borderColor:  Colors.border,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginLeft: Spacing.md,
+  },
+  searchToggleBtn: {
+    width:           40,
+    height:          40,
+    borderRadius:    20,
+    backgroundColor: Colors.white,
+    justifyContent:  'center',
+    alignItems:      'center',
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    shadowColor:     '#000',
+    shadowOpacity:   0.05,
+    shadowRadius:    6,
+    shadowOffset:    { width: 0, height: 2 },
+    elevation:       2,
   },
   greeting: {
     fontFamily:    Typography.fontSemiBold,
@@ -1492,6 +1610,26 @@ const styles = StyleSheet.create({
     shadowOffset:    { width: 0, height: 2 },
     elevation:       2,
   },
+  headerSearchInlineWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  headerSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    height: 40,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
   notifDot: {
     position:        'absolute',
     top:             9,
@@ -1504,38 +1642,12 @@ const styles = StyleSheet.create({
     borderColor:     Colors.white,
   },
 
-  // ── Search ───────────────────────────────────────────────────────────────────
-  searchWrap: {
-    paddingHorizontal: Spacing.xxl,
-    paddingBottom:     Spacing.md,
-    backgroundColor:   Colors.surfaceBg,
-    zIndex:            10,
-  },
-  searchBar: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    gap:             10,
-    backgroundColor: Colors.white,
-    borderRadius:    Radius.xl,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical:   14,
-    borderWidth:     1,
-    borderColor:     Colors.border,
-    shadowColor:     '#000',
-    shadowOpacity:   0.04,
-    shadowRadius:    6,
-    shadowOffset:    { width: 0, height: 2 },
-    elevation:       1,
-  },
   searchInput: {
     flex:       1,
     fontFamily: Typography.fontMedium,
     fontSize:   Typography.base,
     color:      Colors.textPrimary,
     padding:    0,
-  },
-  searchPlaceholder: {
-    display: 'none',
   },
   searchResultsCard: {
     backgroundColor: Colors.white,
