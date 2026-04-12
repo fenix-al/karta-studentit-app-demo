@@ -41,6 +41,8 @@ function notificationAppearance(type: AppNotification['type']) {
       return { iconName: 'Gift', iconColor: '#ca8a04', iconBg: '#fef9c3', iconBorder: '#fde68a' };
     case 'points':
       return { iconName: 'Trophy', iconColor: '#ca8a04', iconBg: '#fef9c3', iconBorder: '#fde68a' };
+    case 'support_ticket':
+      return { iconName: 'Bell', iconColor: '#dc2626', iconBg: '#fee2e2', iconBorder: '#fecaca' };
     default:
       return { iconName: 'Gift', iconColor: '#475569', iconBg: '#f1f5f9', iconBorder: '#e2e8f0' };
   }

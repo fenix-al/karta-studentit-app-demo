@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   Image, Alert, Modal, StyleSheet, ActivityIndicator,
@@ -21,8 +21,11 @@ import {
   fetchMyHistory,
   fetchMyLoyaltyRedemptions,
   fetchMyRaffles,
+  fetchMySupportTickets,
   fetchMyStartupIdeas,
-  postSuggestion,
+  createSupportTicket,
+  markSupportTicketsRead,
+  replySupportTicket,
 } from '../services/api';
 import {
   ProfileAct4HistoryApiItem,
@@ -34,6 +37,7 @@ import {
   ProfileRaffleEntryApiItem,
   ProfileStartupIdeaApiItem,
   ScanHistoryEntry,
+  SupportTicketApiItem,
 } from '../types';
 import ScreenState from '../components/ScreenState';
 
@@ -50,6 +54,7 @@ interface Props {
 }
 
 type ActivityTab =
+  | 'mesazhet'
   | 'aplikimet'
   | 'kurset'
   | 'historiku'
@@ -85,6 +90,15 @@ export default function ProfileScreen({
   const [topic, setTopic] = useState('');
   const [topicOpen, setTopicOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ticketReplies, setTicketReplies] = useState<Record<number, string>>({});
+  const [submittingTicketId, setSubmittingTicketId] = useState<number | null>(null);
+
+  const {
+    data: supportTicketsData,
+    loading: supportTicketsLoading,
+    error: supportTicketsError,
+    reload: reloadSupportTickets,
+  } = useFetch(() => fetchMySupportTickets());
 
   const {
     data: applicationsData,
@@ -130,6 +144,38 @@ export default function ProfileScreen({
 
   const topicLabel = TOPICS.find((t) => t.value === topic)?.label ?? '-- Zgjidh Teme --';
 
+  const supportTickets = useMemo(
+    () => (supportTicketsData ?? []).map((item: SupportTicketApiItem) => ({
+      id: item.id,
+      categoryLabel: item.category_label,
+      subject: item.subject,
+      message: item.message,
+      status: item.status_label,
+      statusRaw: item.status,
+      reply: item.admin_reply,
+      attachmentUrl: item.attachment_url,
+      createdAt: formatDate(item.created_at),
+      replyAt: item.admin_reply_at ? formatDate(item.admin_reply_at) : null,
+      unreadCount: item.unread_count ?? 0,
+      hasUnread: Boolean(item.has_unread),
+      hasStaffReply: (item.messages ?? []).some((msg) => msg.sender_type === 'staff'),
+      messages: (item.messages ?? []).map((msg) => ({
+        id: msg.id,
+        senderType: msg.sender_type,
+        senderName: msg.sender_name,
+        message: msg.message,
+        attachmentUrl: msg.attachment_url,
+        createdAt: formatDate(msg.created_at),
+      })),
+    })),
+    [supportTicketsData],
+  );
+
+  const supportUnreadCount = useMemo(
+    () => supportTickets.reduce((sum, ticket) => sum + (ticket.unreadCount || 0), 0),
+    [supportTickets],
+  );
+
   const applications = useMemo<ProfileApplication[]>(
     () => (applicationsData ?? []).map((app) => ({
       id: app.job_id,
@@ -148,7 +194,7 @@ export default function ProfileScreen({
       action: 'Karta u verifikua me sukses',
       place: item.business,
       date: formatDate(item.date),
-      icon: item.logo ? '🏪' : '✅',
+      icon: item.logo ? 'ðŸª' : 'âœ…',
     })),
     [historyData],
   );
@@ -227,16 +273,64 @@ export default function ProfileScreen({
 
     setIsSubmitting(true);
     try {
-      const res = await postSuggestion(topic, suggestion.trim());
+      const selectedTopic = TOPICS.find((item) => item.value === topic);
+      const res = await createSupportTicket({
+        category: 'sugjerim',
+        subject: selectedTopic?.label || 'Sugjerim',
+        message: suggestion.trim(),
+      });
       Alert.alert('U krye', res.msg || 'Sugjerimi u dergua me sukses.');
       setSuggestion('');
       setTopic('');
+      reloadSupportTickets();
+      setActiveTab('mesazhet');
     } catch (err: any) {
       Alert.alert('Gabim', err?.message ?? 'Nuk mund te dergohet sugjerimi per momentin.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleSupportReply = async (ticketId: number) => {
+    const message = (ticketReplies[ticketId] || '').trim();
+    if (!message) {
+      Alert.alert('Kujdes', 'Shkruaj nje mesazh para se ta dergosh.');
+      return;
+    }
+
+    setSubmittingTicketId(ticketId);
+    try {
+      const res = await replySupportTicket(ticketId, { message });
+      setTicketReplies((prev) => ({ ...prev, [ticketId]: '' }));
+      await reloadSupportTickets();
+      Alert.alert('U krye', res.msg || 'Mesazhi u dergua me sukses.');
+    } catch (err: any) {
+      Alert.alert('Gabim', err?.message ?? 'Nuk mund te dergohet mesazhi per momentin.');
+    } finally {
+      setSubmittingTicketId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'mesazhet' || supportUnreadCount <= 0) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        await markSupportTicketsRead();
+        if (!cancelled) {
+          await reloadSupportTickets();
+        }
+      } catch {
+        // no-op
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, supportUnreadCount, reloadSupportTickets]);
 
   return (
     <View style={s.root}>
@@ -325,8 +419,8 @@ export default function ProfileScreen({
                 <MessageSquare size={20} color="#0ea5e9" strokeWidth={2} fill="#0ea5e9" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.voiceTitle}>Zëri Yt (Sugjerime)</Text>
-                <Text style={s.voiceSub}>Dërgo një mesazh direkt për stafin.</Text>
+                <Text style={s.voiceTitle}>ZÃ«ri Yt (Sugjerime)</Text>
+                <Text style={s.voiceSub}>DÃ«rgo njÃ« mesazh direkt pÃ«r stafin.</Text>
               </View>
             </View>
 
@@ -354,7 +448,7 @@ export default function ProfileScreen({
               ) : (
                 <>
                   <Send size={14} color="#fff" strokeWidth={2} />
-                  <Text style={s.sendBtnText}>Dërgo Sugjerimin</Text>
+                  <Text style={s.sendBtnText}>DÃ«rgo Sugjerimin</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -370,6 +464,7 @@ export default function ProfileScreen({
           style={{ marginBottom: Spacing.lg }}
         >
           {[
+            { key: 'mesazhet' as ActivityTab, label: 'Mesazhet', Icon: MessageSquare },
             { key: 'aplikimet' as ActivityTab, label: 'Aplikimet', Icon: Briefcase },
             { key: 'kurset' as ActivityTab, label: 'Kurset Rinore', Icon: BookOpen },
             { key: 'historiku' as ActivityTab, label: 'Skanimet', Icon: History },
@@ -386,9 +481,127 @@ export default function ProfileScreen({
             >
               <Icon size={13} color={activeTab === key ? '#fff' : Colors.textMuted} strokeWidth={2} />
               <Text style={[s.tabPillText, activeTab === key && s.tabPillTextActive]}>{label}</Text>
+              {key === 'mesazhet' && supportUnreadCount > 0 ? (
+                <View style={[s.unreadBadge, activeTab === key && s.unreadBadgeActive]}>
+                  <Text style={[s.unreadBadgeText, activeTab === key && s.unreadBadgeTextActive]}>
+                    {supportUnreadCount > 99 ? '99+' : supportUnreadCount}
+                  </Text>
+                </View>
+              ) : null}
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        {activeTab === 'mesazhet' && (
+          <TabState
+            loading={supportTicketsLoading}
+            error={supportTicketsError}
+            empty={supportTickets.length === 0}
+            emptyText="Nuk ka mesazhe supporti per momentin."
+          >
+            {supportTickets.map((ticket) => (
+              <View key={ticket.id} style={s.listCardColumn}>
+                <View style={s.listCardHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.listTitle}>{ticket.subject}</Text>
+                    <Text style={s.listSubText}>{ticket.categoryLabel} | {ticket.createdAt}</Text>
+                  </View>
+                  <View
+                    style={[
+                      s.badge,
+                      ticket.statusRaw === 'closed'
+                        ? s.badgeSlate
+                        : ticket.statusRaw === 'in_progress'
+                          ? s.badgeAmber
+                          : s.badgeSky,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        s.badgeText,
+                        ticket.statusRaw === 'closed'
+                          ? { color: '#475569' }
+                          : ticket.statusRaw === 'in_progress'
+                            ? { color: '#92400e' }
+                            : { color: '#0369a1' },
+                      ]}
+                    >
+                      {ticket.status}
+                    </Text>
+                  </View>
+                  {ticket.hasUnread ? (
+                    <View style={s.ticketUnreadDot}>
+                      <Text style={s.ticketUnreadDotText}>{ticket.unreadCount}</Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <View style={s.threadList}>
+                  {ticket.messages.map((messageItem) => (
+                    <View
+                      key={`${ticket.id}-${messageItem.id}-${messageItem.createdAt}`}
+                      style={[
+                        s.threadBubble,
+                        messageItem.senderType === 'staff' ? s.threadBubbleStaff : s.threadBubbleStudent,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          s.threadSender,
+                          messageItem.senderType === 'staff' ? s.threadSenderStaff : s.threadSenderStudent,
+                        ]}
+                      >
+                        {messageItem.senderName}
+                      </Text>
+                      {messageItem.message ? <Text style={s.threadText}>{messageItem.message}</Text> : null}
+                      {messageItem.attachmentUrl ? (
+                        <Image source={{ uri: messageItem.attachmentUrl }} style={s.supportImage} />
+                      ) : null}
+                      <Text style={s.replyDate}>{messageItem.createdAt}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {!ticket.hasStaffReply ? (
+                  <View style={s.replyPending}>
+                    <Clock size={13} color="#92400e" strokeWidth={2} />
+                    <Text style={s.replyPendingText}>Ne pritje te pergjigjes se stafit.</Text>
+                  </View>
+                ) : null}
+
+                <View style={s.replyComposer}>
+                  <TextInput
+                    style={s.replyInput}
+                    value={ticketReplies[ticket.id] || ''}
+                    onChangeText={(value) => setTicketReplies((prev) => ({ ...prev, [ticket.id]: value }))}
+                    placeholder="Shkruaj nje pergjigje..."
+                    placeholderTextColor={Colors.textMuted}
+                    multiline
+                    textAlignVertical="top"
+                  />
+                  <TouchableOpacity
+                    style={[
+                      s.replySendBtn,
+                      (!(ticketReplies[ticket.id] || '').trim() || submittingTicketId === ticket.id) && s.replySendBtnDisabled,
+                    ]}
+                    activeOpacity={0.88}
+                    onPress={() => handleSupportReply(ticket.id)}
+                    disabled={!(ticketReplies[ticket.id] || '').trim() || submittingTicketId === ticket.id}
+                  >
+                    {submittingTicketId === ticket.id ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Send size={14} color="#fff" strokeWidth={2} />
+                        <Text style={s.replySendText}>Dergo</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </TabState>
+        )}
 
         {activeTab === 'aplikimet' && (
           <TabState
@@ -922,6 +1135,26 @@ const s = StyleSheet.create({
     color: Colors.textMuted, whiteSpace: 'nowrap',
   } as any,
   tabPillTextActive: { color: '#fff' },
+  unreadBadge: {
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    borderRadius: Radius.full,
+    backgroundColor: '#dc2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadBadgeActive: {
+    backgroundColor: '#fff',
+  },
+  unreadBadgeText: {
+    fontFamily: Typography.fontExtraBold,
+    fontSize: 10,
+    color: '#fff',
+  },
+  unreadBadgeTextActive: {
+    color: '#0f172a',
+  },
   listCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.white, borderRadius: Radius.xl,
@@ -946,6 +1179,123 @@ const s = StyleSheet.create({
   listTitle: { fontFamily: Typography.fontBold, fontSize: Typography.md, color: Colors.textPrimary, marginBottom: 4 },
   listSubText: { fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textSecondary },
   listBodyText: { fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textMuted, lineHeight: 20 },
+  threadList: {
+    gap: 10,
+  },
+  threadBubble: {
+    borderRadius: Radius.lg,
+    padding: 12,
+    borderWidth: 1,
+  },
+  threadBubbleStudent: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#e2e8f0',
+  },
+  threadBubbleStaff: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+  },
+  threadSender: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.sm,
+    marginBottom: 6,
+  },
+  threadSenderStudent: {
+    color: Colors.textSecondary,
+  },
+  threadSenderStaff: {
+    color: '#1d4ed8',
+  },
+  threadText: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.sm,
+    color: Colors.textPrimary,
+    lineHeight: 20,
+  },
+  supportImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: Radius.lg,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  replyBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: Radius.lg,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  replyLabel: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.sm,
+    color: '#1d4ed8',
+    marginBottom: 6,
+  },
+  replyText: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.sm,
+    color: Colors.textPrimary,
+    lineHeight: 20,
+  },
+  replyDate: {
+    fontFamily: Typography.fontMedium,
+    fontSize: 10,
+    color: Colors.textMuted,
+    marginTop: 8,
+  },
+  replyPending: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: Radius.lg,
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  replyPendingText: {
+    flex: 1,
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.sm,
+    color: '#92400e',
+  },
+  replyComposer: {
+    marginTop: 12,
+    gap: 10,
+  },
+  replyInput: {
+    minHeight: 92,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceBg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.sm,
+    color: Colors.textPrimary,
+  },
+  replySendBtn: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#0f172a',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: Radius.lg,
+  },
+  replySendBtnDisabled: {
+    backgroundColor: '#94a3b8',
+  },
+  replySendText: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.sm,
+    color: '#fff',
+  },
   listMeta: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
   listMetaText: { fontFamily: Typography.fontMedium, fontSize: 10, color: Colors.textMuted },
   badge: {
@@ -959,6 +1309,21 @@ const s = StyleSheet.create({
   badgeRed: { backgroundColor: '#fee2e2', borderColor: '#fecaca' },
   badgeSlate: { backgroundColor: Colors.borderLight, borderColor: Colors.border },
   badgeSky: { backgroundColor: '#e0f2fe', borderColor: '#bae6fd' },
+  ticketUnreadDot: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: Radius.full,
+    backgroundColor: '#dc2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  ticketUnreadDotText: {
+    fontFamily: Typography.fontExtraBold,
+    fontSize: 10,
+    color: '#fff',
+  },
   histIcon: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.borderLight,
@@ -989,3 +1354,5 @@ const s = StyleSheet.create({
     fontFamily: Typography.fontMedium, fontSize: Typography.md, color: Colors.textPrimary,
   },
 });
+
+

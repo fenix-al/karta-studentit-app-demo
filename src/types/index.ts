@@ -252,6 +252,34 @@ export interface ProfileLoyaltyRedemptionApiItem {
   redeemed_at:      string;
 }
 
+export interface SupportTicketApiItem {
+  id:             number;
+  category:       string;
+  category_label: string;
+  subject:        string;
+  message:        string;
+  attachment_url: string | null;
+  status:         'open' | 'in_progress' | 'closed' | string;
+  status_label:   string;
+  admin_reply:    string | null;
+  admin_reply_at: string | null;
+  created_at:     string;
+  updated_at:     string;
+  unread_count:   number;
+  has_unread:     boolean;
+  messages:       SupportTicketMessageApiItem[];
+}
+
+export interface SupportTicketMessageApiItem {
+  id:             number;
+  ticket_id:      number;
+  sender_type:    'student' | 'staff' | string;
+  sender_name:    string;
+  message:        string | null;
+  attachment_url: string | null;
+  created_at:     string;
+}
+
 // ── Offers module ─────────────────────────────────────────────────────────────
 export interface Business {
   id:              string;
@@ -429,7 +457,7 @@ export interface CourseItem {
 // ── Notification ─────────────────────────────────────────────────────────────
 export interface AppNotification {
   id:         string;
-  type:       'points' | 'job' | 'course' | 'offer' | 'act4' | 'startup' | 'kvr' | 'raffle' | 'system';
+  type:       'points' | 'job' | 'course' | 'offer' | 'act4' | 'startup' | 'kvr' | 'raffle' | 'support_ticket' | 'system';
   postId:     number;
   title:      string;
   message:    string;

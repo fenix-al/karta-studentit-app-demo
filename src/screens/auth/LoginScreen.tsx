@@ -11,6 +11,7 @@ import {
   ScrollView,
   Alert,
   Linking,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -18,13 +19,14 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  GraduationCap,
+  Landmark,
   LogIn,
   Trash2,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
+import { BRANDING } from '../../constants/branding';
 import { PASSWORD_RESET_URL } from '../../constants/config';
 import {
   clearRememberedLogin,
@@ -217,16 +219,36 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.brandWrap}>
-          <LinearGradient
-            colors={['#a3e635', '#65a30d']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.logoBox}
-          >
-            <GraduationCap size={32} color="#fff" strokeWidth={2} />
-          </LinearGradient>
-          <Text style={styles.brandTitle}>Karta e Studentit</Text>
-          <Text style={styles.brandSub}>Shkoder</Text>
+          <View style={styles.brandVisuals}>
+            <LinearGradient
+              colors={['#ffffff', '#f8fafc']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.logoBox}
+            >
+              <Image
+                source={BRANDING.assets.appLogo}
+                style={styles.appLogo}
+                resizeMode="contain"
+              />
+            </LinearGradient>
+
+            <View style={styles.municipalityBadge}>
+              <Image
+                source={BRANDING.assets.municipalityLogo}
+                style={styles.municipalityLogo}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+
+          <Text style={styles.brandTitle}>{BRANDING.appName}</Text>
+          <Text style={styles.brandSub}>{BRANDING.cityName}</Text>
+
+          <View style={styles.brandMeta}>
+            <Landmark size={14} color={Colors.textSecondary} strokeWidth={2} />
+            <Text style={styles.brandMetaText}>{BRANDING.municipalityName}</Text>
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -373,8 +395,8 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
         </View>
 
         <Text style={styles.footer}>
-          Karta e Studentit Shkoder · v2.0{'\n'}
-          <Text style={styles.footerMuted}>Ndertuar nga Bashkia Shkoder</Text>
+          {BRANDING.appName} {BRANDING.cityName} - {BRANDING.footerVersion}{'\n'}
+          <Text style={styles.footerMuted}>Ndertuar nga {BRANDING.municipalityName}</Text>
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -386,18 +408,49 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: Spacing.xxl, alignItems: 'center' },
 
   brandWrap: { alignItems: 'center', marginBottom: Spacing.xxxl },
+  brandVisuals: {
+    position: 'relative',
+    marginBottom: Spacing.lg,
+  },
   logoBox: {
-    width: 72,
-    height: 72,
+    width: 104,
+    height: 104,
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.lg,
-    shadowColor: '#65a30d',
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
     elevation: 8,
+  },
+  appLogo: {
+    width: 72,
+    height: 72,
+  },
+  municipalityBadge: {
+    position: 'absolute',
+    right: -12,
+    bottom: -8,
+    width: 44,
+    height: 44,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  municipalityLogo: {
+    width: 28,
+    height: 28,
   },
   brandTitle: {
     fontFamily: Typography.fontExtraBold,
@@ -409,6 +462,23 @@ const styles = StyleSheet.create({
     fontSize: Typography.lg,
     color: Colors.textMuted,
     marginTop: 2,
+  },
+  brandMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: Spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  brandMetaText: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
   },
 
   card: {

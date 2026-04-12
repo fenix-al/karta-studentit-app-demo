@@ -23,6 +23,7 @@ import {
   ProfileLoyaltyRedemptionApiItem,
   ProfileRaffleEntryApiItem,
   ProfileStartupIdeaApiItem,
+  SupportTicketApiItem,
   StudentCard,
 } from '../types';
 
@@ -138,6 +139,11 @@ async function authHeaders(): Promise<Record<string, string>> {
   };
 }
 
+async function authHeadersWithoutContentType(): Promise<Record<string, string>> {
+  const token = await getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // Public fetch — no auth header (avoids JWT plugin rejecting valid public calls)
 async function publicFetch<T>(path: string): Promise<T> {
   const res = await fetch(`${SK_API}${path}`, {
@@ -179,6 +185,36 @@ async function apiFetch<T>(
       details = body;
       message = friendlyApiMessage(res.status, body?.code, body?.message || message);
       code = body?.code;
+    } catch (_) {}
+
+    if (isAuthStatus(res.status) || isJwtErrorCode(code)) {
+      await removeToken();
+      emitAuthError('Sesioni juaj ka skaduar. Ju lutem hyni perseri.');
+    }
+
+    throw new ApiError(message, res.status, code, details);
+  }
+
+  return res.json() as Promise<T>;
+}
+
+async function apiUpload<T>(path: string, body: FormData): Promise<T> {
+  const headers = await authHeadersWithoutContentType();
+  const res = await fetch(`${SK_API}${path}`, {
+    method: 'POST',
+    body,
+    headers,
+  });
+
+  if (!res.ok) {
+    let message = `HTTP ${res.status}`;
+    let code: string | undefined;
+    let details: any;
+    try {
+      const payload = await res.json();
+      details = payload;
+      message = friendlyApiMessage(res.status, payload?.code, payload?.message || message);
+      code = payload?.code;
     } catch (_) {}
 
     if (isAuthStatus(res.status) || isJwtErrorCode(code)) {
@@ -667,6 +703,81 @@ export async function postSuggestion(
   return apiFetch('/me/suggestion', {
     method: 'POST',
     body: JSON.stringify({ topic, message }),
+  });
+}
+
+export interface UploadSupportAttachmentResult {
+  success: boolean;
+  attachment_id: number;
+  attachment_url: string;
+  mime_type: string;
+}
+
+export interface CreateSupportTicketResult {
+  success: boolean;
+  msg: string;
+  ticket: SupportTicketApiItem;
+}
+
+export interface ReplySupportTicketResult {
+  success: boolean;
+  msg: string;
+  ticket: SupportTicketApiItem;
+}
+
+export interface MarkSupportTicketsReadResult {
+  success: boolean;
+  marked_at: string;
+}
+
+export async function uploadSupportAttachment(
+  asset: { uri: string; name?: string; mimeType?: string },
+): Promise<UploadSupportAttachmentResult> {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: asset.uri,
+    name: asset.name || 'support-photo.jpg',
+    type: asset.mimeType || 'image/jpeg',
+  } as any);
+
+  return apiUpload('/me/support-tickets/attachment', formData);
+}
+
+export async function createSupportTicket(input: {
+  category: string;
+  subject: string;
+  message: string;
+  attachment_id?: number;
+  attachment_url?: string;
+}): Promise<CreateSupportTicketResult> {
+  return apiFetch('/me/support-tickets', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function fetchMySupportTickets(): Promise<SupportTicketApiItem[]> {
+  return apiFetch<SupportTicketApiItem[]>('/me/support-tickets');
+}
+
+export async function replySupportTicket(
+  ticketId: number,
+  input: {
+    message: string;
+    attachment_id?: number;
+    attachment_url?: string;
+  },
+): Promise<ReplySupportTicketResult> {
+  return apiFetch(`/me/support-tickets/${ticketId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function markSupportTicketsRead(ticketId?: number): Promise<MarkSupportTicketsReadResult> {
+  return apiFetch('/me/support-tickets/read', {
+    method: 'POST',
+    body: JSON.stringify(ticketId ? { ticket_id: ticketId } : {}),
   });
 }
 

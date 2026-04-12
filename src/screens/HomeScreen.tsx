@@ -195,6 +195,7 @@ export default function HomeScreen() {
   const [storyIndex,   setStoryIndex]   = useState(0);
   const [cardVisible, setCardVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>('home');
+  const [supportModalRequest, setSupportModalRequest] = useState<{ key: number; tab: 'form' | 'history' } | null>(null);
   const [tabReturnTargets, setTabReturnTargets] = useState<Partial<Record<MainTab, MainTab>>>({});
   const [rewardsInitialRaffleId, setRewardsInitialRaffleId] = useState<number | undefined>(undefined);
   const [rewardsInitialRewardTarget, setRewardsInitialRewardTarget] = useState<{ businessPostId: number; rewardUid: string } | undefined>(undefined);
@@ -459,6 +460,10 @@ export default function HomeScreen() {
       case 'points':
         resetRewardsRoute();
         goToTab('dhurata', returnTab);
+        return;
+      case 'support_ticket':
+        goToTab('home', returnTab);
+        setSupportModalRequest({ key: Date.now(), tab: 'history' });
         return;
       default:
         return;
@@ -1148,18 +1153,6 @@ export default function HomeScreen() {
 
       </ScrollView>
 
-      {/* ════════════════════════════════════════════════════════════════
-          FLOATING CHAT STICKER — above tab bar
-      ════════════════════════════════════════════════════════════════ */}
-      <View
-        style={[
-          styles.chatWrapper,
-          { bottom: TAB_BAR_HEIGHT + tabBarBottom + 80 },
-        ]}
-      >
-        <FloatingChat />
-      </View>
-
       </>}
 
       {activeTab === 'perfitimet' && (
@@ -1305,6 +1298,18 @@ export default function HomeScreen() {
           }}
         />
       )}
+
+      <View
+        style={[
+          styles.chatWrapper,
+          { bottom: TAB_BAR_HEIGHT + tabBarBottom + 80 },
+        ]}
+      >
+        <FloatingChat
+          openRequest={supportModalRequest ?? undefined}
+          onHandledOpenRequest={() => setSupportModalRequest(null)}
+        />
+      </View>
 
       {/* ════════════════════════════════════════════════════════════════
           CUSTOM BOTTOM TAB BAR
@@ -1453,7 +1458,7 @@ export default function HomeScreen() {
               { icon: <HandHeart     size={24} color="#f97316" strokeWidth={2} />, bg: '#fff7ed', label: 'Vullnetar',   onPress: () => { setIsUserMenuOpen(false); openAct4(); } },
               { icon: <Landmark      size={24} color="#475569" strokeWidth={2} />, bg: '#f1f5f9', label: 'KVR',          onPress: () => { setIsUserMenuOpen(false); openKVR(); } },
               { icon: <Gift          size={24} color="#f59e0b" strokeWidth={2} />, bg: '#fffbeb', label: 'Dhuratat',    onPress: () => { setIsUserMenuOpen(false); setActiveTab('dhurata'); } },
-              { icon: <MessageCircle size={24} color="#0ea5e9" strokeWidth={2} />, bg: '#f0f9ff', label: 'Suporti',     onPress: () => setIsUserMenuOpen(false) },
+              { icon: <MessageCircle size={24} color="#0ea5e9" strokeWidth={2} />, bg: '#f0f9ff', label: 'Suporti',     onPress: () => { setIsUserMenuOpen(false); setSupportModalRequest({ key: Date.now(), tab: 'form' }); } },
               { icon: <User          size={24} color="#334155" strokeWidth={2} />, bg: '#f8fafc', label: 'Profili Im',  onPress: () => { setIsUserMenuOpen(false); setActiveTab('profil'); } },
               { icon: <LogOut        size={24} color="#ef4444" strokeWidth={2} />, bg: '#fef2f2', label: 'Dil',          onPress: () => setIsUserMenuOpen(false) },
             ].map(({ icon, bg, label, onPress }) => (
