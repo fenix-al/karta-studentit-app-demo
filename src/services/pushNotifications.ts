@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isRunningInExpoGo } from 'expo';
 import Constants from 'expo-constants';
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { registerPushToken, removePushToken } from './api';
@@ -34,9 +33,15 @@ function getProjectId(): string | undefined {
   return expoExtra?.eas?.projectId;
 }
 
+async function loadNotificationsModule() {
+  return import('expo-notifications');
+}
+
 export async function syncPushTokenWithBackend(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
   if (isRunningInExpoGo()) return false;
+
+  const Notifications = await loadNotificationsModule();
 
   const deviceId = await getOrCreateDeviceId();
 
@@ -79,4 +84,5 @@ export async function unregisterPushTokenFromBackend(): Promise<void> {
   const deviceId = await getOrCreateDeviceId();
   const pushToken = await getStoredToken();
   await removePushToken(deviceId, pushToken ?? undefined);
+  await AsyncStorage.removeItem(PUSH_TOKEN_KEY);
 }

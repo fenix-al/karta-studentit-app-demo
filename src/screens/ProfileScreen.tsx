@@ -1,14 +1,17 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  Image, Alert, Modal, StyleSheet, ActivityIndicator,
+  Image, Alert, StyleSheet, ActivityIndicator, Animated,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import QRCode from 'react-native-qrcode-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import {
   Settings, ChevronLeft, Award, MessageSquare, Send,
   Briefcase, BookOpen, History, Rocket, Heart,
-  CheckCircle, Clock, Gift, MapPin,
+  CheckCircle, Clock, Gift, MapPin, QrCode,
+  User, Lock, LogOut, ChevronRight, GraduationCap,
 } from 'lucide-react-native';
 
 import { BRANDING } from '../constants/branding';
@@ -24,7 +27,6 @@ import {
   fetchMyRaffles,
   fetchMySupportTickets,
   fetchMyStartupIdeas,
-  createSupportTicket,
   markSupportTicketsRead,
   replySupportTicket,
 } from '../services/api';
@@ -66,12 +68,6 @@ type ActivityTab =
 
 type BadgeTone = 'green' | 'amber' | 'red' | 'slate' | 'sky';
 
-const TOPICS = [
-  { value: 'problem', label: 'Raporto një problem/biznes' },
-  { value: 'ide',     label: 'Sugjero një ide të re' },
-  { value: 'tjeter',  label: 'Dicka tjeter' },
-];
-
 export default function ProfileScreen({
   bottomInset,
   onBack,
@@ -84,15 +80,32 @@ export default function ProfileScreen({
   onOpenLoyaltyRedemption,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const { card } = useAuth();
+  const { card, onLogout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<ActivityTab>('aplikimet');
-  const [suggestion, setSuggestion] = useState('');
-  const [topic, setTopic] = useState('');
-  const [topicOpen, setTopicOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [ticketReplies, setTicketReplies] = useState<Record<number, string>>({});
   const [submittingTicketId, setSubmittingTicketId] = useState<number | null>(null);
+  const [expandedTicketId, setExpandedTicketId] = useState<number | null>(null);
+
+  // ── 3D flip card animation ───────────────────────────────────────────────────
+  const flipAnim = useRef(new Animated.Value(0)).current;
+  const [cardFlipped, setCardFlipped] = useState(false);
+
+  const handleFlipCard = () => {
+    Animated.spring(flipAnim, {
+      toValue: cardFlipped ? 0 : 1,
+      friction: 8,
+      tension: 10,
+      useNativeDriver: true,
+    }).start();
+    setCardFlipped(prev => !prev);
+  };
+
+  const frontRotateY = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+  const backRotateY  = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] });
+  // Opacity hides the wrong face on Android (backfaceVisibility: hidden is unreliable)
+  const frontOpacity = flipAnim.interpolate({ inputRange: [0, 0.49, 0.5, 1], outputRange: [1, 1, 0, 0] });
+  const backOpacity  = flipAnim.interpolate({ inputRange: [0, 0.49, 0.5, 1], outputRange: [0, 0, 1, 1] });
 
   const {
     data: supportTicketsData,
@@ -143,32 +156,36 @@ export default function ProfileScreen({
     error: loyaltyRedemptionsError,
   } = useFetch(() => fetchMyLoyaltyRedemptions());
 
-  const topicLabel = TOPICS.find((t) => t.value === topic)?.label ?? '-- Zgjidh Temë --';
-
   const supportTickets = useMemo(
-    () => (supportTicketsData ?? []).map((item: SupportTicketApiItem) => ({
-      id: item.id,
-      categoryLabel: item.category_label,
-      subject: item.subject,
-      message: item.message,
-      status: item.status_label,
-      statusRaw: item.status,
-      reply: item.admin_reply,
-      attachmentUrl: item.attachment_url,
-      createdAt: formatDate(item.created_at),
-      replyAt: item.admin_reply_at ? formatDate(item.admin_reply_at) : null,
-      unreadCount: item.unread_count ?? 0,
-      hasUnread: Boolean(item.has_unread),
-      hasStaffReply: (item.messages ?? []).some((msg) => msg.sender_type === 'staff'),
-      messages: (item.messages ?? []).map((msg) => ({
+    () => (supportTicketsData ?? []).map((item: SupportTicketApiItem) => {
+      const messages = (item.messages ?? []).map((msg) => ({
         id: msg.id,
         senderType: msg.sender_type,
         senderName: msg.sender_name,
         message: msg.message,
         attachmentUrl: msg.attachment_url,
         createdAt: formatDate(msg.created_at),
-      })),
-    })),
+      }));
+      const lastMessage = messages[messages.length - 1];
+
+      return {
+        id: item.id,
+        categoryLabel: item.category_label,
+        subject: item.subject,
+        message: item.message,
+        status: item.status_label,
+        statusRaw: item.status,
+        reply: item.admin_reply,
+        attachmentUrl: item.attachment_url,
+        createdAt: formatDate(item.created_at),
+        replyAt: item.admin_reply_at ? formatDate(item.admin_reply_at) : null,
+        unreadCount: item.unread_count ?? 0,
+        hasUnread: Boolean(item.has_unread),
+        hasStaffReply: (item.messages ?? []).some((msg) => msg.sender_type === 'staff'),
+        preview: (lastMessage?.message || item.message || '').trim(),
+        messages,
+      };
+    }),
     [supportTicketsData],
   );
 
@@ -264,33 +281,10 @@ export default function ProfileScreen({
   );
 
   const scanCount = card?.total_scans ?? history.length;
+  const pointsCount = card?.points ?? 0;
+  const qrHash  = card?.student_hash ?? card?.qr_token ?? '';
+  const qrValue = qrHash ? `https://kartaestudentitshkoder.al/karta/${qrHash}` : '';
   const volunteerActivities = card?.act4_activities_count ?? 0;
-
-  const handleSubmit = async () => {
-    if (!topic || !suggestion.trim()) {
-      Alert.alert('Kujdes', 'Ju lutem plotësoni temën dhe mesazhin.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const selectedTopic = TOPICS.find((item) => item.value === topic);
-      const res = await createSupportTicket({
-        category: 'sugjerim',
-        subject: selectedTopic?.label || 'Sugjerim',
-        message: suggestion.trim(),
-      });
-      Alert.alert('U krye', res.msg || 'Sugjerimi u dërgua me sukses.');
-      setSuggestion('');
-      setTopic('');
-      reloadSupportTickets();
-      setActiveTab('mesazhet');
-    } catch (err: any) {
-      Alert.alert('Gabim', err?.message ?? 'Nuk mund të dërgohet sugjerimi për momentin.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleSupportReply = async (ticketId: number) => {
     const message = (ticketReplies[ticketId] || '').trim();
@@ -356,113 +350,205 @@ export default function ProfileScreen({
         contentContainerStyle={{ paddingHorizontal: Spacing.xxl, paddingBottom: bottomInset + 32 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={s.municipalityCard}>
-          <Image source={BRANDING.assets.municipalityLogoHorizontal} style={s.municipalityLogo} resizeMode="contain" />
-          <View style={s.municipalityCopy}>
-            <Text style={s.municipalityTitle}>Menaxhuar nga Bashkia Shkodër</Text>
-            <Text style={s.municipalityText}>Platforma zyrtare e Kartës së Studentit.</Text>
-          </View>
-        </View>
+        {/* ══ FROST EDITION — 3D FLIP CARD ══════════════════════════════════ */}
+        <TouchableOpacity style={s.cardWrapper} onPress={handleFlipCard} activeOpacity={1}>
 
-        <LinearGradient
-          colors={['#002855', '#001233']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={s.idCard}
-        >
-          <View style={s.blobTR} />
-          <View style={s.blobBL} />
+          {/* ════ FRONT FACE ════════════════════════════════════════════════════ */}
+          <Animated.View style={[s.cardFace, { opacity: frontOpacity, transform: [{ rotateY: frontRotateY }] }]}>
 
-          <View style={s.idTop}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.idLabel}>Karta e Studentit</Text>
-              <Text style={s.idName}>{card ? `${card.emeri} ${card.mbiemeri}` : '-'}</Text>
-              <Text style={s.idNim}>{card?.nr_karte ?? '-'}</Text>
-            </View>
-            <View style={s.avatarRing}>
-              <Image source={{ uri: card?.foto_url }} style={s.avatar} />
-            </View>
-          </View>
+            {/* Soft pastel orbs — rendered FIRST so BlurView frosts them */}
+            <View style={s.frostOrbA} />
+            <View style={s.frostOrbB} />
 
-          <View style={s.idBottom}>
-            <View>
-              <Text style={s.idExpiryLabel}>Skadon me</Text>
-              <Text style={s.idExpiry}>{card?.valid_until ?? '-'}</Text>
-            </View>
-            <View style={s.idStatusBadge}>
-              <Text style={s.idStatusText}>{card?.statusi === 'active' ? 'Aktive' : 'Jo Aktive'}</Text>
-            </View>
-          </View>
-        </LinearGradient>
+            {/* Frost layer — blurs the app background + orbs behind the card */}
+            <BlurView intensity={50} tint="light" style={StyleSheet.absoluteFillObject} />
 
-        <View style={s.statsRow}>
-          <View style={s.statAmber}>
-            <View style={s.statTop}>
-              <Text style={s.statLabelAmber}>Skanime</Text>
-              <Gift size={15} color="#f59e0b" strokeWidth={2} />
-            </View>
-            <Text style={s.statBigAmber}>
-              {scanCount}
-            </Text>
-            <Text style={s.statHintAmber}>Skanime totale të kartës.</Text>
-          </View>
-
-          <LinearGradient colors={['#ecfdf5', '#f0fdfa']} style={s.statEmerald}>
-            <View style={s.statTop}>
-              <Text style={s.statLabelEmerald}>Vullnetar</Text>
-              <Award size={15} color="#059669" strokeWidth={2} />
-            </View>
-            <Text style={s.statBigEmerald}>
-              {volunteerActivities}
-            </Text>
-            <Text style={s.statHintEmerald}>Pjesëmarrje në aktivitete vullnetare.</Text>
-          </LinearGradient>
-        </View>
-
-        <LinearGradient colors={['#0ea5e9', '#2563eb']} style={s.voiceBorder}>
-          <View style={s.voiceInner}>
-            <View style={s.voiceBlob} />
-
-            <View style={s.voiceHeader}>
-              <View style={s.voiceIconWrap}>
-                <MessageSquare size={20} color="#0ea5e9" strokeWidth={2} fill="#0ea5e9" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.voiceTitle}>Zëri Yt (Sugjerime)</Text>
-                <Text style={s.voiceSub}>Dërgo një mesazh direkt për stafin.</Text>
-              </View>
-            </View>
-
-            <TouchableOpacity style={s.pickerBtn} activeOpacity={0.8} onPress={() => setTopicOpen(true)}>
-              <Text style={[s.pickerBtnText, !topic && { color: Colors.textMuted }]}>{topicLabel}</Text>
-              <View style={{ transform: [{ rotate: '-90deg' }] }}>
-                <ChevronLeft size={15} color={Colors.textMuted} strokeWidth={2} />
-              </View>
-            </TouchableOpacity>
-
-            <TextInput
-              style={s.textArea}
-              value={suggestion}
-              onChangeText={setSuggestion}
-              placeholder="Shkruaj sugjerimin tënd këtu..."
-              placeholderTextColor={Colors.textMuted}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
+            {/* Dark navy header gradient (absolute, behind content) */}
+            <LinearGradient
+              colors={['#041c48', '#0c2d6b']}
+              start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+              style={s.cardHeaderGrad}
+            />
+            {/* Red accent strip */}
+            <LinearGradient
+              colors={['#e30613', '#ff4757']}
+              start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+              style={s.cardAccentBand}
             />
 
-            <TouchableOpacity style={s.sendBtn} activeOpacity={0.88} onPress={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Send size={14} color="#fff" strokeWidth={2} />
-                  <Text style={s.sendBtnText}>Dërgo Sugjerimin</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            {/* ── Card content ── */}
+            <View style={s.cardContent}>
+
+              {/* ROW 1 — Logos (inside the 76px header zone) */}
+              <View style={s.cardTopRow}>
+                <View style={s.brandLeft}>
+                  <View style={s.brandIconWrap}>
+                    <Image source={BRANDING.assets.municipalityLogoDefault} style={s.brandIcon} resizeMode="contain" />
+                  </View>
+                  <Text style={s.brandTitle}>KARTA E{'\n'}STUDENTIT</Text>
+                </View>
+                <View style={s.brandRight}>
+                  <Text style={s.uniLabel}>Universiteti{'\n'}"Luigj Gurakuqi"</Text>
+                  <View style={s.uniBadge}>
+                    <Text style={s.uniBadgeText}>UNISHK</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* ROW 2 — Student info + photo */}
+              <View style={s.studentRow}>
+                <View style={s.studentInfo}>
+                  <Text style={s.studentLabel}>Studenti</Text>
+                  <Text style={s.studentName} numberOfLines={1}>
+                    {card?.emeri ?? '-'}
+                    {card ? <Text style={s.studentSurname}>{' ' + card.mbiemeri}</Text> : null}
+                  </Text>
+                  <View style={s.idChip}>
+                    <GraduationCap size={12} color="#94a3b8" strokeWidth={2.2} />
+                    <Text style={s.idChipText}>{card?.nr_karte ?? card?.nim ?? '-'}</Text>
+                  </View>
+                </View>
+
+                {/* Photo: real image or light initials placeholder */}
+                <View style={s.photoFrame}>
+                  {card?.foto_url ? (
+                    <Image source={{ uri: card.foto_url }} style={s.photo} />
+                  ) : (
+                    <View style={s.photoPlaceholder}>
+                      <Text style={s.photoInitials}>
+                        {card ? `${card.emeri[0]}${card.mbiemeri[0]}` : '?'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* ROW 3 — Skadon / Viti Akademik / Statusi */}
+              <View style={s.bottomBar}>
+                <View>
+                  <Text style={s.barLabel}>Skadon</Text>
+                  <Text style={s.barValue}>{card?.valid_until ? formatDate(card.valid_until) : '-'}</Text>
+                </View>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={s.barLabel}>Viti Akademik</Text>
+                  <Text style={s.barValue}>{card?.cikli ?? '-'}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={s.barLabel}>Statusi</Text>
+                  <View style={[
+                    s.statusBadge,
+                    card?.statusi === 'active' ? s.statusActive
+                      : card?.statusi === 'pending' ? s.statusPending
+                      : s.statusInactive,
+                  ]}>
+                    {card?.statusi === 'active' && <View style={s.statusDot} />}
+                    <Text style={[
+                      s.statusText,
+                      card?.statusi === 'active' ? s.statusTextActive
+                        : card?.statusi === 'pending' ? s.statusTextPending
+                        : s.statusTextInactive,
+                    ]}>
+                      {card?.statusi === 'active' ? 'AKTIVE'
+                        : card?.statusi === 'pending' ? 'NË PRITJE'
+                        : 'JO AKTIVE'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+            </View>
+          </Animated.View>
+
+          {/* ════ BACK FACE — absoluteFill inherits the front-face height ══════ */}
+          <Animated.View style={[StyleSheet.absoluteFill, s.cardFaceBack, { opacity: backOpacity, transform: [{ rotateY: backRotateY }] }]}>
+
+            {/* Soft orb for depth */}
+            <View style={s.frostOrbA} />
+            {/* Frost layer */}
+            <BlurView intensity={50} tint="light" style={StyleSheet.absoluteFillObject} />
+            {/* Bottom tri-color accent */}
+            <LinearGradient
+              colors={['#041c48', '#e30613', '#041c48']}
+              start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+              style={s.cardBottomAccent}
+            />
+
+            <View style={s.cardContentBack}>
+              {/* Header */}
+              <View style={{ alignItems: 'center' }}>
+                <Text style={s.backHeaderText}>Universiteti "Luigj Gurakuqi" — Shkodër</Text>
+                <View style={s.backDivider} />
+              </View>
+
+              {/* Data + QR */}
+              <View style={s.backRow}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ marginBottom: 10 }}>
+                    <Text style={s.backBarLabel}>Fakulteti</Text>
+                    <Text style={s.backBarValue}>{card?.fakulteti ?? '-'}</Text>
+                  </View>
+                  <View style={{ marginBottom: 10 }}>
+                    <Text style={s.backBarLabel}>Dega / Programi</Text>
+                    <Text style={s.backBarValue} numberOfLines={1}>{card?.programi ?? '-'}</Text>
+                  </View>
+                  <View>
+                    <Text style={s.backBarLabel}>Nr. Matrikullimi</Text>
+                    <Text style={s.backBarValue}>{card?.nr_karte ?? card?.nim ?? '-'}</Text>
+                  </View>
+                </View>
+                <View style={s.qrWrap}>
+                  {qrValue ? (
+                    <QRCode value={qrValue} size={76} color="#0f172a" backgroundColor="#ffffff" />
+                  ) : (
+                    <ActivityIndicator size="small" color="#0f172a" />
+                  )}
+                  <Text style={s.qrLabel}>SKANO PËR{'\n'}VERIFIKIM</Text>
+                </View>
+              </View>
+
+              <Text style={s.backFooter}>
+                Kjo kartë është dokument identifikimi digjital i lëshuar nga Bashkia Shkodër.
+              </Text>
+            </View>
+          </Animated.View>
+
+        </TouchableOpacity>
+
+        <View style={s.flipHint}>
+          <Text style={s.flipHintText}>Kliko kartën për ta kthyer</Text>
+        </View>
+
+        <View style={s.statsGrid}>
+          <View style={s.statCard}>
+            <View style={s.statTop}>
+              <View style={s.statIconBadgeAmber}>
+                <Gift size={13} color="#f59e0b" strokeWidth={2} />
+              </View>
+              <Text style={s.statLabelAmber}>Pikë</Text>
+            </View>
+            <Text style={s.statBig}>{pointsCount}</Text>
           </View>
-        </LinearGradient>
+
+          <View style={s.statCard}>
+            <View style={s.statTop}>
+              <View style={s.statIconBadgeSky}>
+                <QrCode size={13} color="#0ea5e9" strokeWidth={2} />
+              </View>
+              <Text style={s.statLabelSky}>Skanime</Text>
+            </View>
+            <Text style={s.statBig}>{scanCount}</Text>
+          </View>
+
+          <View style={s.statCard}>
+            <View style={s.statTop}>
+              <View style={s.statIconBadgeEmerald}>
+                <Heart size={13} color="#10b981" strokeWidth={2} />
+              </View>
+              <Text style={s.statLabelEmerald}>Vullnetar</Text>
+            </View>
+            <Text style={s.statBig}>{volunteerActivities}</Text>
+          </View>
+        </View>
 
         <Text style={s.sectionTitle}>Aktiviteti Im</Text>
 
@@ -472,7 +558,7 @@ export default function ProfileScreen({
           contentContainerStyle={s.tabPills}
           style={{ marginBottom: Spacing.lg }}
         >
-          {[
+          {[ 
             { key: 'mesazhet' as ActivityTab, label: 'Mesazhet', Icon: MessageSquare },
             { key: 'aplikimet' as ActivityTab, label: 'Aplikimet', Icon: Briefcase },
             { key: 'kurset' as ActivityTab, label: 'Kurset Rinore', Icon: BookOpen },
@@ -510,10 +596,19 @@ export default function ProfileScreen({
           >
             {supportTickets.map((ticket) => (
               <View key={ticket.id} style={s.listCardColumn}>
-                <View style={s.listCardHeader}>
+                <TouchableOpacity
+                  style={s.listCardHeader}
+                  activeOpacity={0.82}
+                  onPress={() => setExpandedTicketId((prev) => (prev === ticket.id ? null : ticket.id))}
+                >
                   <View style={{ flex: 1 }}>
                     <Text style={s.listTitle}>{ticket.subject}</Text>
                     <Text style={s.listSubText}>{ticket.categoryLabel} | {ticket.createdAt}</Text>
+                    {ticket.preview ? (
+                      <Text style={s.ticketPreviewText} numberOfLines={1}>
+                        {ticket.preview}
+                      </Text>
+                    ) : null}
                   </View>
                   <View
                     style={[
@@ -543,70 +638,84 @@ export default function ProfileScreen({
                       <Text style={s.ticketUnreadDotText}>{ticket.unreadCount}</Text>
                     </View>
                   ) : null}
-                </View>
-
-                <View style={s.threadList}>
-                  {ticket.messages.map((messageItem) => (
-                    <View
-                      key={`${ticket.id}-${messageItem.id}-${messageItem.createdAt}`}
-                      style={[
-                        s.threadBubble,
-                        messageItem.senderType === 'staff' ? s.threadBubbleStaff : s.threadBubbleStudent,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          s.threadSender,
-                          messageItem.senderType === 'staff' ? s.threadSenderStaff : s.threadSenderStudent,
-                        ]}
-                      >
-                        {messageItem.senderName}
-                      </Text>
-                      {messageItem.message ? <Text style={s.threadText}>{messageItem.message}</Text> : null}
-                      {messageItem.attachmentUrl ? (
-                        <Image source={{ uri: messageItem.attachmentUrl }} style={s.supportImage} />
-                      ) : null}
-                      <Text style={s.replyDate}>{messageItem.createdAt}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                {!ticket.hasStaffReply ? (
-                  <View style={s.replyPending}>
-                    <Clock size={13} color="#92400e" strokeWidth={2} />
-                    <Text style={s.replyPendingText}>Në pritje të përgjigjes së stafit.</Text>
+                  <View style={s.ticketChevronWrap}>
+                    <ChevronRight
+                      size={16}
+                      color={Colors.textMuted}
+                      strokeWidth={2.4}
+                      style={{
+                        transform: [{ rotate: expandedTicketId === ticket.id ? '90deg' : '0deg' }],
+                      }}
+                    />
                   </View>
-                ) : null}
+                </TouchableOpacity>
 
-                <View style={s.replyComposer}>
-                  <TextInput
-                    style={s.replyInput}
-                    value={ticketReplies[ticket.id] || ''}
-                    onChangeText={(value) => setTicketReplies((prev) => ({ ...prev, [ticket.id]: value }))}
-                    placeholder="Shkruaj një përgjigje..."
-                    placeholderTextColor={Colors.textMuted}
-                    multiline
-                    textAlignVertical="top"
-                  />
-                  <TouchableOpacity
-                    style={[
-                      s.replySendBtn,
-                      (!(ticketReplies[ticket.id] || '').trim() || submittingTicketId === ticket.id) && s.replySendBtnDisabled,
-                    ]}
-                    activeOpacity={0.88}
-                    onPress={() => handleSupportReply(ticket.id)}
-                    disabled={!(ticketReplies[ticket.id] || '').trim() || submittingTicketId === ticket.id}
-                  >
-                    {submittingTicketId === ticket.id ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <Send size={14} color="#fff" strokeWidth={2} />
-                        <Text style={s.replySendText}>Dërgo</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
+                {expandedTicketId === ticket.id ? (
+                  <>
+                    <View style={s.threadList}>
+                      {ticket.messages.map((messageItem) => (
+                        <View
+                          key={`${ticket.id}-${messageItem.id}-${messageItem.createdAt}`}
+                          style={[
+                            s.threadBubble,
+                            messageItem.senderType === 'staff' ? s.threadBubbleStaff : s.threadBubbleStudent,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              s.threadSender,
+                              messageItem.senderType === 'staff' ? s.threadSenderStaff : s.threadSenderStudent,
+                            ]}
+                          >
+                            {messageItem.senderName}
+                          </Text>
+                          {messageItem.message ? <Text style={s.threadText}>{messageItem.message}</Text> : null}
+                          {messageItem.attachmentUrl ? (
+                            <Image source={{ uri: messageItem.attachmentUrl }} style={s.supportImage} />
+                          ) : null}
+                          <Text style={s.replyDate}>{messageItem.createdAt}</Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    {!ticket.hasStaffReply ? (
+                      <View style={s.replyPending}>
+                        <Clock size={13} color="#92400e" strokeWidth={2} />
+                        <Text style={s.replyPendingText}>Në pritje të përgjigjes së stafit.</Text>
+                      </View>
+                    ) : null}
+
+                    <View style={s.replyComposer}>
+                      <TextInput
+                        style={s.replyInput}
+                        value={ticketReplies[ticket.id] || ''}
+                        onChangeText={(value) => setTicketReplies((prev) => ({ ...prev, [ticket.id]: value }))}
+                        placeholder="Shkruaj një përgjigje..."
+                        placeholderTextColor={Colors.textMuted}
+                        multiline
+                        textAlignVertical="top"
+                      />
+                      <TouchableOpacity
+                        style={[
+                          s.replySendBtn,
+                          (!(ticketReplies[ticket.id] || '').trim() || submittingTicketId === ticket.id) && s.replySendBtnDisabled,
+                        ]}
+                        activeOpacity={0.88}
+                        onPress={() => handleSupportReply(ticket.id)}
+                        disabled={!(ticketReplies[ticket.id] || '').trim() || submittingTicketId === ticket.id}
+                      >
+                        {submittingTicketId === ticket.id ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <>
+                            <Send size={14} color="#fff" strokeWidth={2} />
+                            <Text style={s.replySendText}>Dërgo</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : null}
               </View>
             ))}
           </TabState>
@@ -844,25 +953,43 @@ export default function ProfileScreen({
             ))}
           </TabState>
         )}
+
+        <Text style={s.sectionTitle}>Llogaria</Text>
+
+        <View style={s.accountCard}>
+          <TouchableOpacity style={s.accountRow} activeOpacity={0.8} onPress={onSettings}>
+            <View style={s.accountLeft}>
+              <View style={s.accountIconBlue}>
+                <User size={16} color="#3b82f6" strokeWidth={2} />
+              </View>
+              <Text style={s.accountText}>Të dhënat personale</Text>
+            </View>
+            <ChevronRight size={16} color="#cbd5e1" strokeWidth={2.5} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[s.accountRow, s.accountRowDivider]} activeOpacity={0.8} onPress={onSettings}>
+            <View style={s.accountLeft}>
+              <View style={s.accountIconAmber}>
+                <Lock size={16} color="#f59e0b" strokeWidth={2} />
+              </View>
+              <Text style={s.accountText}>Siguria & Fjalëkalimi</Text>
+            </View>
+            <ChevronRight size={16} color="#cbd5e1" strokeWidth={2.5} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.accountRow} activeOpacity={0.8} onPress={onLogout}>
+            <View style={s.accountLeft}>
+              <View style={s.accountIconRose}>
+                <LogOut size={16} color="#f43f5e" strokeWidth={2} />
+              </View>
+              <Text style={s.accountLogoutText}>Dil nga llogaria</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={s.footerText}>Karta e Studentit {BRANDING.footerVersion}</Text>
       </ScrollView>
 
-      <Modal visible={topicOpen} transparent animationType="fade" statusBarTranslucent>
-        <TouchableOpacity style={s.pickerOverlay} activeOpacity={1} onPress={() => setTopicOpen(false)}>
-          <View style={s.pickerSheet}>
-            <Text style={s.pickerSheetTitle}>Zgjidh Temën</Text>
-            {TOPICS.map((t) => (
-              <TouchableOpacity
-                key={t.value}
-                style={[s.pickerOption, topic === t.value && s.pickerOptionActive]}
-                onPress={() => { setTopic(t.value); setTopicOpen(false); }}
-              >
-                <Text style={[s.pickerOptionText, topic === t.value && { color: '#0ea5e9' }]}>{t.label}</Text>
-                {topic === t.value && <CheckCircle size={15} color="#0ea5e9" strokeWidth={2} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
@@ -980,52 +1107,16 @@ function badgeToneStyle(tone: BadgeTone) {
 function formatDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('sq-AL', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const y = date.getFullYear();
+  return `${d}.${m}.${y}`;
 }
 
+
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.surfaceBg },
+  root: { flex: 1, backgroundColor: '#f0f4f8' },
   scroll: { flex: 1 },
-  municipalityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: '#dbe7f5',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginTop: Spacing.xl,
-    marginBottom: 14,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
-  },
-  municipalityLogo: {
-    width: 142,
-    height: 40,
-  },
-  municipalityCopy: {
-    flex: 1,
-  },
-  municipalityTitle: {
-    fontFamily: Typography.fontBold,
-    fontSize: Typography.sm,
-    color: '#003366',
-    marginBottom: 2,
-  },
-  municipalityText: {
-    fontFamily: Typography.fontMedium,
-    fontSize: 11,
-    color: Colors.textSecondary,
-  },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.lg,
@@ -1045,104 +1136,318 @@ const s = StyleSheet.create({
     color: Colors.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 1,
   },
   headerTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xl, color: Colors.textPrimary },
-  idCard: {
-    borderRadius: Radius.xxl + 4, padding: Spacing.xxl, overflow: 'hidden',
-    marginBottom: Spacing.lg,
-    shadowColor: '#002855', shadowOpacity: 0.25, shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 }, elevation: 8,
+  // ══ FROST EDITION CARD — completely fresh styles ══════════════════════════════
+
+  // Outer wrapper: gives drop shadow; height driven by front face content
+  cardWrapper: {
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.sm,
+    borderRadius: 24,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.12,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 16 },
+    elevation: 10,
   },
-  blobTR: {
-    position: 'absolute', top: -30, right: -30,
-    width: 140, height: 140, borderRadius: 70,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+
+  // FRONT FACE — white frosted glass; normal flow so it sizes to content
+  cardFace: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.80)',
   },
-  blobBL: {
-    position: 'absolute', bottom: -20, left: -20,
-    width: 110, height: 110, borderRadius: 55,
-    backgroundColor: 'rgba(10,168,167,0.15)',
+
+  // BACK FACE — same glass; absolutely fills front-face bounds
+  cardFaceBack: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.80)',
   },
-  idTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: Spacing.xxl },
-  idLabel: {
-    fontFamily: Typography.fontBold, fontSize: 9,
-    color: '#0aa8a7', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4,
+
+  // Soft pastel orbs rendered BEFORE BlurView so the frost diffuses them
+  frostOrbA: {
+    position: 'absolute', top: -50, left: -50,
+    width: 220, height: 220, borderRadius: 110,
+    backgroundColor: 'rgba(129,140,248,0.22)',
   },
-  idName: { fontFamily: Typography.fontExtraBold, fontSize: Typography.h2, color: '#fff' },
-  idNim: {
-    fontFamily: Typography.fontMedium, fontSize: Typography.sm,
-    color: 'rgba(203,213,225,0.75)', marginTop: 4, letterSpacing: 0.5,
+  frostOrbB: {
+    position: 'absolute', bottom: -50, right: -50,
+    width: 200, height: 200, borderRadius: 100,
+    backgroundColor: 'rgba(244,114,182,0.18)',
   },
-  avatarRing: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: '#fff', padding: 3, flexShrink: 0,
-    shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 }, elevation: 3,
+
+  // Absolute decorative bands (sit above BlurView, behind content)
+  cardHeaderGrad: {
+    position: 'absolute', left: 0, right: 0, top: 0, height: 76,
   },
-  avatar: { width: '100%', height: '100%', borderRadius: 24 },
-  idBottom: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end',
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.10)', paddingTop: Spacing.lg,
+  cardAccentBand: {
+    position: 'absolute', left: 0, right: 0, top: 76, height: 4,
   },
-  idExpiryLabel: {
-    fontFamily: Typography.fontBold, fontSize: 9,
-    color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 3,
+  cardBottomAccent: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, height: 6,
   },
-  idExpiry: { fontFamily: Typography.fontBold, fontSize: Typography.base, color: '#fff' },
-  idStatusBadge: {
-    backgroundColor: 'rgba(10,168,167,0.18)', borderWidth: 1, borderColor: 'rgba(10,168,167,0.45)',
-    paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.sm,
+
+  // Card content padding
+  cardContent: {
+    padding: 20,
+    flexDirection: 'column',
   },
-  idStatusText: {
+
+  // ROW 1 — Logo row (76px tall, aligns with header gradient behind it)
+  cardTopRow: {
+    height: 76,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  brandLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  brandIconWrap: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    alignItems: 'center', justifyContent: 'center', padding: 4,
+  },
+  brandIcon: { width: '100%', height: '100%' },
+  brandTitle: {
+    fontFamily: Typography.fontExtraBold, fontSize: 15,
+    color: '#ffffff', lineHeight: 18, letterSpacing: -0.3,
+  },
+  brandRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  uniLabel: {
+    textAlign: 'right', fontFamily: Typography.fontBold, fontSize: 8,
+    color: 'rgba(255,255,255,0.90)', textTransform: 'uppercase',
+    letterSpacing: 0.5, lineHeight: 11, maxWidth: 82,
+  },
+  uniBadge: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#c8102e',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.30)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  uniBadgeText: {
+    fontFamily: Typography.fontExtraBold, fontSize: 7,
+    color: '#fff', textAlign: 'center', lineHeight: 9,
+  },
+
+  // ROW 2 — Student info + photo
+  studentRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', gap: 16, marginTop: 20,
+  },
+  studentInfo: { flex: 1 },
+  studentLabel: {
+    fontFamily: Typography.fontExtraBold, fontSize: 10,
+    color: '#64748b', textTransform: 'uppercase',
+    letterSpacing: 2.4, marginBottom: 4,
+  },
+  studentName: {
+    fontFamily: Typography.fontExtraBold, fontSize: 26,
+    color: '#1e293b', lineHeight: 28, marginBottom: 10, letterSpacing: -0.5,
+  },
+  studentSurname: { color: '#475569' },
+  idChip: {
+    alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.70)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.90)',
+    borderRadius: Radius.full, paddingHorizontal: 12, paddingVertical: 6,
+  },
+  idChipText: { fontFamily: Typography.fontBold, fontSize: 11, color: '#334155' },
+  photoFrame: {
+    width: 78, height: 78, borderRadius: 20, overflow: 'hidden', flexShrink: 0,
+    backgroundColor: 'rgba(255,255,255,0.80)',
+    borderWidth: 3, borderColor: '#ffffff',
+  },
+  photo: { width: '100%', height: '100%' },
+  photoPlaceholder: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#f1f5f9',
+  },
+  photoInitials: {
+    fontFamily: Typography.fontExtraBold, fontSize: 24, color: '#94a3b8',
+  },
+
+  // ROW 3 — Bottom status bar
+  bottomBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.60)',
+    borderWidth: 1, borderColor: '#ffffff',
+    borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12,
+    marginTop: 16,
+  },
+  barLabel: {
     fontFamily: Typography.fontExtraBold, fontSize: 9,
-    color: '#0aa8a7', textTransform: 'uppercase', letterSpacing: 1.5,
+    color: '#64748b', textTransform: 'uppercase',
+    letterSpacing: 1.5, marginBottom: 3,
   },
-  statsRow: { flexDirection: 'row', gap: 12, marginBottom: Spacing.xxxl },
-  statAmber: {
-    flex: 1, backgroundColor: Colors.white, borderRadius: Radius.xxl,
-    padding: Spacing.lg, borderWidth: 1, borderColor: '#fef3c7',
-    shadowColor: '#f59e0b', shadowOpacity: 0.07, shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 }, elevation: 2,
+  barValue: {
+    fontFamily: Typography.fontBold, fontSize: 13, color: '#0f172a',
   },
-  statEmerald: {
-    flex: 1, borderRadius: Radius.xxl, padding: Spacing.lg,
-    borderWidth: 1, borderColor: '#d1fae5',
-    shadowColor: '#10b981', shadowOpacity: 0.07, shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 }, elevation: 2,
+  statusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: Radius.full, borderWidth: 1,
   },
-  statTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  statusActive:   { backgroundColor: '#d1fae5', borderColor: '#a7f3d0' },
+  statusPending:  { backgroundColor: '#fef3c7', borderColor: '#fde68a' },
+  statusInactive: { backgroundColor: '#f1f5f9', borderColor: '#e2e8f0' },
+  statusDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981' },
+  statusText:     { fontFamily: Typography.fontExtraBold, fontSize: 10, letterSpacing: 0.8 },
+  statusTextActive:   { color: '#059669' },
+  statusTextPending:  { color: '#b45309' },
+  statusTextInactive: { color: '#64748b' },
+
+  // BACK FACE content wrapper
+  cardContentBack: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    padding: 24, flexDirection: 'column', justifyContent: 'space-between',
+  },
+  backHeaderText: {
+    fontFamily: Typography.fontBold, fontSize: 10,
+    color: '#64748b', textTransform: 'uppercase',
+    letterSpacing: 2.5, textAlign: 'center',
+  },
+  backDivider: {
+    width: '100%', height: 1,
+    backgroundColor: 'rgba(148,163,184,0.35)', marginTop: 8,
+  },
+  backRow: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8,
+  },
+  backBarLabel: {
+    fontFamily: Typography.fontExtraBold, fontSize: 9,
+    color: '#94a3b8', textTransform: 'uppercase',
+    letterSpacing: 1.5, marginBottom: 3,
+  },
+  backBarValue: {
+    fontFamily: Typography.fontBold, fontSize: 13, color: '#1e293b',
+  },
+  qrWrap: {
+    alignItems: 'center', gap: 6,
+    backgroundColor: '#ffffff',
+    borderRadius: 16, padding: 12,
+    borderWidth: 1, borderColor: '#e2e8f0',
+  },
+  qrLabel: {
+    fontFamily: Typography.fontBold, fontSize: 7, color: '#94a3b8',
+    letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center',
+  },
+  backFooter: {
+    fontFamily: Typography.fontMedium, fontSize: 8,
+    color: '#94a3b8', textAlign: 'center', lineHeight: 12, paddingHorizontal: 4,
+  },
+
+  // Flip hint
+  flipHint:     { alignItems: 'center', marginBottom: Spacing.lg },
+  flipHintText: { fontFamily: Typography.fontMedium, fontSize: Typography.xs, color: Colors.textMuted },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: Spacing.xxxl,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.xl,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+    alignItems: 'center',
+  },
+  statTop: {
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  statIconBadgeAmber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff7ed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statIconBadgeSky: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#f0f9ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statIconBadgeEmerald: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ecfdf5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   statLabelAmber: {
     fontFamily: Typography.fontExtraBold, fontSize: 9,
-    color: '#d97706', textTransform: 'uppercase', letterSpacing: 0.8,
+    color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.8,
+    textAlign: 'center',
+  },
+  statLabelSky: {
+    fontFamily: Typography.fontExtraBold, fontSize: 9,
+    color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: 0.8,
+    textAlign: 'center',
   },
   statLabelEmerald: {
     fontFamily: Typography.fontExtraBold, fontSize: 9,
-    color: '#059669', textTransform: 'uppercase', letterSpacing: 0.8,
+    color: '#10b981', textTransform: 'uppercase', letterSpacing: 0.8,
+    textAlign: 'center',
   },
-  statBigAmber: { fontFamily: Typography.fontExtraBold, fontSize: Typography.h2, color: Colors.textPrimary, marginBottom: 8 },
-  statHintAmber: { fontFamily: Typography.fontMedium, fontSize: 10, color: Colors.textMuted },
-  statBigEmerald: { fontFamily: Typography.fontExtraBold, fontSize: Typography.h2, color: '#064e3b', marginBottom: 8 },
-  statHintEmerald: { fontFamily: Typography.fontMedium, fontSize: 10, color: '#047857' },
-  voiceBorder: {
-    borderRadius: Radius.xxl + 4, padding: 2,
-    marginBottom: Spacing.xxxl,
-    shadowColor: '#0ea5e9', shadowOpacity: 0.18, shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 }, elevation: 6,
+  statBig: {
+    fontFamily: Typography.fontExtraBold,
+    fontSize: 22,
+    color: Colors.textPrimary,
+    textAlign: 'center',
   },
-  voiceInner: {
-    backgroundColor: Colors.white, borderRadius: Radius.xxl,
-    padding: Spacing.xl, overflow: 'hidden',
+  supportComposerCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+    marginBottom: 10,
+    shadowColor: '#0ea5e9',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
-  voiceBlob: {
-    position: 'absolute', top: 0, right: 0,
-    width: 80, height: 80, backgroundColor: '#f0f9ff',
-    borderBottomLeftRadius: 80,
+  supportComposerHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
   },
-  voiceHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: Spacing.lg },
-  voiceIconWrap: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#e0f2fe', justifyContent: 'center', alignItems: 'center',
+  supportComposerIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e0f2fe',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  voiceTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xl, color: Colors.textPrimary },
-  voiceSub: { fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textSecondary, marginTop: 1 },
+  supportComposerTitle: {
+    fontFamily: Typography.fontExtraBold,
+    fontSize: Typography.lg,
+    color: Colors.textPrimary,
+  },
+  supportComposerSub: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
   pickerBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.border,
@@ -1369,6 +1674,21 @@ const s = StyleSheet.create({
     fontSize: 10,
     color: '#fff',
   },
+  ticketPreviewText: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.sm,
+    color: Colors.textMuted,
+    marginTop: 2,
+    marginRight: 8,
+  },
+  ticketChevronWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
   histIcon: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.borderLight,
@@ -1376,6 +1696,81 @@ const s = StyleSheet.create({
   },
   histDate: { fontFamily: Typography.fontMedium, fontSize: 9, color: Colors.textMuted, flexShrink: 0, textAlign: 'right' },
   histDateInline: { fontFamily: Typography.fontMedium, fontSize: 10, color: Colors.textMuted, marginTop: 10 },
+  accountCard: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.xxl,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    overflow: 'hidden',
+    marginTop: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  accountRow: {
+    minHeight: 64,
+    paddingHorizontal: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  accountRowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  accountLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  accountIconBlue: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accountIconAmber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#fffbeb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accountIconRose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#fff1f2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accountText: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.md,
+    color: '#334155',
+  },
+  accountLogoutText: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.md,
+    color: '#e11d48',
+  },
+  footerText: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.xs,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    marginTop: Spacing.lg,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
   pickerOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
@@ -1399,5 +1794,3 @@ const s = StyleSheet.create({
     fontFamily: Typography.fontMedium, fontSize: Typography.md, color: Colors.textPrimary,
   },
 });
-
-

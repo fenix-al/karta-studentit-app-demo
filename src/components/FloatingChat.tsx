@@ -247,7 +247,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
               <View style={styles.pillIconWrap}>
                 <MessageCircle size={20} color="#ffffff" strokeWidth={2.2} />
               </View>
-              <Text style={styles.pillLabel}>Ndihmë?</Text>
+              <Text style={styles.pillLabel}>Zëri Yt</Text>
               {totalUnread > 0 ? (
                 <View style={styles.badgeRed}>
                   <Text style={styles.badgeRedText}>{totalUnread > 99 ? '99+' : totalUnread}</Text>

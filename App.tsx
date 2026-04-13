@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import {
   useFonts,
   Poppins_400Regular,
@@ -12,34 +13,24 @@ import {
 } from '@expo-google-fonts/poppins';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-import ModernLoader from './src/components/ModernLoader';
-import HomeScreen    from './src/screens/HomeScreen';
+import CustomSplashScreen from './src/components/CustomSplashScreen';
+import HomeScreen from './src/screens/HomeScreen';
 import BizHomeScreen from './src/screens/biz/BizHomeScreen';
-import LoginScreen   from './src/screens/auth/LoginScreen';
-import { Colors }    from './src/constants/Theme';
+import LoginScreen from './src/screens/auth/LoginScreen';
+import { Colors } from './src/constants/Theme';
 
-// ── Inner component — consumes AuthContext (must be inside AuthProvider) ──────
+void SplashScreen.preventAutoHideAsync().catch(() => {
+  // Native splash may already be controlled by Expo in dev mode.
+});
+
 function AppNavigator() {
   const {
-    isLoading,
     isLoggedIn,
     role,
     onStudentLoginSuccess,
     onBizLoginSuccess,
     authNotice,
   } = useAuth();
-
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: Colors.surfaceBg }}>
-        <ModernLoader
-          fullscreen
-          title="Po hapet aplikacioni"
-          subtitle="Po kontrollojme sesionin tuaj."
-        />
-      </View>
-    );
-  }
 
   if (!isLoggedIn) {
     return (
@@ -55,6 +46,21 @@ function AppNavigator() {
   return <HomeScreen />;
 }
 
+function AppShell() {
+  const { isLoading } = useAuth();
+  const [introFinished, setIntroFinished] = useState(false);
+
+  if (!introFinished || isLoading) {
+    return (
+      <CustomSplashScreen
+        onAnimationComplete={() => setIntroFinished(true)}
+      />
+    );
+  }
+
+  return <AppNavigator />;
+}
+
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
     Poppins_400Regular,
@@ -64,23 +70,23 @@ export default function App() {
     Poppins_800ExtraBold,
   });
 
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync().catch(() => {
+        // Ignore hide races during fast refresh.
+      });
+    }
+  }, [fontError, fontsLoaded]);
+
   if (!fontsLoaded && !fontError) {
-    return (
-      <View style={{ flex: 1, backgroundColor: Colors.surfaceBg }}>
-        <ModernLoader
-          fullscreen
-          title="Po pergatiten fontet"
-          subtitle="Aplikacioni po ngarkohet."
-        />
-      </View>
-    );
+    return <View style={{ flex: 1, backgroundColor: Colors.surfaceBg }} />;
   }
 
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <AuthProvider>
-        <AppNavigator />
+        <AppShell />
       </AuthProvider>
     </SafeAreaProvider>
   );

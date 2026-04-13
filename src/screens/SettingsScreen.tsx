@@ -1,8 +1,10 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   ScrollView,
   StyleSheet,
   Switch,
@@ -14,10 +16,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight, User, Lock, Bell, HelpCircle, FileText, Shield, LogOut } from 'lucide-react-native';
 
 import { BRANDING } from '../constants/branding';
+import { PASSWORD_RESET_URL } from '../constants/config';
 import { Colors, Typography, Spacing, Radius } from '../constants/Theme';
+import { useAuth } from '../context/AuthContext';
 import { fetchPrivacyPolicy, PrivacyPolicyApiResponse } from '../services/api';
+import { syncPushTokenWithBackend, unregisterPushTokenFromBackend } from '../services/pushNotifications';
+import SettingsFaqContent from './settings/SettingsFaqContent';
+import SettingsSubscreen from './settings/SettingsSubscreen';
+import SettingsTermsContent from './settings/SettingsTermsContent';
 
-type SettingsView = 'settings' | 'privacy';
+type SettingsView =
+  | 'settings'
+  | 'personal'
+  | 'security'
+  | 'notifications'
+  | 'faq'
+  | 'terms'
+  | 'privacy';
 
 interface Props {
   onBack: () => void;
@@ -26,6 +41,8 @@ interface Props {
   initialScreen?: SettingsView;
   onInitialScreenHandled?: () => void;
 }
+
+const PUSH_NOTIFICATIONS_ENABLED_KEY = 'sk_push_notifications_enabled';
 
 function SettingRow({
   icon,
@@ -64,22 +81,87 @@ export default function SettingsScreen({
   onInitialScreenHandled,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const [notifEnabled, setNotifEnabled] = useState(true);
+  const { card } = useAuth();
   const [activeView, setActiveView] = useState<SettingsView>(initialScreen);
   const [policy, setPolicy] = useState<PrivacyPolicyApiResponse | null>(null);
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policyError, setPolicyError] = useState<string | null>(null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   useEffect(() => {
     setActiveView(initialScreen);
     onInitialScreenHandled?.();
   }, [initialScreen]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(PUSH_NOTIFICATIONS_ENABLED_KEY);
+        if (!mounted) return;
+        if (stored == null) {
+          setNotificationsEnabled(true);
+          return;
+        }
+        setNotificationsEnabled(stored === 'true');
+      } catch {
+        if (mounted) setNotificationsEnabled(true);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const confirmLogout = () =>
     Alert.alert('Kujdes', 'Jeni të sigurt që dëshironi të dilni nga llogaria?', [
       { text: 'Anulo', style: 'cancel' },
       { text: 'Dil', style: 'destructive', onPress: onLogout },
     ]);
+
+  const openPasswordReset = async () => {
+    try {
+      const supported = await Linking.canOpenURL(PASSWORD_RESET_URL);
+      if (!supported) {
+        Alert.alert('Gabim', 'Lidhja per rikuperimin e fjalekalimit nuk mund te hapet ne kete pajisje.');
+        return;
+      }
+      await Linking.openURL(PASSWORD_RESET_URL);
+    } catch {
+      Alert.alert('Gabim', 'Nuk u arrit te hapej faqja e rikuperimit te fjalekalimit.');
+    }
+  };
+
+  const handleNotificationsToggle = async (nextValue: boolean) => {
+    if (notificationsLoading) return;
+
+    setNotificationsLoading(true);
+    try {
+      if (nextValue) {
+        const synced = await syncPushTokenWithBackend();
+        if (!synced) {
+          Alert.alert(
+            'Njoftimet nuk u aktivizuan',
+            'Lejo njoftimet ne pajisje dhe provo perseri. Ne Expo Go ky funksion nuk aktivizohet.',
+          );
+          return;
+        }
+      } else {
+        await unregisterPushTokenFromBackend();
+      }
+
+      setNotificationsEnabled(nextValue);
+      await AsyncStorage.setItem(PUSH_NOTIFICATIONS_ENABLED_KEY, String(nextValue));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Nuk u arrit te perditesoheshin njoftimet push. Provo perseri.';
+      Alert.alert('Gabim', message);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
 
   const loadPrivacyPolicy = async () => {
     setPolicyLoading(true);
@@ -120,6 +202,161 @@ export default function SettingsScreen({
     if (!raw) return [];
     return raw.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean);
   }, [policy?.content_text]);
+
+  const personalInfoRows = useMemo(
+    () => [
+      { label: 'Emri', value: card?.emeri },
+      { label: 'Mbiemri', value: card?.mbiemeri },
+      { label: 'Email', value: card?.email },
+      { label: 'Telefoni', value: card?.telefoni },
+      { label: 'NIM', value: card?.nim },
+      { label: 'Nr. karte', value: card?.nr_karte },
+      { label: 'Fakulteti', value: card?.fakulteti },
+      { label: 'Programi', value: card?.programi },
+      { label: 'Cikli', value: card?.cikli },
+      { label: 'Datelindja', value: card?.datelindja },
+      { label: 'Vlefshme deri', value: card?.valid_until },
+      { label: 'Statusi', value: mapCardStatusLabel(card?.statusi) },
+    ],
+    [card],
+  );
+
+  if (activeView === 'personal') {
+    return (
+      <SettingsSubscreen
+        title="Të dhënat personale"
+        description="Këtu do të qëndrojnë të dhënat bazë të profilit të studentit."
+        bottomInset={bottomInset}
+        onBack={() => setActiveView('settings')}
+      >
+        <View style={styles.infoCard}>
+          {card ? (
+            personalInfoRows.map((item, index) => (
+              <View
+                key={item.label}
+                style={[styles.infoRow, index !== personalInfoRows.length - 1 && styles.infoRowBorder]}
+              >
+                <Text style={styles.infoLabel}>{item.label}</Text>
+                <Text style={styles.infoValue}>{formatProfileValue(item.value)}</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>
+              Te dhenat e profilit nuk jane ngarkuar ende. Kthehu mbrapa dhe provo perseri.
+            </Text>
+          )}
+        </View>
+      </SettingsSubscreen>
+    );
+  }
+
+  if (activeView === 'security') {
+    return (
+      <SettingsSubscreen
+        title="Siguria & Fjalëkalimi"
+        description="Kjo faqe do të mbajë veprimet që lidhen me sigurinë e llogarisë dhe fjalëkalimin."
+        bottomInset={bottomInset}
+        onBack={() => setActiveView('settings')}
+      >
+        <View style={styles.infoCard}>
+          <View style={[styles.infoRow, styles.infoRowBorder]}>
+            <Text style={styles.infoLabel}>Emaili i llogarise</Text>
+            <Text style={styles.infoValue}>{formatProfileValue(card?.email)}</Text>
+          </View>
+          <View style={[styles.infoRow, styles.infoRowBorder]}>
+            <Text style={styles.infoLabel}>Menyra e ndryshimit</Text>
+            <Text style={styles.infoValue}>
+              Ndryshimi i fjalekalimit behet permes faqes zyrtare te rikuperimit ne WordPress.
+            </Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Siguria</Text>
+            <Text style={styles.infoValue}>
+              Pasi te hapet faqja, mund te kerkosh linkun e rikuperimit dhe te vendosesh nje fjalekalim te ri.
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.primaryAction} activeOpacity={0.85} onPress={openPasswordReset}>
+          <Text style={styles.primaryActionText}>Hap rikuperimin e fjalekalimit</Text>
+        </TouchableOpacity>
+      </SettingsSubscreen>
+    );
+  }
+
+  if (activeView === 'notifications') {
+    return (
+      <SettingsSubscreen
+        title="Njoftimet (Push)"
+        description="Ketu menaxhohet aktivizimi real i njoftimeve push per kete pajisje."
+        bottomInset={bottomInset}
+        onBack={() => setActiveView('settings')}
+      >
+        <View style={styles.infoCard}>
+          <View style={[styles.toggleRow, styles.infoRowBorder]}>
+            <View style={styles.toggleTextWrap}>
+              <Text style={styles.infoLabel}>Statusi</Text>
+              <Text style={styles.infoValue}>
+                {notificationsEnabled ? 'Njoftimet push jane aktive' : 'Njoftimet push jane te fikura'}
+              </Text>
+            </View>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={handleNotificationsToggle}
+              disabled={notificationsLoading}
+              trackColor={{ false: Colors.border, true: '#10b981' }}
+              thumbColor="#fff"
+            />
+          </View>
+          <View style={[styles.infoRow, styles.infoRowBorder]}>
+            <Text style={styles.infoLabel}>Pajisja</Text>
+            <Text style={styles.infoValue}>
+              Kur aktivizohet, aplikacioni regjistron token-in e pajisjes ne backend-in e WordPress.
+            </Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Ruajtja e statusit</Text>
+            <Text style={styles.infoValue}>
+              Zgjedhja ruhet lokalisht ne pajisje dhe lexohet perseri kur app-i hapet ne vazhdim.
+            </Text>
+          </View>
+        </View>
+
+        {notificationsLoading ? (
+          <View style={styles.loadingInline}>
+            <ActivityIndicator size="small" color="#003366" />
+            <Text style={styles.loadingInlineText}>Duke perditesuar preferencen...</Text>
+          </View>
+        ) : null}
+      </SettingsSubscreen>
+    );
+  }
+
+  if (activeView === 'faq') {
+    return (
+      <SettingsSubscreen
+        title="Qendra e Ndihmës (FAQ)"
+        description="Ketu gjen shpjegime te thjeshta per funksionet kryesore te aplikacionit."
+        bottomInset={bottomInset}
+        onBack={() => setActiveView('settings')}
+      >
+        <SettingsFaqContent />
+      </SettingsSubscreen>
+    );
+  }
+
+  if (activeView === 'terms') {
+    return (
+      <SettingsSubscreen
+        title="Kushtet e Përdorimit"
+        description="Keto jane kushtet baze te perdorimit te aplikacionit ne nje forme te thjeshte dhe te qarte."
+        bottomInset={bottomInset}
+        onBack={() => setActiveView('settings')}
+      >
+        <SettingsTermsContent />
+      </SettingsSubscreen>
+    );
+  }
 
   if (activeView === 'privacy') {
     return (
@@ -203,25 +440,19 @@ export default function SettingsScreen({
           <SettingRow
             icon={<User size={16} color="#0284c7" strokeWidth={2} />}
             title="Të dhënat personale"
-            onPress={() => Alert.alert('Nuk disponohet', 'Kjo faqe do të shtohet së shpejti.')}
+            onPress={() => setActiveView('personal')}
           />
           <SettingRow
             icon={<Lock size={16} color="#d97706" strokeWidth={2} />}
             title="Siguria & Fjalëkalimi"
-            onPress={() => Alert.alert('Nuk disponohet', 'Kjo faqe do të shtohet së shpejti.')}
+            onPress={() => setActiveView('security')}
           />
           <SettingRow
             icon={<Bell size={16} color="#e11d48" strokeWidth={2} />}
             title="Njoftimet (Push)"
             isLast
-            rightElement={
-              <Switch
-                value={notifEnabled}
-                onValueChange={setNotifEnabled}
-                trackColor={{ false: Colors.border, true: '#10b981' }}
-                thumbColor="#fff"
-              />
-            }
+            onPress={() => setActiveView('notifications')}
+            rightElement={<ChevronRight size={16} color={Colors.textMuted} strokeWidth={2} />}
           />
         </View>
 
@@ -230,12 +461,12 @@ export default function SettingsScreen({
           <SettingRow
             icon={<HelpCircle size={16} color="#0d9488" strokeWidth={2} />}
             title="Qendra e Ndihmës (FAQ)"
-            onPress={() => {}}
+            onPress={() => setActiveView('faq')}
           />
           <SettingRow
             icon={<FileText size={16} color="#64748b" strokeWidth={2} />}
             title="Kushtet e Përdorimit"
-            onPress={() => {}}
+            onPress={() => setActiveView('terms')}
           />
           <SettingRow
             icon={<Shield size={16} color="#64748b" strokeWidth={2} />}
@@ -347,6 +578,86 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   rowTitleDestructive: { color: '#e11d48' },
+  infoCard: {
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: Radius.xxl,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  infoRow: {
+    paddingHorizontal: Spacing.xxl,
+    paddingVertical: 18,
+    gap: 8,
+  },
+  toggleRow: {
+    paddingHorizontal: Spacing.xxl,
+    paddingVertical: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  toggleTextWrap: {
+    flex: 1,
+    gap: 6,
+  },
+  infoRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  infoLabel: {
+    fontFamily: Typography.fontBold,
+    fontSize: 12,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  infoValue: {
+    fontFamily: Typography.fontSemiBold,
+    fontSize: Typography.md,
+    color: Colors.textPrimary,
+    lineHeight: 22,
+  },
+  emptyText: {
+    fontFamily: Typography.fontRegular,
+    fontSize: Typography.md,
+    lineHeight: 22,
+    color: Colors.textSecondary,
+    padding: Spacing.xxl,
+  },
+  primaryAction: {
+    minHeight: 52,
+    marginTop: Spacing.sm,
+    borderRadius: 12,
+    backgroundColor: '#003366',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  primaryActionText: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.base,
+    color: Colors.white,
+    textAlign: 'center',
+  },
+  loadingInline: {
+    marginTop: Spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  loadingInlineText: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.base,
+    color: Colors.textSecondary,
+  },
   policyHero: {
     backgroundColor: Colors.white,
     borderWidth: 1,
@@ -387,6 +698,11 @@ const styles = StyleSheet.create({
     borderRadius: Radius.xxl,
     padding: Spacing.xxl,
     gap: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   policyParagraph: {
     fontFamily: Typography.fontMedium,
@@ -403,6 +719,11 @@ const styles = StyleSheet.create({
     padding: Spacing.xxl,
     alignItems: 'center',
     gap: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   loadingText: {
     fontFamily: Typography.fontMedium,
@@ -415,6 +736,11 @@ const styles = StyleSheet.create({
     borderColor: '#fecaca',
     borderRadius: Radius.xxl,
     padding: Spacing.xxl,
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   errorTitle: {
     fontFamily: Typography.fontExtraBold,
@@ -457,4 +783,25 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
 });
+
+function formatProfileValue(value?: string | null) {
+  const normalized = typeof value === 'string' ? value.trim() : value;
+  if (!normalized) return 'Nuk eshte plotesuar';
+  return normalized;
+}
+
+function mapCardStatusLabel(status?: string) {
+  switch (status) {
+    case 'active':
+      return 'Aktive';
+    case 'inactive':
+      return 'Jo aktive';
+    case 'pending':
+      return 'Ne pritje';
+    case 'expired':
+      return 'E skaduar';
+    default:
+      return undefined;
+  }
+}
 
