@@ -47,7 +47,7 @@ import { SupportTicketApiItem } from '../types';
 const categories = [
   { id: 'karta', label: 'Karta ime', Icon: CreditCard },
   { id: 'sugjerim', label: 'Sugjerim', Icon: Lightbulb },
-  { id: 'biznes', label: 'Nje biznes', Icon: Briefcase },
+  { id: 'biznes', label: 'Një biznes', Icon: Briefcase },
   { id: 'teknike', label: 'Teknike', Icon: Wrench },
 ] as const;
 
@@ -164,7 +164,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
   const handleAttachmentPress = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Leja mungon', 'Lejo aksesin te fotot per te bashkengjitur nje screenshot.');
+      Alert.alert('Leja mungon', 'Lejo aksesin te fotot për të bashkëngjitur një screenshot.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -187,11 +187,11 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
     const cleanSubject = subject.trim();
     const cleanMessage = message.trim();
     if (!selectedCategory) {
-      Alert.alert('Kategoria', 'Zgjidh nje kategori para se ta dergosh mesazhin.');
+      Alert.alert('Kategoria', 'Zgjidh një kategori para se ta dërgosh mesazhin.');
       return;
     }
     if (!cleanSubject || !cleanMessage) {
-      Alert.alert('Ploteso fushat', 'Shkruaj subjektin dhe mesazhin.');
+      Alert.alert('Plotëso fushat', 'Shkruaj subjektin dhe mesazhin.');
       return;
     }
     setIsSubmitting(true);
@@ -205,7 +205,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
         attachment_id: uploadedAttachment?.attachment_id,
         attachment_url: uploadedAttachment?.attachment_url,
       });
-      if (!result?.success) throw new Error(result?.msg || 'Mesazhi nuk u dergua.');
+      if (!result?.success) throw new Error(result?.msg || 'Mesazhi nuk u dërgua.');
       setIsSuccess(true);
       await reloadSupportTickets();
       setTimeout(() => {
@@ -213,7 +213,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
         setModalTab('history');
       }, 1800);
     } catch (error: any) {
-      Alert.alert('Gabim', error?.message || 'Nuk u lidh me serverin. Provo perseri.');
+      Alert.alert('Gabim', error?.message || 'Nuk u lidh me serverin. Provo përsëri.');
       setIsSubmitting(false);
     }
   };
@@ -224,12 +224,12 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
     setSubmittingReplyTicketId(ticketId);
     try {
       const result = await replySupportTicket(ticketId, { message: draft });
-      if (!result?.success) throw new Error(result?.msg || 'Pergjigjja nuk u dergua.');
+      if (!result?.success) throw new Error(result?.msg || 'Përgjigjja nuk u dërgua.');
       setReplyDrafts((prev) => ({ ...prev, [ticketId]: '' }));
       await reloadSupportTickets();
       setExpandedTicketId(ticketId);
     } catch (error: any) {
-      Alert.alert('Gabim', error?.message || 'Pergjigjja nuk u dergua.');
+      Alert.alert('Gabim', error?.message || 'Përgjigjja nuk u dërgua.');
     } finally {
       setSubmittingReplyTicketId(null);
     }
@@ -247,7 +247,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
               <View style={styles.pillIconWrap}>
                 <MessageCircle size={20} color="#ffffff" strokeWidth={2.2} />
               </View>
-              <Text style={styles.pillLabel}>Ndihme?</Text>
+              <Text style={styles.pillLabel}>Ndihmë?</Text>
               {totalUnread > 0 ? (
                 <View style={styles.badgeRed}>
                   <Text style={styles.badgeRedText}>{totalUnread > 99 ? '99+' : totalUnread}</Text>
@@ -276,9 +276,9 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
               <Image source={BRANDING.assets.appLogo} style={styles.headerLogo} resizeMode="contain" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.title}>Suporti</Text>
-                <Text style={styles.subtitle}>Kerko ndihme nga stafi</Text>
+                <Text style={styles.subtitle}>Kërko ndihmë nga stafi</Text>
               </View>
-              <Image source={BRANDING.assets.municipalityLogo} style={styles.headerMunicipality} resizeMode="contain" />
+              <Image source={BRANDING.assets.municipalityLogoHorizontal} style={styles.headerMunicipality} resizeMode="contain" />
             </View>
 
             <View style={styles.tabs}>
@@ -315,13 +315,13 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
                     <View style={styles.successIconWrap}>
                       <CheckCircle2 size={42} color="#16a34a" strokeWidth={2.2} />
                     </View>
-                    <Text style={styles.successTitle}>Mesazhi u dergua</Text>
-                    <Text style={styles.successText}>Pergjigjet e stafit do t'i shohesh te skeda Mesazhet.</Text>
+                    <Text style={styles.successTitle}>Mesazhi u dërgua</Text>
+                    <Text style={styles.successText}>Përgjigjet e stafit do t'i shohësh te skeda Mesazhet.</Text>
                   </View>
                 ) : (
                   <>
                     <View style={styles.group}>
-                      <Text style={styles.groupLabel}>Lloji i kerkeses</Text>
+                      <Text style={styles.groupLabel}>Lloji i kërkesës</Text>
                       <View style={styles.categoryWrap}>
                         {categories.map(({ id, label, Icon }) => {
                           const active = activeCategory === id;
@@ -340,19 +340,19 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
                     </View>
                     <View style={styles.group}>
                       <Text style={styles.groupLabel}>Mesazhi</Text>
-                      <TextInput value={message} onChangeText={setMessage} placeholder="Pershkruaje me detaje problemin ose sugjerimin..." placeholderTextColor={Colors.textMuted} style={[styles.input, styles.textarea]} multiline textAlignVertical="top" />
+                      <TextInput value={message} onChangeText={setMessage} placeholder="Përshkruaje me detaje problemin ose sugjerimin..." placeholderTextColor={Colors.textMuted} style={[styles.input, styles.textarea]} multiline textAlignVertical="top" />
                     </View>
                     <TouchableOpacity onPress={handleAttachmentPress} activeOpacity={0.9} style={styles.attachmentBox}>
                       <View style={styles.attachmentIcon}>
                         {attachment ? <ImageIcon size={20} color="#003366" strokeWidth={2} /> : <ImagePlus size={20} color="#003366" strokeWidth={2} />}
                       </View>
                       <Text style={styles.attachmentTitle}>{attachment ? 'Foto e zgjedhur' : 'Shto foto'}</Text>
-                      <Text style={styles.attachmentHint}>{attachment ? attachment.name : 'Shto nje screenshot ose foto sqaruese.'}</Text>
+                      <Text style={styles.attachmentHint}>{attachment ? attachment.name : 'Shto një screenshot ose foto sqaruese.'}</Text>
                       {attachment ? <Image source={{ uri: attachment.uri }} style={styles.attachmentPreview} /> : null}
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleSubmit} activeOpacity={0.92} disabled={!activeCategory || isSubmitting} style={[styles.submitBtn, !activeCategory && styles.submitBtnDisabled]}>
                       <LinearGradient colors={!activeCategory ? ['#cbd5e1', '#cbd5e1'] : ['#e30613', '#c10410']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submitGradient}>
-                        {isSubmitting ? <ActivityIndicator color="#fff" size="small" /> : <><Send size={18} color="#fff" strokeWidth={2.1} /><Text style={styles.submitText}>Dergo Kerkesen</Text></>}
+                        {isSubmitting ? <ActivityIndicator color="#fff" size="small" /> : <><Send size={18} color="#fff" strokeWidth={2.1} /><Text style={styles.submitText}>Dërgo Kërkesën</Text></>}
                       </LinearGradient>
                     </TouchableOpacity>
                   </>
@@ -364,13 +364,13 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
                 </View>
               ) : supportTicketsError ? (
                 <View style={styles.stateWrap}>
-                  <Text style={styles.stateTitle}>Nuk u hapen mesazhet</Text>
+                  <Text style={styles.stateTitle}>Nuk u hapën mesazhet</Text>
                   <Text style={styles.stateText}>{supportTicketsError}</Text>
                 </View>
               ) : supportTickets.length === 0 ? (
                 <View style={styles.stateWrap}>
                   <Text style={styles.stateTitle}>Ende pa mesazhe</Text>
-                  <Text style={styles.stateText}>Kerkesat e suportit do t'i gjesh ketu sapo te dergosh nje te re.</Text>
+                  <Text style={styles.stateText}>Kërkesat e suportit do t'i gjesh këtu sapo të dërgosh një të re.</Text>
                 </View>
               ) : (
                 <View style={styles.historyWrap}>
@@ -408,9 +408,9 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
                               );
                             })}
                             <View style={styles.replyComposer}>
-                              <TextInput value={replyDrafts[ticket.id] || ''} onChangeText={(value) => setReplyDrafts((prev) => ({ ...prev, [ticket.id]: value }))} placeholder="Shkruaj nje pergjigje..." placeholderTextColor={Colors.textMuted} style={styles.replyInput} multiline textAlignVertical="top" />
+                              <TextInput value={replyDrafts[ticket.id] || ''} onChangeText={(value) => setReplyDrafts((prev) => ({ ...prev, [ticket.id]: value }))} placeholder="Shkruaj një përgjigje..." placeholderTextColor={Colors.textMuted} style={styles.replyInput} multiline textAlignVertical="top" />
                               <TouchableOpacity onPress={() => handleReply(ticket.id)} activeOpacity={0.9} disabled={submittingReplyTicketId === ticket.id || !(replyDrafts[ticket.id] || '').trim()} style={[styles.replyBtn, (submittingReplyTicketId === ticket.id || !(replyDrafts[ticket.id] || '').trim()) && styles.replyBtnDisabled]}>
-                                {submittingReplyTicketId === ticket.id ? <ActivityIndicator color="#fff" size="small" /> : <><Send size={15} color="#fff" strokeWidth={2} /><Text style={styles.replyBtnText}>Dergo</Text></>}
+                                {submittingReplyTicketId === ticket.id ? <ActivityIndicator color="#fff" size="small" /> : <><Send size={15} color="#fff" strokeWidth={2} /><Text style={styles.replyBtnText}>Dërgo</Text></>}
                               </TouchableOpacity>
                             </View>
                           </View>
@@ -493,8 +493,8 @@ const styles = StyleSheet.create({
   handle: { alignSelf: 'center', width: 48, height: 5, borderRadius: Radius.full, backgroundColor: '#cbd5e1', marginBottom: 18 },
   sheetClose: { position: 'absolute', top: 14, right: 18, width: 34, height: 34, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: Colors.borderLight, zIndex: 2 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16, paddingRight: 40 },
-  headerLogo: { width: 34, height: 34 },
-  headerMunicipality: { width: 24, height: 30 },
+  headerLogo: { width: 42, height: 42 },
+  headerMunicipality: { width: 112, height: 36 },
   title: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xxl, color: '#003366' },
   subtitle: { fontFamily: Typography.fontMedium, fontSize: Typography.sm, color: Colors.textSecondary, marginTop: 2 },
   tabs: { flexDirection: 'row', backgroundColor: '#f1f5f9', borderRadius: 16, padding: 4, marginBottom: 14 },

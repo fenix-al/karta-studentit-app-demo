@@ -146,24 +146,42 @@ async function authHeadersWithoutContentType(): Promise<Record<string, string>> 
 
 // Public fetch — no auth header (avoids JWT plugin rejecting valid public calls)
 async function publicFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${SK_API}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (!res.ok) {
-    let message = `HTTP ${res.status}`;
-    let code: string | undefined;
-    let details: any;
-    try {
-      const body = await res.json();
-      details = body;
-      message = friendlyApiMessage(res.status, body?.code, body?.message || message);
-      code = body?.code;
-    } catch (_) {
-      message = friendlyApiMessage(res.status, undefined, message);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+
+  try {
+    const res = await fetch(`${SK_API}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      let message = `HTTP ${res.status}`;
+      let code: string | undefined;
+      let details: any;
+      try {
+        const body = await res.json();
+        details = body;
+        message = friendlyApiMessage(res.status, body?.code, body?.message || message);
+        code = body?.code;
+      } catch (_) {
+        message = friendlyApiMessage(res.status, undefined, message);
+      }
+      throw new ApiError(message, res.status, code, details);
     }
-    throw new ApiError(message, res.status, code, details);
+
+    return res.json() as Promise<T>;
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new ApiError('Serveri vonoi shume. Provo perseri pas pak.', 408);
+    }
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError('Nuk u arrit lidhja me serverin.', 0, 'network_error', error);
+  } finally {
+    clearTimeout(timeout);
   }
-  return res.json() as Promise<T>;
 }
 
 async function apiFetch<T>(
@@ -502,6 +520,18 @@ export interface AppPromotionApiItem {
 
 export async function fetchAppPromotions(): Promise<{ items: AppPromotionApiItem[] }> {
   return publicFetch('/app-promotions');
+}
+
+export interface PrivacyPolicyApiResponse {
+  title: string;
+  intro: string;
+  content_html?: string;
+  content_text: string;
+  url?: string;
+}
+
+export async function fetchPrivacyPolicy(): Promise<PrivacyPolicyApiResponse> {
+  return publicFetch('/privacy-policy');
 }
 
 export async function fetchKurset(params?: { category?: string; search?: string }) {

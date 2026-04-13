@@ -98,15 +98,15 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
     try {
       if (selected.kind === 'raffle') {
         const res = await enterRaffle(selected.raffle.id);
-        Alert.alert('U krye', res.msg || 'U regjistruat ne short.');
+        Alert.alert('U krye', res.msg || 'U regjistruat në short.');
       } else {
         const res = await redeemLoyaltyReward(selected.business.business_post_id, selected.reward.uid);
-        Alert.alert('U krye', res.msg || 'Shperblimi u terhoq me sukses.');
+        Alert.alert('U krye', res.msg || 'Shpërblimi u tërhoq me sukses.');
       }
       setSelected(null);
       await refreshAll();
     } catch (err: any) {
-      Alert.alert('Gabim', err?.message ?? 'Veprimi nuk mund te kryhet per momentin.');
+      Alert.alert('Gabim', err?.message ?? 'Veprimi nuk mund të kryhet për momentin.');
     } finally {
       setSubmitting(false);
     }
@@ -120,7 +120,7 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
             <ChevronLeft size={20} color={Colors.textSecondary} strokeWidth={2.5} />
           </TouchableOpacity>
           <View>
-            <Text style={s.headerSub}>Pike Dhe Dhurata</Text>
+            <Text style={s.headerSub}>Pikë Dhe Dhurata</Text>
             <Text style={s.headerTitle}>Rewards</Text>
           </View>
         </View>
@@ -145,11 +145,11 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
                   <Filter size={14} color="#0ea5e9" strokeWidth={2.3} />
                   <Text style={s.heroTitle}>Filtro Dhuratat</Text>
                 </View>
-                <Text style={s.heroSub}>Zgjidh sa pike deshiron te shpenzosh</Text>
+                <Text style={s.heroSub}>Zgjidh sa pikë dëshiron të shpenzosh</Text>
               </View>
               <View style={s.maxBox}>
                 <Text style={s.maxBoxValue}>{maxPoints}</Text>
-                <Text style={s.maxBoxLabel}>Pike Max</Text>
+                <Text style={s.maxBoxLabel}>Pikë Max</Text>
               </View>
             </View>
             <View style={s.sliderWrap}>
@@ -171,7 +171,7 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
           </View>
         </View>
 
-        {error ? <SectionPad><MessageBox text={error} button="Provo perseri" onPress={refreshAll} /></SectionPad> : null}
+        {error ? <SectionPad><MessageBox text={error} button="Provo përsëri" onPress={refreshAll} /></SectionPad> : null}
         {loading ? <SectionPad><MessageBox text="Duke ngarkuar dhuratat..." loading /></SectionPad> : null}
 
         {!loading && !error ? (
@@ -190,15 +190,15 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
                     <View style={s.raffleCostChip}><Text style={s.raffleCost}>{formatPoints(raffle.points_cost)}</Text><Text style={s.raffleCoin}>🟡</Text></View>
                     <View style={[s.raffleActionPill, (!raffle.can_afford || raffle.has_entered) && s.raffleActionPillMuted]}>
                       <Text style={[s.raffleAction, (!raffle.can_afford || raffle.has_entered) && s.raffleActionMuted]}>
-                        {raffle.has_entered ? 'Ne short' : raffle.can_afford ? 'Merr pjese' : 'Pike te pamj.'}
+                        {raffle.has_entered ? 'Në short' : raffle.can_afford ? 'Merr pjesë' : 'Pikë të pamj.'}
                       </Text>
                     </View>
                   </View>
                 </TouchableOpacity>
-              )) : <View style={s.inlineEmpty}><FeatureEmpty kind="raffle" text="Nuk ka shorte aktive per momentin." actionLabel="Kthehu ne Home" onPress={onBack} /></View>}
+              )) : <View style={s.inlineEmpty}><FeatureEmpty kind="raffle" text="Nuk ka shorte aktive për momentin." actionLabel="Kthehu në Home" onPress={onBack} /></View>}
             </ScrollView>
 
-            <Section title="Terhiq Tani" meta={`${filteredClaimable.length} aktive`} />
+            <Section title="Tërhiq Tani" meta={`${filteredClaimable.length} aktive`} />
             <SectionPad>
               {filteredClaimable.length ? filteredClaimable.map(({ business, reward }) => (
                 <TouchableOpacity key={`${business.business_post_id}-${reward.uid}`} style={s.claimCard} activeOpacity={0.9} onPress={() => setSelected({ kind: 'reward', business, reward })}>
@@ -213,7 +213,7 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
                     <Text style={s.claimCostCoin}>🟡</Text>
                   </View>
                 </TouchableOpacity>
-              )) : <FeatureEmpty kind="reward" text="Nuk ka dhurata direkte per kete numer pikesh." />}
+              )) : <FeatureEmpty kind="reward" text="Nuk ka dhurata direkte për këtë numër pikësh." />}
             </SectionPad>
 
             {currentLiveSession ? (
@@ -229,7 +229,7 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
                           <Text style={s.liveBadgeText}>{currentLiveSession.status === 'live' ? 'LIVE TANI' : currentLiveSession.status === 'countdown' ? 'COUNTDOWN' : currentLiveSession.status.toUpperCase()}</Text>
                         </View>
                         <Text style={s.liveTitle}>{currentLiveSession.raffle_title}</Text>
-                        <Text style={s.liveDesc}>{currentLiveSession.raffle_excerpt || 'Hape shortin live, bashkohu dhe zgjidh kutine tende.'}</Text>
+                        <Text style={s.liveDesc}>{currentLiveSession.raffle_excerpt || 'Hape shortin live, bashkohu dhe zgjidh kutinë tënde.'}</Text>
                         <View style={s.liveFooter}>
                           <View style={s.liveRoundPill}>
                             <Text style={s.liveFooterText}>Raundi {currentLiveSession.current_round}</Text>
@@ -268,15 +268,15 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
                       <View style={s.track}><View style={[s.fill, { width: `${Math.max(8, reward.progress)}%` as any, backgroundColor: reward.redeemed ? '#10b981' : reward.unlocked ? '#10b981' : '#fbbf24' }]} /></View>
                       <View style={s.progressMetaRow}>
                         <Text style={s.progressMeta}>{business.scan_count}/{reward.threshold}</Text>
-                        <Text style={s.progressState}>{reward.redeemed ? 'E terhequr' : reward.unlocked ? 'Gati per terheqje' : `Mungojne ${Math.max(0, reward.threshold - business.scan_count)} skanime`}</Text>
+                        <Text style={s.progressState}>{reward.redeemed ? 'E tërhequr' : reward.unlocked ? 'Gati për tërheqje' : `Mungojnë ${Math.max(0, reward.threshold - business.scan_count)} skanime`}</Text>
                       </View>
                     </View>
                   ))}
                 </View>
-              )) : <Empty text="Nuk ka ende progres lojaliteti." actionLabel="Kthehu ne Home" onPress={onBack} />}
+              )) : <Empty text="Nuk ka ende progres lojaliteti." actionLabel="Kthehu në Home" onPress={onBack} />}
             </SectionPad>
 
-            <Section title="Levizjet e fundit" meta={`${transactions.length} te fundit`} />
+            <Section title="Lëvizjet e fundit" meta={`${transactions.length} të fundit`} />
             <SectionPad>
               {transactions.length ? transactions.map((tx, i) => (
                 <View key={`${tx.date}-${i}`} style={s.txRow}>
@@ -291,7 +291,7 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
                     {tx.type === 'earn' ? '+' : ''}{formatPoints(tx.points)}
                   </Text>
                 </View>
-              )) : <Empty text="Nuk ka ende levizje pikesh." actionLabel="Kthehu ne Home" onPress={onBack} />}
+              )) : <Empty text="Nuk ka ende lëvizje pikësh." actionLabel="Kthehu në Home" onPress={onBack} />}
             </SectionPad>
           </>
         ) : null}
@@ -336,7 +336,7 @@ function FeatureEmpty({
           ? <Ticket size={24} color="#4d7c0f" strokeWidth={2.1} />
           : <Gift size={24} color="#4d7c0f" strokeWidth={2.1} />}
       </View>
-      <Text style={s.emptyTitle}>{kind === 'raffle' ? 'Asnje short aktiv' : 'Asnje dhurate direkte'}</Text>
+      <Text style={s.emptyTitle}>{kind === 'raffle' ? 'Asnjë short aktiv' : 'Asnjë dhuratë direkte'}</Text>
       <Text style={s.emptyText}>{text}</Text>
       {actionLabel && onPress ? (
         <TouchableOpacity style={s.emptyAction} onPress={onPress} activeOpacity={0.85}>
@@ -365,7 +365,7 @@ function getRaffleBadge(raffle: RaffleApiItem) {
     return { label: 'I regjistruar', style: s.badgeDone };
   }
   if (!raffle.can_afford) {
-    return { label: 'Pike te pamj.', style: s.badgeMuted };
+    return { label: 'Pikë të pamj.', style: s.badgeMuted };
   }
   const end = raffle.end_date ? new Date(raffle.end_date) : null;
   if (!end || Number.isNaN(end.getTime())) {
@@ -377,7 +377,7 @@ function getRaffleBadge(raffle: RaffleApiItem) {
     return { label: 'Mbyllet sot', style: s.badgeUrgent };
   }
   if (diffDays <= 3) {
-    return { label: `Mbyllet ne ${diffDays} dite`, style: s.badgeSoon };
+    return { label: `Mbyllet në ${diffDays} ditë`, style: s.badgeSoon };
   }
   return { label: formatRaffleDate(raffle.end_date), style: s.badgeActive };
 }
@@ -391,8 +391,8 @@ function RewardsModal({ item, loading, onClose, onConfirm }: { item: ModalItem |
   const badgeLabel = item.kind === 'raffle' ? formatRaffleDate(raffle!.end_date) : item.business.business_name;
   const title = item.kind === 'raffle' ? raffle!.title : item.reward.title;
   const desc = item.kind === 'raffle'
-    ? (raffle!.excerpt || 'Merr pjese ne kete short duke shpenzuar pike.')
-    : `Ky shperblim mund te terhiqet tani nga ${item.business.business_name}.`;
+    ? (raffle!.excerpt || 'Merr pjesë në këtë short duke shpenzuar pikë.')
+    : `Ky shpërblim mund të tërhiqet tani nga ${item.business.business_name}.`;
   const cost = formatPoints(item.kind === 'raffle' ? raffle!.points_cost : item.reward.threshold);
   return (
     <Modal visible animationType="fade" transparent statusBarTranslucent>
@@ -425,10 +425,10 @@ function RewardsModal({ item, loading, onClose, onConfirm }: { item: ModalItem |
               {loading ? <ActivityIndicator size="small" color="#fff" /> : <Gift size={16} color="#fff" />}
               <Text style={m.btnText}>
                 {item.kind === 'raffle'
-                  ? (raffle!.has_entered ? 'Je regjistruar tashme' : raffle!.can_afford ? 'Konfirmo pjesemarrjen' : 'Nuk ke pike te mjaftueshme')
+                  ? (raffle!.has_entered ? 'Je regjistruar tashmë' : raffle!.can_afford ? 'Konfirmo pjesëmarrjen' : 'Nuk ke pikë të mjaftueshme')
                   : item.reward.redeemed
-                    ? 'Shperblimi eshte terhequr'
-                    : 'Konfirmo terheqjen'}
+                    ? 'Shpërblimi është tërhequr'
+                    : 'Konfirmo tërheqjen'}
               </Text>
             </TouchableOpacity>
           </View>

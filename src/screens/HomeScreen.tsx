@@ -27,6 +27,7 @@ import {
 } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius, Gradients } from '../constants/Theme';
+import { BRANDING } from '../constants/branding';
 import { useAuth } from '../context/AuthContext';
 import { CATEGORIES } from '../data/mockData';
 import { useFetch } from '../hooks/useFetch';
@@ -36,6 +37,7 @@ import { AppNotification, Business, CardItem, Category, CourseItem, JobItem } fr
 import StoryModal from '../components/StoryModal';
 import CardStoryModal from '../components/CardStoryModal';
 import FloatingChat from '../components/FloatingChat';
+import AppPrivacyBottomSheet from '../components/AppPrivacyBottomSheet';
 import OffersNavigator from './offers/OffersNavigator';
 import CoursesNavigator from './courses/CoursesNavigator';
 import OpportunitiesNavigator from './opportunities/OpportunitiesNavigator';
@@ -189,6 +191,7 @@ export default function HomeScreen() {
   const [isUserMenuOpen, setIsUserMenuOpen]       = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings]           = useState(false);
+  const [settingsInitialScreen, setSettingsInitialScreen] = useState<'settings' | 'privacy'>('settings');
   const [activeCarousel, setActiveCarousel] = useState<{ items: CardItem[]; initialIndex: number } | null>(null);
   const [activeStories, setActiveStories] = useState<Business[]>([]);
   const [storyVisible, setStoryVisible] = useState(false);
@@ -644,7 +647,13 @@ export default function HomeScreen() {
   if (showSettings) {
     return (
       <View style={styles.root}>
-        <SettingsScreen onBack={() => setShowSettings(false)} bottomInset={TAB_BAR_HEIGHT + insets.bottom} onLogout={onLogout} />
+        <SettingsScreen
+          onBack={() => setShowSettings(false)}
+          bottomInset={TAB_BAR_HEIGHT + insets.bottom}
+          onLogout={onLogout}
+          initialScreen={settingsInitialScreen}
+          onInitialScreenHandled={() => setSettingsInitialScreen('settings')}
+        />
       </View>
     );
   }
@@ -777,6 +786,16 @@ export default function HomeScreen() {
             </View>
           </View>
         ) : null}
+
+        <View style={styles.sectionPad}>
+          <View style={styles.municipalityCard}>
+            <Image source={BRANDING.assets.municipalityLogoHorizontal} style={styles.municipalityLogo} resizeMode="contain" />
+            <View style={styles.municipalityCopy}>
+              <Text style={styles.municipalityTitle}>Menaxhuar nga Bashkia Shkodër</Text>
+              <Text style={styles.municipalityText}>Platforma zyrtare e Kartës së Studentit.</Text>
+            </View>
+          </View>
+        </View>
 
         {/* ── SCoins Balance Card ──────────────────────────────────────── */}
         <View style={styles.sectionPad}>
@@ -1269,7 +1288,10 @@ export default function HomeScreen() {
         <ProfileScreen
           bottomInset={TAB_BAR_HEIGHT + tabBarBottom}
           onBack={() => exitTab('profil')}
-          onSettings={() => setShowSettings(true)}
+          onSettings={() => {
+            setSettingsInitialScreen('settings');
+            setShowSettings(true);
+          }}
           onOpenApplication={(jobId) => {
             setTabReturnTarget('mundesit', 'profil');
             openJobProfile(jobId);
@@ -1408,6 +1430,12 @@ export default function HomeScreen() {
         }}
       />
       <DigitalCardModal visible={cardVisible} onClose={() => setCardVisible(false)} />
+      <AppPrivacyBottomSheet
+        onOpenPolicy={() => {
+          setSettingsInitialScreen('privacy');
+          setShowSettings(true);
+        }}
+      />
 
       {/* ════════════════════════════════════════════════════════════════
           SUPER MENU — Avatar bottom sheet
@@ -1720,6 +1748,42 @@ const styles = StyleSheet.create({
   },
   sectionMb: {
     marginBottom: Spacing.xxxl,
+  },
+  municipalityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: '#dbe7f5',
+    borderRadius: 16,
+    paddingLeft: 6,
+    paddingRight: 14,
+    paddingVertical: 12,
+    marginTop: Spacing.xl,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  municipalityLogo: {
+    width: 142,
+    height: 40,
+  },
+  municipalityCopy: {
+    flex: 1,
+  },
+  municipalityTitle: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.sm,
+    color: '#003366',
+    marginBottom: 2,
+  },
+  municipalityText: {
+    fontFamily: Typography.fontMedium,
+    fontSize: 11,
+    color: Colors.textSecondary,
   },
 
   // ── SCoins card ──────────────────────────────────────────────────────────────

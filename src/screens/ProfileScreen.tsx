@@ -11,6 +11,7 @@ import {
   CheckCircle, Clock, Gift, MapPin,
 } from 'lucide-react-native';
 
+import { BRANDING } from '../constants/branding';
 import { Colors, Typography, Spacing, Radius } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
 import { useFetch } from '../hooks/useFetch';
@@ -66,8 +67,8 @@ type ActivityTab =
 type BadgeTone = 'green' | 'amber' | 'red' | 'slate' | 'sky';
 
 const TOPICS = [
-  { value: 'problem', label: 'Raporto nje problem/biznes' },
-  { value: 'ide',     label: 'Sugjero nje ide te re' },
+  { value: 'problem', label: 'Raporto një problem/biznes' },
+  { value: 'ide',     label: 'Sugjero një ide të re' },
   { value: 'tjeter',  label: 'Dicka tjeter' },
 ];
 
@@ -142,7 +143,7 @@ export default function ProfileScreen({
     error: loyaltyRedemptionsError,
   } = useFetch(() => fetchMyLoyaltyRedemptions());
 
-  const topicLabel = TOPICS.find((t) => t.value === topic)?.label ?? '-- Zgjidh Teme --';
+  const topicLabel = TOPICS.find((t) => t.value === topic)?.label ?? '-- Zgjidh Temë --';
 
   const supportTickets = useMemo(
     () => (supportTicketsData ?? []).map((item: SupportTicketApiItem) => ({
@@ -180,7 +181,7 @@ export default function ProfileScreen({
     () => (applicationsData ?? []).map((app) => ({
       id: app.job_id,
       title: app.title,
-      company: app.company || 'Organizate / Kompani',
+      company: app.company || 'Organizatë / Kompani',
       date: formatDate(app.date),
       status: mapApplicationStatusLabel(app.status),
       type: mapApplicationType(app.status),
@@ -203,7 +204,7 @@ export default function ProfileScreen({
     () => (coursesData ?? []).map((course: ProfileCourseApiItem) => ({
       id: course.course_id,
       title: course.title,
-      location: course.location || 'Shkoder',
+      location: course.location || 'Shkodër',
       date: formatDate(course.start_date || course.date),
       session: course.session,
       status: mapCourseStatusLabel(course.status),
@@ -231,7 +232,7 @@ export default function ProfileScreen({
       activityId: item.activity_id,
       title: item.title,
       date: formatDate(item.date),
-      status: item.status === 'attended' ? 'Pjesemarrese' : 'E regjistruar',
+      status: item.status === 'attended' ? 'Pjesëmarrëse' : 'E regjistruar',
       tone: (item.status === 'attended' ? 'green' : 'sky') as BadgeTone,
     })),
     [act4HistoryData],
@@ -267,7 +268,7 @@ export default function ProfileScreen({
 
   const handleSubmit = async () => {
     if (!topic || !suggestion.trim()) {
-      Alert.alert('Kujdes', 'Ju lutem plotesoni temen dhe mesazhin.');
+      Alert.alert('Kujdes', 'Ju lutem plotësoni temën dhe mesazhin.');
       return;
     }
 
@@ -279,13 +280,13 @@ export default function ProfileScreen({
         subject: selectedTopic?.label || 'Sugjerim',
         message: suggestion.trim(),
       });
-      Alert.alert('U krye', res.msg || 'Sugjerimi u dergua me sukses.');
+      Alert.alert('U krye', res.msg || 'Sugjerimi u dërgua me sukses.');
       setSuggestion('');
       setTopic('');
       reloadSupportTickets();
       setActiveTab('mesazhet');
     } catch (err: any) {
-      Alert.alert('Gabim', err?.message ?? 'Nuk mund te dergohet sugjerimi per momentin.');
+      Alert.alert('Gabim', err?.message ?? 'Nuk mund të dërgohet sugjerimi për momentin.');
     } finally {
       setIsSubmitting(false);
     }
@@ -294,7 +295,7 @@ export default function ProfileScreen({
   const handleSupportReply = async (ticketId: number) => {
     const message = (ticketReplies[ticketId] || '').trim();
     if (!message) {
-      Alert.alert('Kujdes', 'Shkruaj nje mesazh para se ta dergosh.');
+      Alert.alert('Kujdes', 'Shkruaj një mesazh para se ta dërgosh.');
       return;
     }
 
@@ -303,9 +304,9 @@ export default function ProfileScreen({
       const res = await replySupportTicket(ticketId, { message });
       setTicketReplies((prev) => ({ ...prev, [ticketId]: '' }));
       await reloadSupportTickets();
-      Alert.alert('U krye', res.msg || 'Mesazhi u dergua me sukses.');
+      Alert.alert('U krye', res.msg || 'Mesazhi u dërgua me sukses.');
     } catch (err: any) {
-      Alert.alert('Gabim', err?.message ?? 'Nuk mund te dergohet mesazhi per momentin.');
+      Alert.alert('Gabim', err?.message ?? 'Nuk mund të dërgohet mesazhi për momentin.');
     } finally {
       setSubmittingTicketId(null);
     }
@@ -355,6 +356,14 @@ export default function ProfileScreen({
         contentContainerStyle={{ paddingHorizontal: Spacing.xxl, paddingBottom: bottomInset + 32 }}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={s.municipalityCard}>
+          <Image source={BRANDING.assets.municipalityLogoHorizontal} style={s.municipalityLogo} resizeMode="contain" />
+          <View style={s.municipalityCopy}>
+            <Text style={s.municipalityTitle}>Menaxhuar nga Bashkia Shkodër</Text>
+            <Text style={s.municipalityText}>Platforma zyrtare e Kartës së Studentit.</Text>
+          </View>
+        </View>
+
         <LinearGradient
           colors={['#002855', '#001233']}
           start={{ x: 0, y: 0 }}
@@ -395,7 +404,7 @@ export default function ProfileScreen({
             <Text style={s.statBigAmber}>
               {scanCount}
             </Text>
-            <Text style={s.statHintAmber}>Skanime totale te kartes.</Text>
+            <Text style={s.statHintAmber}>Skanime totale të kartës.</Text>
           </View>
 
           <LinearGradient colors={['#ecfdf5', '#f0fdfa']} style={s.statEmerald}>
@@ -406,7 +415,7 @@ export default function ProfileScreen({
             <Text style={s.statBigEmerald}>
               {volunteerActivities}
             </Text>
-            <Text style={s.statHintEmerald}>Pjesemarrje ne aktivitete vullnetare.</Text>
+            <Text style={s.statHintEmerald}>Pjesëmarrje në aktivitete vullnetare.</Text>
           </LinearGradient>
         </View>
 
@@ -419,8 +428,8 @@ export default function ProfileScreen({
                 <MessageSquare size={20} color="#0ea5e9" strokeWidth={2} fill="#0ea5e9" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.voiceTitle}>ZÃ«ri Yt (Sugjerime)</Text>
-                <Text style={s.voiceSub}>DÃ«rgo njÃ« mesazh direkt pÃ«r stafin.</Text>
+                <Text style={s.voiceTitle}>Zëri Yt (Sugjerime)</Text>
+                <Text style={s.voiceSub}>Dërgo një mesazh direkt për stafin.</Text>
               </View>
             </View>
 
@@ -435,7 +444,7 @@ export default function ProfileScreen({
               style={s.textArea}
               value={suggestion}
               onChangeText={setSuggestion}
-              placeholder="Shkruaj sugjerimin tend ketu..."
+              placeholder="Shkruaj sugjerimin tënd këtu..."
               placeholderTextColor={Colors.textMuted}
               multiline
               numberOfLines={4}
@@ -448,7 +457,7 @@ export default function ProfileScreen({
               ) : (
                 <>
                   <Send size={14} color="#fff" strokeWidth={2} />
-                  <Text style={s.sendBtnText}>DÃ«rgo Sugjerimin</Text>
+                  <Text style={s.sendBtnText}>Dërgo Sugjerimin</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -471,7 +480,7 @@ export default function ProfileScreen({
             { key: 'startup' as ActivityTab, label: 'Startup Ideas', Icon: Rocket },
             { key: 'act4' as ActivityTab, label: 'ACT4', Icon: Heart },
             { key: 'raffles' as ActivityTab, label: 'Shortet', Icon: Gift },
-            { key: 'loyalty' as ActivityTab, label: 'Shperblimet', Icon: Award },
+            { key: 'loyalty' as ActivityTab, label: 'Shpërblimet', Icon: Award },
           ].map(({ key, label, Icon }) => (
             <TouchableOpacity
               key={key}
@@ -497,7 +506,7 @@ export default function ProfileScreen({
             loading={supportTicketsLoading}
             error={supportTicketsError}
             empty={supportTickets.length === 0}
-            emptyText="Nuk ka mesazhe supporti per momentin."
+            emptyText="Nuk ka mesazhe supporti për momentin."
           >
             {supportTickets.map((ticket) => (
               <View key={ticket.id} style={s.listCardColumn}>
@@ -565,7 +574,7 @@ export default function ProfileScreen({
                 {!ticket.hasStaffReply ? (
                   <View style={s.replyPending}>
                     <Clock size={13} color="#92400e" strokeWidth={2} />
-                    <Text style={s.replyPendingText}>Ne pritje te pergjigjes se stafit.</Text>
+                    <Text style={s.replyPendingText}>Në pritje të përgjigjes së stafit.</Text>
                   </View>
                 ) : null}
 
@@ -574,7 +583,7 @@ export default function ProfileScreen({
                     style={s.replyInput}
                     value={ticketReplies[ticket.id] || ''}
                     onChangeText={(value) => setTicketReplies((prev) => ({ ...prev, [ticket.id]: value }))}
-                    placeholder="Shkruaj nje pergjigje..."
+                    placeholder="Shkruaj një përgjigje..."
                     placeholderTextColor={Colors.textMuted}
                     multiline
                     textAlignVertical="top"
@@ -593,7 +602,7 @@ export default function ProfileScreen({
                     ) : (
                       <>
                         <Send size={14} color="#fff" strokeWidth={2} />
-                        <Text style={s.replySendText}>Dergo</Text>
+                        <Text style={s.replySendText}>Dërgo</Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -608,7 +617,7 @@ export default function ProfileScreen({
             loading={applicationsLoading}
             error={applicationsError}
             empty={applications.length === 0}
-            emptyText="Nuk ka aplikime te ruajtura per momentin."
+            emptyText="Nuk ka aplikime të ruajtura për momentin."
           >
             {applications.map((app) => (
               <TouchableOpacity
@@ -656,7 +665,7 @@ export default function ProfileScreen({
             loading={coursesLoading}
             error={coursesError}
             empty={courses.length === 0}
-            emptyText="Nuk ka kurse te regjistruara per momentin."
+            emptyText="Nuk ka kurse të regjistruara për momentin."
           >
             {courses.map((c) => (
               <TouchableOpacity
@@ -691,7 +700,7 @@ export default function ProfileScreen({
             loading={historyLoading}
             error={historyError}
             empty={history.length === 0}
-            emptyText="Nuk ka histori skanimesh per momentin."
+            emptyText="Nuk ka histori skanimesh për momentin."
           >
             {history.map((h) => (
               <View key={h.id} style={[s.listCard, { gap: Spacing.lg }]}>
@@ -713,7 +722,7 @@ export default function ProfileScreen({
             loading={startupIdeasLoading}
             error={startupIdeasError}
             empty={startupIdeas.length === 0}
-            emptyText="Nuk ka ide startup te ruajtura per momentin."
+            emptyText="Nuk ka ide startup të ruajtura për momentin."
             emptyActionLabel="Shko te Startup"
             onEmptyAction={onOpenStartupIdea}
           >
@@ -746,8 +755,8 @@ export default function ProfileScreen({
             loading={act4HistoryLoading}
             error={act4HistoryError}
             empty={act4History.length === 0}
-            emptyText="Nuk ka histori ACT4 per momentin."
-            emptyActionLabel="Kthehu ne Home"
+            emptyText="Nuk ka histori ACT4 për momentin."
+            emptyActionLabel="Kthehu në Home"
             onEmptyAction={onBack}
           >
             {act4History.map((item) => (
@@ -775,8 +784,8 @@ export default function ProfileScreen({
             loading={rafflesLoading}
             error={rafflesError}
             empty={raffleEntries.length === 0}
-            emptyText="Nuk ka pjesemarrje ne shorte per momentin."
-            emptyActionLabel="Kthehu ne Home"
+            emptyText="Nuk ka pjesëmarrje në shorte për momentin."
+            emptyActionLabel="Kthehu në Home"
             onEmptyAction={onBack}
           >
             {raffleEntries.map((entry) => (
@@ -791,7 +800,7 @@ export default function ProfileScreen({
                   <Text style={s.listTitle}>{entry.title}</Text>
                   <View style={s.listMeta}>
                     <Gift size={10} color={Colors.textMuted} strokeWidth={2} />
-                    <Text style={s.listMetaText}>{entry.cost} pike</Text>
+                    <Text style={s.listMetaText}>{entry.cost} pikë</Text>
                     <Clock size={10} color={Colors.textMuted} strokeWidth={2} />
                     <Text style={s.listMetaText}>{entry.date}</Text>
                   </View>
@@ -809,8 +818,8 @@ export default function ProfileScreen({
             loading={loyaltyRedemptionsLoading}
             error={loyaltyRedemptionsError}
             empty={loyaltyRedemptions.length === 0}
-            emptyText="Nuk ka terheqje shperblimesh loyalty per momentin."
-            emptyActionLabel="Kthehu ne Home"
+            emptyText="Nuk ka tërheqje shpërblimesh loyalty për momentin."
+            emptyActionLabel="Kthehu në Home"
             onEmptyAction={onBack}
           >
             {loyaltyRedemptions.map((item) => (
@@ -827,7 +836,7 @@ export default function ProfileScreen({
                     <Text style={s.listSubText}>{item.business}</Text>
                   </View>
                   <View style={[s.badge, s.badgeGreen]}>
-                    <Text style={[s.badgeText, { color: '#059669' }]}>Terhequr</Text>
+                    <Text style={[s.badgeText, { color: '#059669' }]}>Tërhequr</Text>
                   </View>
                 </View>
                 <Text style={s.histDateInline}>{item.date}</Text>
@@ -840,7 +849,7 @@ export default function ProfileScreen({
       <Modal visible={topicOpen} transparent animationType="fade" statusBarTranslucent>
         <TouchableOpacity style={s.pickerOverlay} activeOpacity={1} onPress={() => setTopicOpen(false)}>
           <View style={s.pickerSheet}>
-            <Text style={s.pickerSheetTitle}>Zgjidh Temen</Text>
+            <Text style={s.pickerSheetTitle}>Zgjidh Temën</Text>
             {TOPICS.map((t) => (
               <TouchableOpacity
                 key={t.value}
@@ -890,7 +899,7 @@ function TabState({
     return (
       <ScreenState
         icon="error"
-        title="Gabim ne ngarkim"
+        title="Gabim në ngarkim"
         message={error}
         compact
       />
@@ -923,7 +932,7 @@ function mapApplicationStatusLabel(status: string): string {
   const type = mapApplicationType(status);
   if (type === 'accepted') return 'Pranuar';
   if (type === 'rejected') return 'Refuzuar';
-  return 'Ne pritje';
+  return 'Në pritje';
 }
 
 function mapCourseType(status: string): 'done' | 'active' {
@@ -933,8 +942,8 @@ function mapCourseType(status: string): 'done' | 'active' {
 
 function mapCourseStatusLabel(status: string): string {
   const normalized = status.trim().toLowerCase();
-  if (normalized === 'completed') return 'Perfunduar';
-  if (normalized === 'active') return 'Ne zhvillim';
+  if (normalized === 'completed') return 'Përfunduar';
+  if (normalized === 'active') return 'Në zhvillim';
   return 'E regjistruar';
 }
 
@@ -950,7 +959,7 @@ function mapStartupStatusLabel(status: string): string {
   if (['kontaktuar', 'contacted'].includes(normalized)) return 'Kontaktuar';
   if (['approved', 'accepted'].includes(normalized)) return 'Pranuar';
   if (['rejected', 'refused', 'declined'].includes(normalized)) return 'Refuzuar';
-  return 'Ne pritje';
+  return 'Në pritje';
 }
 
 function badgeToneStyle(tone: BadgeTone) {
@@ -981,6 +990,42 @@ function formatDate(value: string): string {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.surfaceBg },
   scroll: { flex: 1 },
+  municipalityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: '#dbe7f5',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: Spacing.xl,
+    marginBottom: 14,
+    shadowColor: '#0f172a',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  municipalityLogo: {
+    width: 142,
+    height: 40,
+  },
+  municipalityCopy: {
+    flex: 1,
+  },
+  municipalityTitle: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.sm,
+    color: '#003366',
+    marginBottom: 2,
+  },
+  municipalityText: {
+    fontFamily: Typography.fontMedium,
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.lg,
@@ -1002,7 +1047,7 @@ const s = StyleSheet.create({
   headerTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xl, color: Colors.textPrimary },
   idCard: {
     borderRadius: Radius.xxl + 4, padding: Spacing.xxl, overflow: 'hidden',
-    marginTop: Spacing.xxl, marginBottom: Spacing.lg,
+    marginBottom: Spacing.lg,
     shadowColor: '#002855', shadowOpacity: 0.25, shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 }, elevation: 8,
   },
