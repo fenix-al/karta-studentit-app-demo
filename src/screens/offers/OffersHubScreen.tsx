@@ -13,6 +13,7 @@ import { Business } from '../../types';
 import { fetchOffers, fetchBusinessCategories, recommendBusiness, fetchAppPromotions, AppPromotionApiItem } from '../../services/api';
 import { apiBizToBusiness } from '../../services/mappers';
 import ScreenState from '../../components/ScreenState';
+import { allowedAppOriginWhitelist, escapeHtmlAttribute, sanitizeAllowedAppUrl } from '../../utils/urlSecurity';
 
 interface Props {
   onBack:      () => void;
@@ -501,9 +502,11 @@ function PromoBannerCard({
   isActive: boolean;
   onPress: () => void;
 }) {
-  const hasVideo = item.media_type === 'video' && !!item.video_url;
+  const safeVideoUrl = item.media_type === 'video' ? sanitizeAllowedAppUrl(item.video_url) : null;
+  const safePosterUrl = sanitizeAllowedAppUrl(item.poster_url);
+  const hasVideo = !!safeVideoUrl;
   const mediaHtml = hasVideo
-    ? `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"></head><body style="margin:0;background:#0f172a;overflow:hidden;"><video src="${item.video_url}" poster="${item.poster_url ?? ''}" autoplay muted loop playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;background:#0f172a;"></video></body></html>`
+    ? `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"></head><body style="margin:0;background:#0f172a;overflow:hidden;"><video src="${escapeHtmlAttribute(safeVideoUrl)}" poster="${escapeHtmlAttribute(safePosterUrl ?? '')}" autoplay muted loop playsinline webkit-playsinline style="width:100%;height:100%;object-fit:cover;background:#0f172a;"></video></body></html>`
     : '';
 
   return (
@@ -516,6 +519,11 @@ function PromoBannerCard({
           scrollEnabled={false}
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
+          originWhitelist={allowedAppOriginWhitelist()}
+          onShouldStartLoadWithRequest={(request) => {
+            if (request.url === 'about:blank') return true;
+            return !!sanitizeAllowedAppUrl(request.url);
+          }}
         />
       ) : (
         <Image

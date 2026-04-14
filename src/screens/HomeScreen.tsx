@@ -32,6 +32,7 @@ import { useAuth } from '../context/AuthContext';
 import { CATEGORIES } from '../data/mockData';
 import { useFetch } from '../hooks/useFetch';
 import { fetchOffers, fetchKurset, fetchJobs, fetchStartups, fetchAct4, fetchKvr, recommendBusiness, fetchLiveRaffleLaunchUrl } from '../services/api';
+import { subscribeToPushNotificationRoutes, syncPushTokenIfEnabled } from '../services/pushNotifications';
 import { apiBizToBusiness, kursToCard, opportunityToCard, startupToCard, act4ToCard, kvrToCard } from '../services/mappers';
 import { AppNotification, Business, CardItem, Category, CourseItem, JobItem } from '../types';
 import StoryModal from '../components/StoryModal';
@@ -129,6 +130,7 @@ export default function HomeScreen() {
   const { onLogout, card } = useAuth();
   const homeSearchInputRef = useRef<TextInput | null>(null);
   const homeSearchAnim = useRef(new Animated.Value(0)).current;
+  const handleOpenNotificationRef = useRef<((notification: AppNotification) => void) | null>(null);
 
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locLoading, setLocLoading] = useState(false);
@@ -472,6 +474,47 @@ export default function HomeScreen() {
         return;
     }
   };
+
+  handleOpenNotificationRef.current = handleOpenNotification;
+
+  useEffect(() => {
+    if (!card?.id) return;
+
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+
+    syncPushTokenIfEnabled().catch(() => {});
+
+    subscribeToPushNotificationRoutes((route) => {
+      if (!active) return;
+      handleOpenNotificationRef.current?.({
+        id: `push-${Date.now()}`,
+        type: route.type as AppNotification['type'],
+        postId: route.postId,
+        title: route.title,
+        message: route.message,
+        time: 'Tani',
+        isRead: true,
+        iconName: 'Bell',
+        iconColor: Colors.textPrimary,
+        iconBg: Colors.surfaceBg,
+        iconBorder: Colors.borderLight,
+      });
+    })
+      .then((cleanup) => {
+        if (active) {
+          unsubscribe = cleanup;
+        } else {
+          cleanup();
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, [card?.id]);
 
   const homeSearchResults = useMemo(() => {
     const query = homeSearch.trim().toLowerCase();

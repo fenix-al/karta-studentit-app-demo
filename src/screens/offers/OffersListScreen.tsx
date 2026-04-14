@@ -1,16 +1,17 @@
-﻿import React, { useState, useMemo } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  Image, TextInput, ActivityIndicator, StyleSheet, Alert,
+  Image, TextInput, StyleSheet, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Search, Heart, ArrowDownUp } from 'lucide-react-native';
+import { ChevronLeft, Search, Heart, ArrowDownUp, X } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchOffers, recommendBusiness } from '../../services/api';
 import { apiBizToBusiness } from '../../services/mappers';
+import ListSkeleton from '../../components/ListSkeleton';
 
 interface Props {
   title:       string;
@@ -23,6 +24,9 @@ interface Props {
 export default function OffersListScreen({ title, catSlug, onBack, onProfile, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [sortByDiscount, setSortByDiscount] = useState(false);
+  const searchInputRef = useRef<TextInput | null>(null);
   const [voteOverrides, setVoteOverrides] = useState<Record<string, { votes: number; recommended: boolean }>>({});
 
   const { data, loading } = useFetch(
@@ -47,8 +51,23 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
                  b.discount.toLowerCase().includes(q);
         })
       : allBiz;
-    return [...list].sort((a, b) => (b.votes ?? 0) - (a.votes ?? 0));
-  }, [allBiz, search]);
+    return [...list].sort((a, b) => {
+      if (sortByDiscount) {
+        const discountA = Number(a.discount.match(/\d+/)?.[0] ?? 0);
+        const discountB = Number(b.discount.match(/\d+/)?.[0] ?? 0);
+        return discountB - discountA;
+      }
+      return (b.votes ?? 0) - (a.votes ?? 0);
+    });
+  }, [allBiz, search, sortByDiscount]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      const timer = setTimeout(() => searchInputRef.current?.focus(), 120);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [searchOpen]);
 
   async function handleToggleRecommend(biz: Business) {
     const current = voteOverrides[biz.id] ?? {
@@ -90,11 +109,37 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
             <ChevronLeft size={20} color={Colors.textPrimary} strokeWidth={2.5} />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.headerIconBtn}
+              onPress={() => {
+                if (searchOpen && search.trim()) {
+                  setSearch('');
+                }
+                setSearchOpen((prev) => !prev);
+              }}
+              activeOpacity={0.85}
+            >
+              {searchOpen ? (
+                <X size={18} color={Colors.textPrimary} strokeWidth={2.2} />
+              ) : (
+                <Search size={18} color={Colors.textPrimary} strokeWidth={2.2} />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.headerIconBtn, sortByDiscount && styles.headerIconBtnActive]}
+              onPress={() => setSortByDiscount((prev) => !prev)}
+              activeOpacity={0.85}
+            >
+              <ArrowDownUp size={18} color={sortByDiscount ? '#0284c7' : Colors.textPrimary} strokeWidth={2} />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.searchRow}>
+        {searchOpen && (
           <View style={styles.searchBar}>
             <Search size={14} color={Colors.textMuted} strokeWidth={2} />
             <TextInput
+              ref={searchInputRef}
               style={styles.searchInput}
               placeholder="Kërko në listë..."
               placeholderTextColor={Colors.textMuted}
@@ -104,18 +149,12 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
               autoCapitalize="none"
             />
           </View>
-          <TouchableOpacity style={styles.sortBtn}>
-            <ArrowDownUp size={18} color={Colors.textPrimary} strokeWidth={2} />
-          </TouchableOpacity>
-        </View>
+        )}
       </View>
 
       {/* Loading */}
       {loading && (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={Colors.textMuted} />
-          <Text style={styles.loadingText}>Duke ngarkuar bizneset...</Text>
-        </View>
+        <ListSkeleton count={4} />
       )}
 
       {/* Vertical feed */}
@@ -206,7 +245,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 }, elevation: 3, zIndex: 20,
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.lg },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.sm },
   backBtn: {
     width: 40, height: 40, borderRadius: 20, flexShrink: 0,
     backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.border,
@@ -216,21 +255,22 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontExtraBold, fontSize: Typography.xxl,
     color: Colors.textPrimary, flex: 1,
   },
-  searchRow: { flexDirection: 'row', gap: 12 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  headerIconBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.border,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  headerIconBtnActive: { backgroundColor: '#e0f2fe', borderColor: '#bae6fd' },
   searchBar: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: Colors.surfaceBg, borderRadius: Radius.xl,
-    paddingHorizontal: Spacing.lg, paddingVertical: 12,
+    paddingHorizontal: Spacing.lg, paddingVertical: 14,
     borderWidth: 1, borderColor: Colors.border,
   },
   searchInput: {
     flex: 1, fontFamily: Typography.fontMedium,
     fontSize: Typography.base, color: Colors.textPrimary,
-  },
-  sortBtn: {
-    width: 52, borderRadius: Radius.xl,
-    backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.border,
-    justifyContent: 'center', alignItems: 'center',
   },
 
   // Cards

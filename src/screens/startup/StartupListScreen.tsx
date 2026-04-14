@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View, Text, FlatList, TouchableOpacity, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Search } from 'lucide-react-native';
@@ -11,6 +11,7 @@ import { useFetch } from '../../hooks/useFetch';
 import { fetchStartups } from '../../services/api';
 import { StartupCard } from './StartupHubScreen';
 import ScreenState from '../../components/ScreenState';
+import ListSkeleton from '../../components/ListSkeleton';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800';
 
@@ -66,21 +67,19 @@ export default function StartupListScreen({ title, initialType, onBack, onProfil
         </View>
         <View style={styles.searchBar}>
           <Search size={15} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.searchPlaceholder}>Kerko ne liste...</Text>
+          <Text style={styles.searchPlaceholder}>Kërko në listë...</Text>
         </View>
       </View>
 
       {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#10b981" />
-        </View>
+        <ListSkeleton count={4} />
       ) : error ? (
         <View style={styles.centered}>
           <ScreenState
             icon="error"
-            title="Gabim ne ngarkim"
+            title="Gabim në ngarkim"
             message="Lista nuk u ngarkua dot."
-            actionLabel="Provo perseri"
+            actionLabel="Provo përsëri"
             onAction={reload}
           />
         </View>
@@ -88,8 +87,8 @@ export default function StartupListScreen({ title, initialType, onBack, onProfil
         <View style={styles.centered}>
           <ScreenState
             icon="startup"
-            title="Nuk ka startup te publikuara"
-            message="Kur te shtohen postime te reja, ato do te shfaqen ketu."
+            title="Nuk ka startup të publikuara"
+            message="Kur të shtohen postime të reja, ato do të shfaqen këtu."
             actionLabel="Kthehu ne Home"
             onAction={onBack}
           />

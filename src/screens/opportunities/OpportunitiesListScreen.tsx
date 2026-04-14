@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Search } from 'lucide-react-native';
@@ -11,6 +11,7 @@ import { useFetch } from '../../hooks/useFetch';
 import { fetchJobCategories, fetchJobs } from '../../services/api';
 import { apiToJobItem, JobCard } from './OpportunitiesHubScreen';
 import ScreenState from '../../components/ScreenState';
+import ListSkeleton from '../../components/ListSkeleton';
 
 interface Props {
   title:       string;
@@ -32,7 +33,7 @@ export default function OpportunitiesListScreen({ title, typeSlug, onBack, onPro
 
   const categories = useMemo<JobCategory[]>(() => {
     const live = (catData ?? []).map((c) => ({ id: c.slug, name: c.name, icon: '•' }));
-    return [{ id: 'all', name: 'Te gjitha', icon: '•' }, ...live];
+    return [{ id: 'all', name: 'Të gjitha', icon: '•' }, ...live];
   }, [catData]);
 
   return (
@@ -46,7 +47,7 @@ export default function OpportunitiesListScreen({ title, typeSlug, onBack, onPro
         </View>
         <View style={styles.searchBar}>
           <Search size={15} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.searchPlaceholder}>Kerko ne liste...</Text>
+          <Text style={styles.searchPlaceholder}>Kërko në listë...</Text>
         </View>
       </View>
 
@@ -67,14 +68,14 @@ export default function OpportunitiesListScreen({ title, typeSlug, onBack, onPro
       </View>
 
       {loading ? (
-        <View style={styles.centered}><ActivityIndicator size="large" color="#e30613" /></View>
+        <ListSkeleton count={4} />
       ) : error ? (
         <View style={styles.centered}>
           <ScreenState
             icon="error"
-            title="Gabim ne ngarkim"
+            title="Gabim në ngarkim"
             message={typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
-            actionLabel="Provo perseri"
+            actionLabel="Provo përsëri"
             onAction={reload}
           />
         </View>
@@ -82,8 +83,8 @@ export default function OpportunitiesListScreen({ title, typeSlug, onBack, onPro
         <View style={styles.centered}>
           <ScreenState
             icon="briefcase"
-            title="Nuk ka mundesi"
-            message="Nuk ka pozicione te publikuara ne kete kategori."
+            title="Nuk ka mundësi"
+            message="Nuk ka pozicione të publikuara në këtë kategori."
             actionLabel="Kthehu ne Home"
             onAction={onBack}
           />

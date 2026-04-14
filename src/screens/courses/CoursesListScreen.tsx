@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Search } from 'lucide-react-native';
 
@@ -9,6 +9,7 @@ import { useFetch } from '../../hooks/useFetch';
 import { fetchKursCategories, fetchKurset } from '../../services/api';
 import { CourseCard } from './CoursesHubScreen';
 import ScreenState from '../../components/ScreenState';
+import ListSkeleton from '../../components/ListSkeleton';
 
 const mapCourse = (k: any): CourseItem => ({
   id: String(k.id),
@@ -18,9 +19,9 @@ const mapCourse = (k: any): CourseItem => ({
   categorySlugs: k.category_slugs ?? [],
   badgeColor: '#0891b2',
   date: k.start_date ?? '',
-  location: k.location ?? 'Shkoder',
+  location: k.location ?? 'Shkodër',
   duration: k.duration ?? '—',
-  cert: k.certification_text ?? 'Po, pas perfundimit',
+  cert: k.certification_text ?? 'Po, pas përfundimit',
   seats: typeof k.free_spots === 'number' && k.total_spots ? `${k.free_spots} / ${k.total_spots} vende` : (k.total_spots ? `${k.total_spots} vende` : ''),
   totalSpots: k.total_spots ?? 0,
   freeSpots: typeof k.free_spots === 'number' ? k.free_spots : null,
@@ -47,7 +48,7 @@ export default function CoursesListScreen({ title, categorySlug, onBack, onProfi
   const courses: CourseItem[] = (data?.items ?? []).map(mapCourse);
   const categories = useMemo<CourseCategory[]>(() => {
     const live = (catData ?? []).map((c) => ({ id: c.slug, name: c.name, icon: '•' }));
-    return [{ id: 'all', name: 'Te gjitha', icon: '•' }, ...live];
+    return [{ id: 'all', name: 'Të gjitha', icon: '•' }, ...live];
   }, [catData]);
 
   return (
@@ -61,7 +62,7 @@ export default function CoursesListScreen({ title, categorySlug, onBack, onProfi
         </View>
         <View style={styles.searchBar}>
           <Search size={15} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.searchPlaceholder}>Liste reale e kurseve</Text>
+          <Text style={styles.searchPlaceholder}>Listë reale e kurseve</Text>
         </View>
       </View>
 
@@ -82,14 +83,14 @@ export default function CoursesListScreen({ title, categorySlug, onBack, onProfi
       </View>
 
       {loading ? (
-        <View style={styles.centered}><ActivityIndicator size="large" color="#e30613" /></View>
+        <ListSkeleton count={4} />
       ) : error ? (
         <View style={styles.centered}>
           <ScreenState
             icon="error"
-            title="Gabim ne ngarkim"
+            title="Gabim në ngarkim"
             message={error}
-            actionLabel="Provo perseri"
+            actionLabel="Provo përsëri"
             onAction={reload}
           />
         </View>
@@ -98,7 +99,7 @@ export default function CoursesListScreen({ title, categorySlug, onBack, onProfi
           <ScreenState
             icon="empty"
             title="Nuk ka kurse"
-            message="Nuk ka kurse te publikuara ne kete kategori."
+            message="Nuk ka kurse të publikuara në këtë kategori."
             actionLabel="Kthehu ne Home"
             onAction={onBack}
           />

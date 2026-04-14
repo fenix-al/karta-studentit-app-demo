@@ -189,31 +189,47 @@ async function apiFetch<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const headers = await authHeaders();
-  const res = await fetch(`${SK_API}${path}`, {
-    ...options,
-    headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
 
-  if (!res.ok) {
-    let message = `HTTP ${res.status}`;
-    let code: string | undefined;
-    let details: any;
-    try {
-      const body = await res.json();
-      details = body;
-      message = friendlyApiMessage(res.status, body?.code, body?.message || message);
-      code = body?.code;
-    } catch (_) {}
+  try {
+    const res = await fetch(`${SK_API}${path}`, {
+      ...options,
+      headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
+      signal: controller.signal,
+    });
 
-    if (isAuthStatus(res.status) || isJwtErrorCode(code)) {
-      await removeToken();
-      emitAuthError('Sesioni juaj ka skaduar. Ju lutem hyni perseri.');
+    if (!res.ok) {
+      let message = `HTTP ${res.status}`;
+      let code: string | undefined;
+      let details: any;
+      try {
+        const body = await res.json();
+        details = body;
+        message = friendlyApiMessage(res.status, body?.code, body?.message || message);
+        code = body?.code;
+      } catch (_) {}
+
+      if (isAuthStatus(res.status) || isJwtErrorCode(code)) {
+        await removeToken();
+        emitAuthError('Sesioni juaj ka skaduar. Ju lutem hyni perseri.');
+      }
+
+      throw new ApiError(message, res.status, code, details);
     }
 
-    throw new ApiError(message, res.status, code, details);
+    return res.json() as Promise<T>;
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new ApiError('Serveri vonoi shume. Provo perseri pas pak.', 408);
+    }
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError('Nuk u arrit lidhja me serverin.', 0, 'network_error', error);
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return res.json() as Promise<T>;
 }
 
 async function apiUpload<T>(path: string, body: FormData): Promise<T> {
@@ -257,7 +273,6 @@ export interface LoginResponse {
 
 export interface RememberedLogin {
   username: string;
-  password: string;
   email?: string | null;
   displayName?: string | null;
 }
@@ -303,13 +318,15 @@ export async function getRememberedLogin(): Promise<RememberedLogin | null> {
 
   try {
     const parsed = JSON.parse(raw) as Partial<RememberedLogin>;
-    if (!parsed.username || !parsed.password) return null;
-    return {
+    if (!parsed.username) return null;
+
+    const remembered = {
       username: parsed.username,
-      password: parsed.password,
       email: parsed.email ?? null,
       displayName: parsed.displayName ?? null,
     };
+    await storeSecureValue(REMEMBERED_LOGIN_KEY, JSON.stringify(remembered));
+    return remembered;
   } catch (_) {
     return null;
   }
@@ -673,8 +690,21 @@ export async function fetchMyLoyaltyRedemptions(): Promise<ProfileLoyaltyRedempt
   return apiFetch<ProfileLoyaltyRedemptionApiItem[]>('/me/loyalty-redemptions');
 }
 
-export async function fetchMyNotifications(): Promise<{ items: NotificationApiItem[]; unread_count: number }> {
-  return apiFetch<{ items: NotificationApiItem[]; unread_count: number }>('/me/notifications');
+export interface NotificationsResponse {
+  items: NotificationApiItem[];
+  unread_count: number;
+  page: number;
+  per_page: number;
+  total: number;
+  total_pages: number;
+}
+
+export async function fetchMyNotifications(params?: { page?: number; perPage?: number }): Promise<NotificationsResponse> {
+  const query = new URLSearchParams();
+  if (params?.page) query.set('page', String(params.page));
+  if (params?.perPage) query.set('per_page', String(params.perPage));
+
+  return apiFetch<NotificationsResponse>(`/me/notifications${query.toString() ? `?${query.toString()}` : ''}`);
 }
 
 export async function markNotificationRead(notificationId: number): Promise<{ success: boolean }> {

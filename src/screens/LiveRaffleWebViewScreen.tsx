@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, ExternalLink, RefreshCw } from 'lucide-react-native';
 import { Colors, Spacing, Typography, Radius } from '../constants/Theme';
+import { allowedAppOriginWhitelist, sanitizeAllowedAppUrl } from '../utils/urlSecurity';
 
 // react-native-webview is an optional peer dependency.
 // Install with: npx expo install react-native-webview
@@ -33,6 +34,7 @@ export default function LiveRaffleWebViewScreen({ url, title = 'Live Raffle', on
   const webViewRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const safeUrl = sanitizeAllowedAppUrl(url);
 
   const header = (
     <View style={[s.header, { paddingTop: insets.top + 8 }]}>
@@ -44,7 +46,7 @@ export default function LiveRaffleWebViewScreen({ url, title = 'Live Raffle', on
         style={s.iconBtn}
         onPress={() => {
           if (WebView) { setError(false); webViewRef.current?.reload(); }
-          else Linking.openURL(url);
+          else if (safeUrl) Linking.openURL(safeUrl);
         }}
         activeOpacity={0.8}
       >
@@ -56,6 +58,18 @@ export default function LiveRaffleWebViewScreen({ url, title = 'Live Raffle', on
   );
 
   // ── Fallback: no WebView package — open in system browser ─────────────────
+  if (!safeUrl) {
+    return (
+      <View style={s.root}>
+        {header}
+        <View style={s.errorWrap}>
+          <Text style={s.errorTitle}>Link i pavlefshem</Text>
+          <Text style={s.errorSub}>Ky link nuk eshte nga domain-i zyrtar i aplikacionit.</Text>
+        </View>
+      </View>
+    );
+  }
+
   if (!WebView) {
     return (
       <View style={s.root}>
@@ -66,7 +80,7 @@ export default function LiveRaffleWebViewScreen({ url, title = 'Live Raffle', on
             Ky version i app-it hap lojën live në browserin e telefonit.{'\n'}
             Linku i lojtarit është unik dhe i dërguar nga admini.
           </Text>
-          <TouchableOpacity style={s.retryBtn} onPress={() => Linking.openURL(url)} activeOpacity={0.85}>
+          <TouchableOpacity style={s.retryBtn} onPress={() => Linking.openURL(safeUrl)} activeOpacity={0.85}>
             <Text style={s.retryBtnText}>Hap në browser</Text>
           </TouchableOpacity>
         </View>
@@ -91,7 +105,7 @@ export default function LiveRaffleWebViewScreen({ url, title = 'Live Raffle', on
           </TouchableOpacity>
           <TouchableOpacity
             style={[s.retryBtn, { marginTop: 8, backgroundColor: Colors.surfaceBg, borderWidth: 1, borderColor: Colors.borderLight }]}
-            onPress={() => Linking.openURL(url)}
+            onPress={() => Linking.openURL(safeUrl)}
             activeOpacity={0.85}
           >
             <Text style={[s.retryBtnText, { color: Colors.textPrimary }]}>Hap në browser</Text>
@@ -101,11 +115,13 @@ export default function LiveRaffleWebViewScreen({ url, title = 'Live Raffle', on
         <View style={s.webWrap}>
           <WebView
             ref={webViewRef}
-            source={{ uri: url }}
+            source={{ uri: safeUrl }}
             style={s.webView}
             onLoadStart={() => setLoading(true)}
             onLoadEnd={() => setLoading(false)}
             onError={() => { setLoading(false); setError(true); }}
+            onShouldStartLoadWithRequest={(request: { url: string }) => !!sanitizeAllowedAppUrl(request.url)}
+            originWhitelist={allowedAppOriginWhitelist()}
             startInLoadingState={false}
             allowsInlineMediaPlayback
             mediaPlaybackRequiresUserAction={false}

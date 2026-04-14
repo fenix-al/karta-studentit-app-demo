@@ -67,7 +67,6 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
       setSavedLogin(remembered);
       setRememberMe(true);
       setUsername(remembered.username);
-      setPassword(remembered.password);
     })();
 
     return () => {
@@ -119,7 +118,6 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
 
   const persistRememberedLogin = async (
     nextUsername: string,
-    nextPassword: string,
     email?: string | null,
     displayName?: string | null,
   ) => {
@@ -131,7 +129,6 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
 
     const remembered: RememberedLogin = {
       username: nextUsername,
-      password: nextPassword,
       email: email ?? null,
       displayName: displayName ?? null,
     };
@@ -150,7 +147,6 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
       const loginResponse = await login(cleanUsername, nextPassword);
       await persistRememberedLogin(
         cleanUsername,
-        nextPassword,
         loginResponse.user_email,
         loginResponse.user_display_name,
       );
@@ -186,8 +182,8 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
     if (!savedLogin) return;
 
     setUsername(savedLogin.username);
-    setPassword(savedLogin.password);
-    await performLogin(savedLogin.username, savedLogin.password);
+    setPassword('');
+    setPassError('Shkruaj fjalekalimin per te hyre ne kete pajisje.');
   };
 
   const handleOpenPasswordReset = async () => {
@@ -280,7 +276,7 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
                   disabled={isLoading}
                 >
                   <LogIn size={16} color={Colors.brandGreenDark} strokeWidth={2} />
-                  <Text style={styles.savedBtnText}>Hyr me nje klik</Text>
+                  <Text style={styles.savedBtnText}>Perdor llogarine</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -370,7 +366,7 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
           </View>
 
           <Text style={styles.helperText}>
-            Kur del nga llogaria, te dhenat ruhen ne kete pajisje dhe mund te hysh perseri me nje klik.
+            Ruhet vetem llogaria ne kete pajisje. Fjalekalimi nuk ruhet ne aplikacion.
           </Text>
 
           <TouchableOpacity

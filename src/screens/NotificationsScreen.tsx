@@ -17,11 +17,14 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../services/api';
+import ListSkeleton from '../components/ListSkeleton';
 
 interface Props {
   onBack: () => void;
   onOpenNotification?: (notification: AppNotification) => void;
 }
+
+const PAGE_SIZE = 50;
 
 function notificationAppearance(type: AppNotification['type']) {
   switch (type) {
@@ -105,29 +108,59 @@ export default function NotificationsScreen({ onBack, onOpenNotification }: Prop
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [items, setItems] = useState<AppNotification[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [serverUnreadCount, setServerUnreadCount] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const { data, loading, error, reload } = useFetch(() => fetchMyNotifications());
+  const { data, loading, error, reload } = useFetch(() => fetchMyNotifications({ page: 1, perPage: PAGE_SIZE }));
 
   useEffect(() => {
     setItems((data?.items ?? []).map(mapNotification));
+    setPage(data?.page ?? 1);
+    setTotalPages(data?.total_pages ?? 1);
+    setServerUnreadCount(data?.unread_count ?? 0);
   }, [data]);
 
-  const unreadCount = useMemo(() => items.filter((n) => !n.isRead).length, [items]);
+  const unreadCount = serverUnreadCount;
   const filtered = useMemo(
     () => (filter === 'all' ? items : items.filter((n) => !n.isRead)),
     [filter, items],
   );
 
+  async function handleLoadMore() {
+    if (loading || loadingMore || page >= totalPages) return;
+
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const next = await fetchMyNotifications({ page: nextPage, perPage: PAGE_SIZE });
+      setItems((prev) => {
+        const seen = new Set(prev.map((item) => item.id));
+        const nextItems = next.items.map(mapNotification).filter((item) => !seen.has(item.id));
+        return [...prev, ...nextItems];
+      });
+      setPage(next.page);
+      setTotalPages(next.total_pages);
+      setServerUnreadCount(next.unread_count);
+    } catch {
+      Alert.alert('Gabim', 'Njoftimet e tjera nuk u ngarkuan dot. Provo përsëri.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   async function handleMarkAllRead() {
-    const unreadItems = items.filter((item) => !item.isRead);
-    if (unreadItems.length === 0) return;
+    if (serverUnreadCount === 0) return;
 
     setItems((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    setServerUnreadCount(0);
     try {
       await markAllNotificationsRead();
     } catch {
       setItems((data?.items ?? []).map(mapNotification));
-      Alert.alert('Gabim', 'Njoftimet nuk u perditesuan dot. Provo perseri.');
+      setServerUnreadCount(data?.unread_count ?? 0);
+      Alert.alert('Gabim', 'Njoftimet nuk u përditësuan dot. Provo përsëri.');
     }
   }
 
@@ -141,24 +174,32 @@ export default function NotificationsScreen({ onBack, onOpenNotification }: Prop
     }
 
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, isRead: true } : item)));
+    setServerUnreadCount((prev) => Math.max(0, prev - 1));
     try {
       await markNotificationRead(Number(id));
     } catch {
       setItems((data?.items ?? []).map(mapNotification));
-      Alert.alert('Gabim', 'Njoftimi nuk u shenua dot si i lexuar. Provo perseri.');
+      setServerUnreadCount(data?.unread_count ?? 0);
+      Alert.alert('Gabim', 'Njoftimi nuk u shënua dot si i lexuar. Provo përsëri.');
     }
     onOpenNotification?.(target);
   }
 
   async function handleDelete(id: string) {
     const previousItems = items;
+    const previousUnreadCount = serverUnreadCount;
+    const deletedItem = items.find((item) => item.id === id);
     setItems((prev) => prev.filter((item) => item.id !== id));
+    if (deletedItem && !deletedItem.isRead) {
+      setServerUnreadCount((prev) => Math.max(0, prev - 1));
+    }
 
     try {
       await deleteNotification(Number(id));
     } catch {
       setItems(previousItems);
-      Alert.alert('Gabim', 'Njoftimi nuk u fshi dot. Provo perseri.');
+      setServerUnreadCount(previousUnreadCount);
+      Alert.alert('Gabim', 'Njoftimi nuk u fshi dot. Provo përsëri.');
     }
   }
 
@@ -208,10 +249,7 @@ export default function NotificationsScreen({ onBack, onOpenNotification }: Prop
       </View>
 
       {loading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={Colors.textMuted} />
-          <Text style={styles.loadingText}>Duke ngarkuar njoftimet...</Text>
-        </View>
+        <ListSkeleton count={5} variant="compact" />
       ) : error ? (
         <View style={styles.empty}>
           <View style={styles.emptyIconWrap}>
@@ -241,6 +279,13 @@ export default function NotificationsScreen({ onBack, onOpenNotification }: Prop
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.35}
+          ListFooterComponent={loadingMore ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator size="small" color={Colors.textMuted} />
+            </View>
+          ) : null}
           renderItem={({ item }) => (
             <TouchableOpacity
               style={[styles.card, !item.isRead && styles.cardUnread]}
@@ -340,6 +385,7 @@ const styles = StyleSheet.create({
   badgeTextActive: { color: '#0ea5e9' },
 
   list: { padding: Spacing.xxl, gap: 10 },
+  footerLoader: { paddingVertical: Spacing.lg, alignItems: 'center' },
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',

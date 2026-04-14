@@ -253,9 +253,17 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
   );
 }
 
-export function KVRActivityCard({ activity, onPress }: { activity: KvrActivity; onPress: () => void }) {
+export function KVRActivityCard({
+  activity,
+  onPress,
+  fullWidth = false,
+}: {
+  activity: KvrActivity;
+  onPress: () => void;
+  fullWidth?: boolean;
+}) {
   return (
-    <TouchableOpacity style={styles.actCard} onPress={onPress} activeOpacity={0.9}>
+    <TouchableOpacity style={[styles.actCard, fullWidth && styles.actCardFull]} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.actImageWrap}>
         <Image source={{ uri: activity.img }} style={styles.actImage} resizeMode="cover" />
         <View style={styles.actKvrBadge}>
@@ -477,6 +485,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     overflow: 'hidden',
   },
+  actCardFull: { width: '100%' },
   actImageWrap: { height: 140, backgroundColor: Colors.borderLight },
   actImage: { width: '100%', height: '100%' },
   actKvrBadge: {

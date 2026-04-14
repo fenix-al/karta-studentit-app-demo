@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView,
-  TouchableOpacity, Image, StyleSheet, ActivityIndicator,
+  TouchableOpacity, Image, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
@@ -11,6 +11,7 @@ import { ActActivity, ActCategory } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchAct4 } from '../../services/api';
 import ScreenState from '../../components/ScreenState';
+import ListSkeleton from '../../components/ListSkeleton';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800';
 
@@ -24,7 +25,7 @@ function apiToActActivity(a: any): ActActivity {
     dateStr: a.date ?? '',
     fullDate: a.date_raw ?? a.date ?? '',
     time: '',
-    location: a.location ?? 'Shkoder',
+    location: a.location ?? 'Shkodër',
     img: a.image || PLACEHOLDER,
     desc: a.excerpt ?? '',
     fullDesc: a.excerpt ?? '',
@@ -49,7 +50,7 @@ export default function ActListScreen({ title, initialCatId, onBack, onProfile, 
 
   const categories: ActCategory[] = useMemo(() => {
     const unique = new Map<string, ActCategory>();
-    unique.set('all', { id: 'all', name: 'Te Gjitha', icon: '•' });
+    unique.set('all', { id: 'all', name: 'Të Gjitha', icon: '•' });
 
     activities.forEach((activity) => {
       if (!activity.catId || unique.has(activity.catId)) return;
@@ -106,16 +107,14 @@ export default function ActListScreen({ title, initialCatId, onBack, onProfile, 
       </View>
 
       {loading ? (
-        <View style={styles.emptyWrap}>
-          <ActivityIndicator size="large" color="#0aa8a7" />
-        </View>
+        <ListSkeleton count={4} />
       ) : error ? (
         <View style={styles.emptyWrap}>
           <ScreenState
             icon="error"
-            title="Gabim ne ngarkim"
+            title="Gabim në ngarkim"
             message="Aktivitetet nuk u ngarkuan dot."
-            actionLabel="Provo perseri"
+            actionLabel="Provo përsëri"
             onAction={reload}
           />
         </View>
@@ -124,7 +123,7 @@ export default function ActListScreen({ title, initialCatId, onBack, onProfile, 
           <ScreenState
             icon="empty"
             title="Nuk ka aktivitete"
-            message="Nuk ka aktivitete per kete kategori aktualisht."
+            message="Nuk ka aktivitete për këtë kategori aktualisht."
             actionLabel="Kthehu ne Home"
             onAction={onBack}
           />
@@ -164,7 +163,7 @@ function ActivityCardFull({ activity, onPress }: { activity: ActActivity; onPres
         <Text style={listCardStyles.desc} numberOfLines={2}>{activity.desc}</Text>
         <View style={listCardStyles.footer}>
           <Text style={listCardStyles.location}>📍 {activity.location}</Text>
-          <Text style={listCardStyles.readMore}>Lexo me shume →</Text>
+          <Text style={listCardStyles.readMore}>Lexo më shumë →</Text>
         </View>
       </View>
     </TouchableOpacity>

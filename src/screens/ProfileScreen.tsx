@@ -212,7 +212,7 @@ export default function ProfileScreen({
       action: 'Karta u verifikua me sukses',
       place: item.business,
       date: formatDate(item.date),
-      icon: item.logo ? 'ðŸª' : 'âœ…',
+      icon: item.logo ? '🏪' : '✅',
     })),
     [historyData],
   );
@@ -382,16 +382,10 @@ export default function ProfileScreen({
               {/* ROW 1 — Logos (inside the 76px header zone) */}
               <View style={s.cardTopRow}>
                 <View style={s.brandLeft}>
-                  <View style={s.brandIconWrap}>
-                    <Image source={BRANDING.assets.municipalityLogoDefault} style={s.brandIcon} resizeMode="contain" />
-                  </View>
-                  <Text style={s.brandTitle}>KARTA E{'\n'}STUDENTIT</Text>
+                  <Image source={BRANDING.assets.kessNegativeWhite} style={s.kessLogo} resizeMode="contain" />
                 </View>
                 <View style={s.brandRight}>
-                  <Text style={s.uniLabel}>Universiteti{'\n'}"Luigj Gurakuqi"</Text>
-                  <View style={s.uniBadge}>
-                    <Text style={s.uniBadgeText}>UNISHK</Text>
-                  </View>
+                  <Image source={BRANDING.assets.bashkiaHorizontalWhite} style={s.bashkiaLogo} resizeMode="contain" />
                 </View>
               </View>
 
@@ -1202,33 +1196,10 @@ const s = StyleSheet.create({
     height: 76,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  brandLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  brandIconWrap: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    alignItems: 'center', justifyContent: 'center', padding: 4,
-  },
-  brandIcon: { width: '100%', height: '100%' },
-  brandTitle: {
-    fontFamily: Typography.fontExtraBold, fontSize: 15,
-    color: '#ffffff', lineHeight: 18, letterSpacing: -0.3,
-  },
-  brandRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  uniLabel: {
-    textAlign: 'right', fontFamily: Typography.fontBold, fontSize: 8,
-    color: 'rgba(255,255,255,0.90)', textTransform: 'uppercase',
-    letterSpacing: 0.5, lineHeight: 11, maxWidth: 82,
-  },
-  uniBadge: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#c8102e',
-    borderWidth: 2, borderColor: 'rgba(255,255,255,0.30)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  uniBadgeText: {
-    fontFamily: Typography.fontExtraBold, fontSize: 7,
-    color: '#fff', textAlign: 'center', lineHeight: 9,
-  },
+  brandLeft: { flexDirection: 'row', alignItems: 'center' },
+  brandRight: { flexDirection: 'row', alignItems: 'center' },
+  kessLogo: { width: 126, height: 42, transform: [{ translateY: -18 }] },
+  bashkiaLogo: { width: 118, height: 38, transform: [{ translateY: -18 }] },
 
   // ROW 2 — Student info + photo
   studentRow: {

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView,
-  TouchableOpacity, StyleSheet, ActivityIndicator,
+  TouchableOpacity, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
@@ -12,9 +12,10 @@ import { KVRActivityCard } from './KVRHubScreen';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchKvr, fetchKvrCategories } from '../../services/api';
 import ScreenState from '../../components/ScreenState';
+import ListSkeleton from '../../components/ListSkeleton';
 
 const NAVY = '#003366';
-const ALL_PILL = { id: 'all', name: 'Te gjitha' };
+const ALL_PILL = { id: 'all', name: 'Të gjitha' };
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=800';
 
 function apiToKvrActivity(k: any): KvrActivity {
@@ -27,7 +28,7 @@ function apiToKvrActivity(k: any): KvrActivity {
     img: k.image || PLACEHOLDER,
     desc: k.excerpt ?? '',
     fullDesc: k.content ?? k.excerpt ?? '',
-    location: k.location ?? 'Bashkia Shkoder',
+    location: k.location ?? 'Bashkia Shkodër',
   };
 }
 
@@ -100,16 +101,14 @@ export default function KVRListScreen({ title, initialCatId, onBack, onProfile, 
       </View>
 
       {loading || categoryLoading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#e30613" />
-        </View>
+        <ListSkeleton count={4} />
       ) : error ? (
         <View style={styles.centered}>
           <ScreenState
             icon="error"
-            title="Gabim ne ngarkim"
+            title="Gabim në ngarkim"
             message="Postimet e KVR nuk u ngarkuan dot."
-            actionLabel="Provo perseri"
+            actionLabel="Provo përsëri"
             onAction={reload}
           />
         </View>
@@ -118,7 +117,7 @@ export default function KVRListScreen({ title, initialCatId, onBack, onProfile, 
           <ScreenState
             icon="empty"
             title="Nuk ka postime"
-            message="Lajmet per kete kategori do te shfaqen ketu."
+            message="Lajmet për këtë kategori do të shfaqen këtu."
             actionLabel="Kthehu ne Home"
             onAction={onBack}
           />
@@ -131,7 +130,7 @@ export default function KVRListScreen({ title, initialCatId, onBack, onProfile, 
           contentContainerStyle={[styles.list, { paddingBottom: bottomInset + 24 }]}
           renderItem={({ item }) => (
             <View style={styles.fullWidthCard}>
-              <KVRActivityCard activity={item} onPress={() => onProfile(item.id)} />
+              <KVRActivityCard activity={item} onPress={() => onProfile(item.id)} fullWidth />
             </View>
           )}
         />

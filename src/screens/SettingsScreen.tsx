@@ -20,7 +20,12 @@ import { PASSWORD_RESET_URL } from '../constants/config';
 import { Colors, Typography, Spacing, Radius } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
 import { fetchPrivacyPolicy, PrivacyPolicyApiResponse } from '../services/api';
-import { syncPushTokenWithBackend, unregisterPushTokenFromBackend } from '../services/pushNotifications';
+import {
+  getPushNotificationsPreference,
+  PUSH_NOTIFICATIONS_ENABLED_KEY,
+  syncPushTokenWithBackend,
+  unregisterPushTokenFromBackend,
+} from '../services/pushNotifications';
 import SettingsFaqContent from './settings/SettingsFaqContent';
 import SettingsSubscreen from './settings/SettingsSubscreen';
 import SettingsTermsContent from './settings/SettingsTermsContent';
@@ -41,8 +46,6 @@ interface Props {
   initialScreen?: SettingsView;
   onInitialScreenHandled?: () => void;
 }
-
-const PUSH_NOTIFICATIONS_ENABLED_KEY = 'sk_push_notifications_enabled';
 
 function SettingRow({
   icon,
@@ -99,13 +102,8 @@ export default function SettingsScreen({
 
     (async () => {
       try {
-        const stored = await AsyncStorage.getItem(PUSH_NOTIFICATIONS_ENABLED_KEY);
         if (!mounted) return;
-        if (stored == null) {
-          setNotificationsEnabled(true);
-          return;
-        }
-        setNotificationsEnabled(stored === 'true');
+        setNotificationsEnabled(await getPushNotificationsPreference());
       } catch {
         if (mounted) setNotificationsEnabled(true);
       }
