@@ -48,10 +48,10 @@ export default function JobProfileScreen({ job, onBack, bottomInset }: Props) {
     try {
       setApplying(true);
       const res = await applyJob(Number(liveJob.id));
-      Alert.alert('U krye', res.msg || 'Aplikimi u dergua me sukses.');
+      Alert.alert('U krye', res.msg || 'Aplikimi u dërgua me sukses.');
       reload();
     } catch (err) {
-      Alert.alert('Gabim', err instanceof Error ? err.message : 'Aplikimi nuk u dergua. Provo perseri.');
+      Alert.alert('Gabim', err instanceof Error ? err.message : 'Aplikimi nuk u dërgua. Provo përsëri.');
     } finally {
       setApplying(false);
     }
@@ -81,7 +81,7 @@ export default function JobProfileScreen({ job, onBack, bottomInset }: Props) {
             icon="error"
             title="Nuk u ngarkua pozicioni"
             message={typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
-            actionLabel="Provo perseri"
+            actionLabel="Provo përsëri"
             onAction={reload}
           />
         </View>
@@ -135,7 +135,7 @@ export default function JobProfileScreen({ job, onBack, bottomInset }: Props) {
                 </View>
                 <View>
                   <Text style={[styles.infoLabel, { color: '#f43f5e' }]}>Afati i Aplikimit</Text>
-                  <Text style={styles.infoValue}>{liveJob.date || 'Pa afat te percaktuar'}</Text>
+                  <Text style={styles.infoValue}>{liveJob.date || 'Pa afat të përcaktuar'}</Text>
                 </View>
               </View>
 
@@ -147,16 +147,16 @@ export default function JobProfileScreen({ job, onBack, bottomInset }: Props) {
                 </View>
                 <View>
                   <Text style={styles.infoLabel}>Paga / Shperblimi</Text>
-                  <Text style={[styles.infoValue, { color: '#059669' }]}>{liveJob.salary || 'Sipas pershkrimit'}</Text>
+                  <Text style={[styles.infoValue, { color: '#059669' }]}>{liveJob.salary || 'Sipas përshkrimit'}</Text>
                 </View>
               </View>
             </View>
           </View>
 
           <View style={styles.descPad}>
-            <Text style={styles.descTitle}>Pershkrimi i Pozicionit</Text>
+            <Text style={styles.descTitle}>Përshkrimi i Pozicionit</Text>
             <View style={styles.descCard}>
-              <Text style={styles.descText}>{liveJob.content || liveJob.desc || 'Pershkrimi nuk eshte plotesuar ende.'}</Text>
+              <Text style={styles.descText}>{liveJob.content || liveJob.desc || 'Përshkrimi nuk është plotësuar ende.'}</Text>
             </View>
           </View>
 
@@ -179,11 +179,11 @@ export default function JobProfileScreen({ job, onBack, bottomInset }: Props) {
                   ? 'Keni Aplikuar Tashme'
                   : liveJob.canApply
                   ? 'Apliko me 1 Klik'
-                  : 'Vetem Studentet mund te Aplikojne'}
+                  : 'Vetem Studentet mund të Aplikojne'}
               </Text>
             </TouchableOpacity>
             <Text style={styles.applyHint}>
-              Profili dhe te dhenat e kartes suaj i dergohen automatikisht kompanise.
+              Profili dhe të dhënat e kartës suaj i dërgohen automatikisht kompanise.
             </Text>
           </View>
         </ScrollView>

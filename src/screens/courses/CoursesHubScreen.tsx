@@ -21,9 +21,9 @@ function apiToCourseItem(k: any): CourseItem {
     categorySlugs: k.category_slugs ?? [],
     badgeColor: '#0891b2',
     date: k.start_date ?? '',
-    location: k.location ?? 'Shkoder',
+    location: k.location ?? 'Shkodër',
     duration: k.duration ?? '—',
-    cert: k.certification_text ?? 'Po, pas perfundimit',
+    cert: k.certification_text ?? 'Po, pas përfundimit',
     seats: typeof k.free_spots === 'number' && k.total_spots ? `${k.free_spots} / ${k.total_spots} vende` : (k.total_spots ? `${k.total_spots} vende` : ''),
     totalSpots: k.total_spots ?? 0,
     freeSpots: typeof k.free_spots === 'number' ? k.free_spots : null,
@@ -51,7 +51,7 @@ export default function CoursesHubScreen({ onBack, onList, onProfile, bottomInse
 
   const categories = useMemo<CourseCategory[]>(() => {
     const live = (catData ?? []).map((c) => ({ id: c.slug, name: c.name, icon: '•' }));
-    return [{ id: 'all', name: 'Te gjitha', icon: '•' }, ...live];
+    return [{ id: 'all', name: 'Të gjitha', icon: '•' }, ...live];
   }, [catData]);
 
   return (
@@ -113,8 +113,8 @@ export default function CoursesHubScreen({ onBack, onList, onProfile, bottomInse
               <Text style={styles.sectionTitle}>Kurset e Hapura</Text>
               <Text style={styles.sectionSubtitle}>Data reale, kategori reale dhe regjistrim i drejtperdrejte.</Text>
             </View>
-            <TouchableOpacity style={styles.seeAllBtn} onPress={() => onList(activeCat === 'all' ? 'Te gjitha Kurset' : `Kategoria: ${categories.find((c) => c.id === activeCat)?.name ?? ''}`, activeCat === 'all' ? undefined : activeCat)}>
-              <Text style={styles.seeAllText}>Shiko te gjitha</Text>
+            <TouchableOpacity style={styles.seeAllBtn} onPress={() => onList(activeCat === 'all' ? 'Të gjitha Kurset' : `Kategoria: ${categories.find((c) => c.id === activeCat)?.name ?? ''}`, activeCat === 'all' ? undefined : activeCat)}>
+              <Text style={styles.seeAllText}>Shiko të gjitha</Text>
             </TouchableOpacity>
           </View>
 
@@ -126,7 +126,7 @@ export default function CoursesHubScreen({ onBack, onList, onProfile, bottomInse
                 icon="error"
                 title="Gabim ne ngarkim"
                 message={error}
-                actionLabel="Provo perseri"
+                actionLabel="Provo përsëri"
                 onAction={reload}
               />
             </View>
@@ -138,7 +138,7 @@ export default function CoursesHubScreen({ onBack, onList, onProfile, bottomInse
                 <ScreenState
                   icon="empty"
                   title="Nuk ka kurse"
-                  message="Kur te publikohen kurse te reja, do te shfaqen ketu."
+                  message="Kur të publikohen kurse të reja, do të shfaqen këtu."
                   actionLabel="Kthehu ne Home"
                   onAction={onBack}
                 />

@@ -75,7 +75,7 @@ export default function ActHubScreen({ onBack, onList, onProfile, bottomInset }:
     if (selected.length === 0) return;
 
     if (!activities.length) {
-      Alert.alert('Nuk disponohet', 'Sapo te publikohet nje aktivitet i ri, mund te regjistroheni edhe nga ky formular.');
+      Alert.alert('Nuk disponohet', 'Sapo të publikohet një aktivitet i ri, mund të regjistroheni edhe nga ky formular.');
       return;
     }
 
@@ -84,7 +84,7 @@ export default function ActHubScreen({ onBack, onList, onProfile, bottomInset }:
       await volunteerAct4(Number(activities[0].id), selected.join(', '));
       setSubmitted(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Regjistrimi nuk u krye. Provo perseri.';
+      const message = err instanceof Error ? err.message : 'Regjistrimi nuk u krye. Provo përsëri.';
       Alert.alert('Gabim', message);
     } finally {
       setSubmitting(false);
@@ -160,21 +160,21 @@ export default function ActHubScreen({ onBack, onList, onProfile, bottomInset }:
                 <Leaf size={15} color={NAVY} strokeWidth={2} />
                 <Text style={[styles.infoCardTitle, { color: NAVY }]}>Veprim praktik</Text>
               </View>
-              <Text style={styles.infoCardDesc}>Aksione konkrete për pastrim, ndërgjegjësim dhe mbështetje komunitare.</Text>
+              <Text style={styles.infoCardDesc}>Aksione konkretë për pastrim, ndërgjegjësim dhe mbështetje komunitare.</Text>
             </View>
             <View style={[styles.infoCard, { borderTopColor: TEAL }]}>
               <View style={styles.infoCardTitleRow}>
                 <Users size={15} color={TEAL} strokeWidth={2} />
                 <Text style={[styles.infoCardTitle, { color: NAVY }]}>Edukim & Bashkëpunim</Text>
               </View>
-              <Text style={styles.infoCardDesc}>Trajnime, evente dhe bashkëpunime që forcojnë frymën e komunitetit.</Text>
+              <Text style={styles.infoCardDesc}>Trajnime, eventë dhe bashkëpunime që forcojnë frymën e komunitetit.</Text>
             </View>
             <View style={[styles.infoCard, { borderTopColor: '#f5a623' }]}>
               <View style={styles.infoCardTitleRow}>
                 <Shield size={15} color="#f5a623" strokeWidth={2} />
                 <Text style={[styles.infoCardTitle, { color: NAVY }]}>Vlera & Identitet</Text>
               </View>
-              <Text style={styles.infoCardDesc}>Promovojmë vlera pozitive, të drejtat e njeriut dhe mbrojtjen e mjedisit.</Text>
+              <Text style={styles.infoCardDesc}>Promovojmë vlera pozitive, të drejtat e njëriut dhe mbrojtjen e mjedisit.</Text>
             </View>
           </ScrollView>
         </View>
@@ -221,7 +221,7 @@ export default function ActHubScreen({ onBack, onList, onProfile, bottomInset }:
         <View style={styles.formPad}>
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>Regjistrohuni si Vullnetar</Text>
-            <Text style={styles.formSubtitle}>Ne do t'ju kontaktojmë kur të ketë aktivitete të reja në fushat tuaja të interesit.</Text>
+            <Text style={styles.formSubtitle}>Ne do t'ju kontaktojmë kur të ketë aktivitetë të reja në fushat tuaja të interesit.</Text>
 
             {/* Auto-fill alert */}
             <View style={styles.alertBox}>
@@ -329,7 +329,7 @@ export function ActivityCard({ activity, onPress }: { activity: ActActivity; onP
         <View style={[styles.actCatBadge, { backgroundColor: activity.badgeColor }]}>
           <Text style={styles.actCatBadgeText}>{activity.category}</Text>
         </View>
-        {/* Overlapping date badge */}
+        {/* Overlapping datë badge */}
         <View style={styles.actDateBadge}>
           <Text style={styles.actDateDay}>{day}</Text>
           <Text style={styles.actDateMon}>{mon}</Text>

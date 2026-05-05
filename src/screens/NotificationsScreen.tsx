@@ -41,6 +41,7 @@ function notificationAppearance(type: AppNotification['type']) {
     case 'kvr':
       return { iconName: 'Bell', iconColor: '#0f766e', iconBg: '#ccfbf1', iconBorder: '#99f6e4' };
     case 'raffle':
+    case 'live_raffle':
       return { iconName: 'Gift', iconColor: '#ca8a04', iconBg: '#fef9c3', iconBorder: '#fde68a' };
     case 'points':
       return { iconName: 'Trophy', iconColor: '#ca8a04', iconBg: '#fef9c3', iconBorder: '#fde68a' };

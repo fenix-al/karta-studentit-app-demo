@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   ActivityIndicator,
@@ -125,12 +125,12 @@ export default function SettingsScreen({
     try {
       const supported = await Linking.canOpenURL(PASSWORD_RESET_URL);
       if (!supported) {
-        Alert.alert('Gabim', 'Lidhja per rikuperimin e fjalekalimit nuk mund te hapet ne kete pajisje.');
+        Alert.alert('Gabim', 'Lidhja për rikuperimin e fjalëkalimit nuk mund të hapet në këtë pajisje.');
         return;
       }
       await Linking.openURL(PASSWORD_RESET_URL);
     } catch {
-      Alert.alert('Gabim', 'Nuk u arrit te hapej faqja e rikuperimit te fjalekalimit.');
+      Alert.alert('Gabim', 'Nuk u arrit të hapej faqja e rikuperimit të fjalëkalimit.');
     }
   };
 
@@ -138,7 +138,7 @@ export default function SettingsScreen({
     try {
       await Linking.openURL(ACCOUNT_DELETION_URL);
     } catch {
-      Alert.alert('Gabim', 'Nuk u arrit te hapej faqja publike per fshirjen e llogarise.');
+      Alert.alert('Gabim', 'Nuk u arrit të hapej faqja publike për fshirjen e llogarisë.');
     }
   };
 
@@ -146,23 +146,23 @@ export default function SettingsScreen({
     if (deletionLoading) return;
 
     Alert.alert(
-      'Fshirja e llogarise',
-      'Do te dergohet nje kerkese zyrtare te stafi per fshirjen e llogarise dhe te dhenave qe lidhen me aplikacionin. Llogaria nuk fshihet automatikisht pa verifikim.',
+      'Fshirja e llogarisë',
+      'Do të dërgohet një kërkesë zyrtare te stafi për fshirjen e llogarisë dhe të dhënave që lidhen me aplikacionin. Llogaria nuk fshihet automatikisht pa verifikim.',
       [
         { text: 'Anulo', style: 'cancel' },
         {
-          text: 'Dergo kerkesen',
+          text: 'Dergo kërkesën',
           style: 'destructive',
           onPress: async () => {
             setDeletionLoading(true);
             try {
               await requestAccountDeletion();
               Alert.alert(
-                'Kerkesa u dergua',
-                'Kerkesa per fshirjen e llogarise u regjistrua. Stafi do ta shqyrtoje dhe do tju kontaktoje per verifikim.',
+                'Kërkesa u dërgua',
+                'Kërkesa për fshirjen e llogarisë u regjistrua. Stafi do ta shqyrtojë dhe do t’ju kontaktojë për verifikim.',
               );
             } catch (error) {
-              const message = error instanceof Error ? error.message : 'Nuk u dergua kerkesa. Provo perseri.';
+              const message = error instanceof Error ? error.message : 'Nuk u dërgua kerkesa. Provo përsëri.';
               Alert.alert('Gabim', message);
             } finally {
               setDeletionLoading(false);
@@ -183,7 +183,7 @@ export default function SettingsScreen({
         if (!synced) {
           Alert.alert(
             'Njoftimet nuk u aktivizuan',
-            'Lejo njoftimet ne pajisje dhe provo perseri. Ne Expo Go ky funksion nuk aktivizohet.',
+            'Lejo njoftimet ne pajisje dhe provo përsëri. Ne Expo Go ky funksion nuk aktivizohet.',
           );
           return;
         }
@@ -194,7 +194,7 @@ export default function SettingsScreen({
       setNotificationsEnabled(nextValue);
       await AsyncStorage.setItem(PUSH_NOTIFICATIONS_ENABLED_KEY, String(nextValue));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Nuk u arrit te perditesoheshin njoftimet push. Provo perseri.';
+      const message = error instanceof Error ? error.message : 'Nuk u arrit të përditësoheshin njoftimet push. Provo përsëri.';
       Alert.alert('Gabim', message);
     } finally {
       setNotificationsLoading(false);
@@ -248,7 +248,7 @@ export default function SettingsScreen({
       { label: 'Email', value: card?.email },
       { label: 'Telefoni', value: card?.telefoni },
       { label: 'NIM', value: card?.nim },
-      { label: 'Nr. karte', value: card?.nr_karte },
+      { label: 'Nr. kartë', value: card?.nr_karte },
       { label: 'Fakulteti', value: card?.fakulteti },
       { label: 'Programi', value: card?.programi },
       { label: 'Cikli', value: card?.cikli },
@@ -280,7 +280,7 @@ export default function SettingsScreen({
             ))
           ) : (
             <Text style={styles.emptyText}>
-              Te dhenat e profilit nuk jane ngarkuar ende. Kthehu mbrapa dhe provo perseri.
+              Të dhënat e profilit nuk janë ngarkuar ende. Kthehu mbrapa dhe provo përsëri.
             </Text>
           )}
         </View>
@@ -298,25 +298,25 @@ export default function SettingsScreen({
       >
         <View style={styles.infoCard}>
           <View style={[styles.infoRow, styles.infoRowBorder]}>
-            <Text style={styles.infoLabel}>Emaili i llogarise</Text>
+            <Text style={styles.infoLabel}>Emaili i llogarisë</Text>
             <Text style={styles.infoValue}>{formatProfileValue(card?.email)}</Text>
           </View>
           <View style={[styles.infoRow, styles.infoRowBorder]}>
             <Text style={styles.infoLabel}>Menyra e ndryshimit</Text>
             <Text style={styles.infoValue}>
-              Ndryshimi i fjalekalimit behet permes faqes zyrtare te rikuperimit ne WordPress.
+              Ndryshimi i fjalëkalimit behet permes faqes zyrtare të rikuperimit ne WordPress.
             </Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Siguria</Text>
             <Text style={styles.infoValue}>
-              Pasi te hapet faqja, mund te kerkosh linkun e rikuperimit dhe te vendosesh nje fjalekalim te ri.
+              Pasi të hapet faqja, mund të kërkosh linkun e rikuperimit dhe të vendosesh një fjalëkalim të ri.
             </Text>
           </View>
         </View>
 
         <TouchableOpacity style={styles.primaryAction} activeOpacity={0.85} onPress={openPasswordReset}>
-          <Text style={styles.primaryActionText}>Hap rikuperimin e fjalekalimit</Text>
+          <Text style={styles.primaryActionText}>Hap rikuperimin e fjalëkalimit</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -328,12 +328,12 @@ export default function SettingsScreen({
           {deletionLoading ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={styles.destructiveActionText}>Kerko fshirjen e llogarise</Text>
+            <Text style={styles.destructiveActionText}>Kërko fshirjen e llogarisë</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.secondaryLinkAction} activeOpacity={0.85} onPress={openAccountDeletionPage}>
-          <Text style={styles.secondaryLinkActionText}>Hap faqen publike te fshirjes</Text>
+          <Text style={styles.secondaryLinkActionText}>Hap faqen publike të fshirjes</Text>
         </TouchableOpacity>
       </SettingsSubscreen>
     );
@@ -343,7 +343,7 @@ export default function SettingsScreen({
     return (
       <SettingsSubscreen
         title="Njoftimet (Push)"
-        description="Ketu menaxhohet aktivizimi real i njoftimeve push per kete pajisje."
+        description="Këtu menaxhohet aktivizimi real i njoftimeve push për këtë pajisje."
         bottomInset={bottomInset}
         onBack={() => setActiveView('settings')}
       >
@@ -352,7 +352,7 @@ export default function SettingsScreen({
             <View style={styles.toggleTextWrap}>
               <Text style={styles.infoLabel}>Statusi</Text>
               <Text style={styles.infoValue}>
-                {notificationsEnabled ? 'Njoftimet push jane aktive' : 'Njoftimet push jane te fikura'}
+                {notificationsEnabled ? 'Njoftimet push janë aktive' : 'Njoftimet push janë të fikura'}
               </Text>
             </View>
             <Switch
@@ -372,7 +372,7 @@ export default function SettingsScreen({
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Ruajtja e statusit</Text>
             <Text style={styles.infoValue}>
-              Zgjedhja ruhet lokalisht ne pajisje dhe lexohet perseri kur app-i hapet ne vazhdim.
+              Zgjedhja ruhet lokalisht ne pajisje dhe lexohet përsëri kur app-i hapet ne vazhdim.
             </Text>
           </View>
         </View>
@@ -391,7 +391,7 @@ export default function SettingsScreen({
     return (
       <SettingsSubscreen
         title="Qendra e Ndihmës (FAQ)"
-        description="Ketu gjen shpjegime te thjeshta per funksionet kryesore te aplikacionit."
+        description="Këtu gjen shpjegime të thjeshta për funksionet kryesore të aplikacionit."
         bottomInset={bottomInset}
         onBack={() => setActiveView('settings')}
       >
@@ -404,7 +404,7 @@ export default function SettingsScreen({
     return (
       <SettingsSubscreen
         title="Kushtet e Përdorimit"
-        description="Keto jane kushtet baze te perdorimit te aplikacionit ne nje forme te thjeshte dhe te qarte."
+        description="Këto janë kushtet bazë të përdorimit të aplikacionit në një formë të thjeshtë dhe të qartë."
         bottomInset={bottomInset}
         onBack={() => setActiveView('settings')}
       >
@@ -876,7 +876,7 @@ const styles = StyleSheet.create({
 
 function formatProfileValue(value?: string | null) {
   const normalized = typeof value === 'string' ? value.trim() : value;
-  if (!normalized) return 'Nuk eshte plotesuar';
+  if (!normalized) return 'Nuk është plotësuar';
   return normalized;
 }
 

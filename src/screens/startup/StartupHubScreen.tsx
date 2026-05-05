@@ -78,7 +78,7 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
       setIdeaDesc('');
       setHelpNeeded('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Ideja nuk u dergua. Provo perseri.';
+      const message = err instanceof Error ? err.message : 'Ideja nuk u dërgua. Provo përsëri.';
       Alert.alert('Gabim', message);
     } finally {
       setSubmittingIdea(false);
@@ -99,7 +99,7 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
         </View>
         <View style={styles.searchBar}>
           <Search size={15} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.searchPlaceholder}>Kerko thirrje, fonde, udhezues...</Text>
+          <Text style={styles.searchPlaceholder}>Kërko thirrje, fonde, udhezues...</Text>
         </View>
       </View>
 
@@ -116,7 +116,7 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
               activeOpacity={0.8}
               onPress={() => {
                 setActiveCat(cat.id);
-                if (cat.id === 'thirrje') onList('Te gjitha Thirrjet', 'thirrje');
+                if (cat.id === 'thirrje') onList('Të gjitha Thirrjet', 'thirrje');
                 if (cat.id === 'udhezues') onList('Udhezues & Materiale', 'udhezues');
               }}
             >
@@ -141,8 +141,8 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
                 <Lightbulb size={20} color="#10b981" strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.ideaCardTitle}>Dergo Idete Tende</Text>
-                <Text style={styles.ideaCardSub}>Na trego cfare ke ne mendje dhe cfare mbeshtetje kerkon.</Text>
+                <Text style={styles.ideaCardTitle}>Dergo Idetë Tende</Text>
+                <Text style={styles.ideaCardSub}>Na trego cfare ke ne mendje dhe cfare mbështëtje kërkon.</Text>
               </View>
             </View>
 
@@ -150,7 +150,7 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
               <View style={styles.ideaSentWrap}>
                 <Text style={styles.ideaSentEmoji}>🚀</Text>
                 <Text style={styles.ideaSentTitle}>Faleminderit!</Text>
-                <Text style={styles.ideaSentSub}>Ideja u dergua ne database dhe stafi do ta shqyrtoje se shpejti.</Text>
+                <Text style={styles.ideaSentSub}>Ideja u dërgua ne database dhe stafi do ta shqyrtoje se shpejti.</Text>
               </View>
             ) : (
               <>
@@ -163,7 +163,7 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
                 />
                 <TextInput
                   style={[styles.ideaInput, styles.ideaTextarea]}
-                  placeholder="Pershkruaje shkurt idene tende..."
+                  placeholder="Përshkruaje shkurt idene tende..."
                   placeholderTextColor={Colors.textMuted}
                   value={ideaDesc}
                   onChangeText={setIdeaDesc}
@@ -188,7 +188,7 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
                 >
                   <Send size={16} color="#fff" strokeWidth={2.5} />
                   <Text style={styles.ideaSubmitText}>
-                    {submittingIdea ? 'Duke derguar...' : 'Dergo Idene'}
+                    {submittingIdea ? 'Duke dërguar...' : 'Dergo Idene'}
                   </Text>
                 </TouchableOpacity>
               </>
@@ -222,13 +222,13 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
           <View style={[styles.sectionHeader, styles.sectionPadH]}>
             <View>
               <Text style={styles.sectionTitle}>Startupet Aktive</Text>
-              <Text style={styles.sectionSubtitle}>Thirrje te hapura dhe materiale udhezuese.</Text>
+              <Text style={styles.sectionSubtitle}>Thirrje të hapura dhe materiale udhezuese.</Text>
             </View>
             <TouchableOpacity
               style={styles.seeAllBtn}
-              onPress={() => onList('Te gjitha Startupet', activeCat === 'all' ? undefined : (activeCat as 'thirrje' | 'udhezues'))}
+              onPress={() => onList('Të gjitha Startupet', activeCat === 'all' ? undefined : (activeCat as 'thirrje' | 'udhezues'))}
             >
-              <Text style={styles.seeAllText}>Shiko te gjitha</Text>
+              <Text style={styles.seeAllText}>Shiko të gjitha</Text>
             </TouchableOpacity>
           </View>
 
@@ -242,7 +242,7 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
                 icon="error"
                 title="Gabim ne ngarkim"
                 message={typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
-                actionLabel="Provo perseri"
+                actionLabel="Provo përsëri"
                 onAction={reload}
               />
             </View>
@@ -259,10 +259,10 @@ export default function StartupHubScreen({ onBack, onList, onProfile, bottomInse
               ) : (
                 <ScreenState
                   icon="startup"
-                  title="Nuk ka startup ne kete kategori"
-                  message="Kur te publikohen thirrje ose materiale te reja, do t'i shihni ketu."
-                  actionLabel="Shko te Startup"
-                  onAction={() => onList('Te gjitha Startupet')}
+                  title="Nuk ka startup në këtë kategori"
+                  message="Kur të publikohen thirrje ose materiale të reja, do t'i shihni këtu."
+                  actionLabel="Shko të Startup"
+                  onAction={() => onList('Të gjitha Startupet')}
                 />
               )}
             </View>

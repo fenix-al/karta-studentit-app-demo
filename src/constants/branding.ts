@@ -1,7 +1,7 @@
 export const BRANDING = {
   appName: 'Karta e Studentit',
-  cityName: 'Shkoder',
-  municipalityName: 'Bashkia Shkoder',
+  cityName: 'Shkodër',
+  municipalityName: 'Bashkia Shkodër',
   footerVersion: 'v2.0',
   assets: {
     appLogo: require('../../assets/app-logo.png'),

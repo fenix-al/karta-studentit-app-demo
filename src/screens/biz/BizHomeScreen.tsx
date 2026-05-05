@@ -121,23 +121,23 @@ function getScannerSubmitErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case 'not_found':
-        return 'Ky QR nuk i perket asnje karte studenti ne sistem.';
+        return 'Ky QR nuk i perket asnjë kartë studenti ne sistem.';
       case 'expired':
-        return 'Karta e studentit ka skaduar dhe nuk mund te pranohet.';
+        return 'Karta e studentit ka skaduar dhe nuk mund të pranohet.';
       case 'inactive':
-        return 'Karta e studentit nuk eshte aktive dhe nuk mund te pranohet.';
+        return 'Karta e studentit nuk është aktive dhe nuk mund të pranohet.';
       case 'scan_cooldown_active':
         return error.message;
       case 'missing_token':
-        return 'Tokeni i QR mungon. Provo nje kod tjeter.';
+        return 'Tokeni i QR mungon. Provo një kod tjetër.';
       default:
-        return error.message || 'Ndodhi nje gabim ne server. Provo perseri.';
+        return error.message || 'Ndodhi një gabim ne server. Provo përsëri.';
     }
   }
 
   return error instanceof Error
-    ? 'Nuk u lidhem me serverin. Kontrollo internetin dhe provo perseri.'
-    : 'Ndodhi nje gabim i papritur. Provo perseri.';
+    ? 'Nuk u lidhëm me serverin. Kontrollo internetin dhe provo përsëri.'
+    : 'Ndodhi një gabim i papritur. Provo përsëri.';
 }
 
 function getScannerErrorResult(error: ApiError): BizScanResponse | null {
@@ -205,7 +205,7 @@ export default function BizHomeScreen() {
     loadTopStudents();
   }, [loadTopStudents]);
 
-  // ── Promo tab state ─────────────────────────────────────────────────────────
+  // ── Promo tab statë ─────────────────────────────────────────────────────────
   const [campaigns,        setCampaigns]        = useState<BizCampaign[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [campaignsError,   setCampaignsError]   = useState(false);
@@ -213,7 +213,7 @@ export default function BizHomeScreen() {
   // Form
   const [formTitulli,    setFormTitulli]    = useState('');
   const [formLloji,      setFormLloji]      = useState('Zbritje');
-  const [formPershkrimi, setFormPershkrimi] = useState('');
+  const [formPërshkrimi, setFormPërshkrimi] = useState('');
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError,      setFormError]      = useState('');
   const [formSuccess,    setFormSuccess]    = useState('');
@@ -268,7 +268,7 @@ export default function BizHomeScreen() {
   }, [cooldownRemaining]);
 
   const handleCampaignSubmit = async () => {
-    if (!formTitulli.trim() || !formPershkrimi.trim()) {
+    if (!formTitulli.trim() || !formPërshkrimi.trim()) {
       setFormError('Plotëso titullin dhe përshkrimin.');
       return;
     }
@@ -276,10 +276,10 @@ export default function BizHomeScreen() {
     setFormError('');
     setFormSuccess('');
     try {
-      await postBizCampaign(formTitulli.trim(), formLloji, formPershkrimi.trim());
+      await postBizCampaign(formTitulli.trim(), formLloji, formPërshkrimi.trim());
       setFormSuccess('Kërkesa u dërgua me sukses. Bashkia do ta shqyrtojë.');
       setFormTitulli('');
-      setFormPershkrimi('');
+      setFormPërshkrimi('');
       setFormLloji('Zbritje');
       // Reload history
       const updated = await fetchBizCampaigns();
@@ -310,7 +310,7 @@ export default function BizHomeScreen() {
     const token = extractScanToken(rawValue);
 
     if (!token) {
-      setScannerError('Kodi u lexua, por tokeni nuk u nxor. Provo nje QR tjeter.');
+      setScannerError('Kodi u lexua, por tokeni nuk u nxor. Provo një QR tjetër.');
       return;
     }
 
@@ -335,7 +335,7 @@ export default function BizHomeScreen() {
       setScanPreviewError(
         error instanceof Error
           ? error.message
-          : 'Nuk u ngarkuan te dhenat e kartes per kontroll me foto.'
+          : 'Nuk u ngarkuan të dhënat e kartës për kontroll me foto.'
       );
     } finally {
       setScanPreviewLoading(false);
@@ -379,7 +379,7 @@ export default function BizHomeScreen() {
     try {
       await Linking.openURL(ACCOUNT_DELETION_URL);
     } catch {
-      Alert.alert('Gabim', 'Nuk u arrit te hapej faqja publike per fshirjen e llogarise.');
+      Alert.alert('Gabim', 'Nuk u arrit të hapej faqja publike për fshirjen e llogarisë.');
     }
   };
 
@@ -559,12 +559,12 @@ export default function BizHomeScreen() {
     const scanActionLabel = scanSubmitting
       ? 'Duke verifikuar...'
       : scanPreviewLoading
-        ? 'Duke ngarkuar te dhenat...'
+        ? 'Duke ngarkuar të dhënat...'
         : cooldownRemaining != null
         ? `Prit ${formatCountdown(cooldownRemaining)}`
         : scanRequiresReset
           ? 'Skano QR tjetër'
-          : 'Verifiko Karten';
+          : 'Verifiko Kartën';
     const previewInitials = previewStudent?.student
       ? previewStudent.student.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()
       : '?';
@@ -586,7 +586,7 @@ export default function BizHomeScreen() {
 
         {!isPermissionReady && (
           <View style={styles.scannerInfoCard}>
-            <Text style={styles.scannerInfoTitle}>Akses te kamera</Text>
+            <Text style={styles.scannerInfoTitle}>Akses të kamera</Text>
             <Text style={styles.scannerInfoText}>
               {cameraPermission
                 ? 'Ky funksion kërkon leje për kamerën që të lexosh QR-në e studentit.'
@@ -606,7 +606,7 @@ export default function BizHomeScreen() {
             {cameraPermission && !cameraPermission.granted && !canAskAgain && (
               <Text style={styles.scannerHintText}>
                 Kamera është bllokuar nga cilësimet e pajisjes. Aktivizoje nga Settings
-                dhe pastaj kthehu te ky ekran për të vazhduar skanimin.
+                dhe pastaj kthehu të ky ekran për të vazhduar skanimin.
               </Text>
             )}
           </View>
@@ -637,7 +637,7 @@ export default function BizHomeScreen() {
                       <Text style={styles.studentPreviewName}>{previewStudent.student}</Text>
                       <Text style={styles.studentPreviewMeta}>NIM: {previewStudent.nim}</Text>
                       {!!previewStudent.nr_karte && (
-                        <Text style={styles.studentPreviewMeta}>Nr. kartes: {previewStudent.nr_karte}</Text>
+                        <Text style={styles.studentPreviewMeta}>Nr. kartës: {previewStudent.nr_karte}</Text>
                       )}
                       {!!previewStudent.msg && (
                         <Text style={[
@@ -820,15 +820,15 @@ export default function BizHomeScreen() {
           ))}
         </View>
 
-        {/* Pershkrimi */}
+        {/* Përshkrimi */}
         <Text style={[styles.formLabel, { marginTop: Spacing.lg }]}>Përshkrimi</Text>
         <View style={[styles.formInputBox, styles.formTextareaBox]}>
           <TextInput
             style={[styles.formInput, styles.formTextarea]}
             placeholder="Përshkruaj ofertën ose ngjarjen në detaje…"
             placeholderTextColor={Colors.textMuted}
-            value={formPershkrimi}
-            onChangeText={t => { setFormPershkrimi(t); setFormError(''); setFormSuccess(''); }}
+            value={formPërshkrimi}
+            onChangeText={t => { setFormPërshkrimi(t); setFormError(''); setFormSuccess(''); }}
             multiline
             numberOfLines={4}
             textAlignVertical="top"
@@ -985,7 +985,7 @@ export default function BizHomeScreen() {
           <TrendingUp size={20} color="#0f766e" strokeWidth={2.2} />
         </View>
         <View style={styles.desktopInfoContent}>
-          <Text style={styles.desktopInfoTitle}>{'Raporte dhe t\u00eb dh\u00ebna t\u00eb detajuara'}</Text>
+          <Text style={styles.desktopInfoTitle}>{'Raportë dhe t\u00eb dh\u00ebna t\u00eb detajuara'}</Text>
           <Text style={styles.desktopInfoText}>
             {'P\u00ebr analiza m\u00eb t\u00eb plota, eksportime dhe shkarkim t\u00eb dh\u00ebnash, hyni n\u00eb platform\u00eb nga desktop.'}
           </Text>
@@ -999,7 +999,7 @@ export default function BizHomeScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.accountDeleteBtn} onPress={openAccountDeletionPage} activeOpacity={0.85}>
-        <Text style={styles.accountDeleteText}>Kerko fshirjen e llogarise</Text>
+        <Text style={styles.accountDeleteText}>Kërko fshirjen e llogarisë</Text>
       </TouchableOpacity>
     </ScrollView>
   );

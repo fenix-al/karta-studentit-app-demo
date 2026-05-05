@@ -19,7 +19,7 @@ interface Props {
 export default function BusinessProfileScreen({ business: biz, onBack, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
 
-  // ── Local state — seeded from list data, enriched by single-business fetch ──
+  // ── Local statë — seeded from list data, enriched by single-business fetch ──
   const [recommended, setRecommended] = useState(biz.has_recommended ?? false);
   const [voteCount,   setVoteCount]   = useState(biz.votes ?? 0);
   const [mapUrl,      setMapUrl]      = useState(biz.map_url      ?? '');
@@ -94,7 +94,7 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
   async function handleReportSubmit() {
     const reason = reportReason.trim();
     if (!reason) {
-      Alert.alert('Kujdes', 'Ju lutem pershkruani problemin para se ta dergoni.');
+      Alert.alert('Kujdes', 'Ju lutem përshkruani problemin para se ta dergoni.');
       return;
     }
     if (reportLoading) return;
@@ -104,9 +104,9 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
       const res = await reportBusiness(biz.id, reason);
       setReportReason('');
       setReportOpen(false);
-      Alert.alert('U dergua', res.message || 'Raportimi u dergua me sukses.');
+      Alert.alert('U dërgua', res.message || 'Raportimi u dërgua me sukses.');
     } catch (error: any) {
-      Alert.alert('Gabim', error?.message || 'Raportimi nuk u dergua. Provo perseri.');
+      Alert.alert('Gabim', error?.message || 'Raportimi nuk u dërgua. Provo përsëri.');
     } finally {
       setReportLoading(false);
     }
@@ -233,17 +233,17 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
             onPress={() => setReportOpen(open => !open)}
           >
             <AlertTriangle size={18} color="#dc2626" strokeWidth={2} />
-            <Text style={styles.reportBtnText}>Raporto Problem me Karten</Text>
+            <Text style={styles.reportBtnText}>Raporto Problem me Kartën</Text>
           </TouchableOpacity>
 
           {reportOpen && (
             <View style={styles.reportBox}>
-              <Text style={styles.reportHelp}>Pershkruaje shkurt problemin me kete biznes.</Text>
+              <Text style={styles.reportHelp}>Përshkruaje shkurt problemin me këtë biznes.</Text>
               <TextInput
                 style={styles.reportInput}
                 value={reportReason}
                 onChangeText={setReportReason}
-                placeholder="Psh: Nuk ma pranuan karten..."
+                placeholder="Psh: Nuk ma pranuan kartën..."
                 placeholderTextColor={Colors.textMuted}
                 multiline
                 maxLength={1000}

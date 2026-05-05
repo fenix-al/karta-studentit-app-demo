@@ -7,39 +7,39 @@ export default function SettingsTermsContent() {
   const termsSections = useMemo(
     () => [
       {
-        title: '1. Perdorimi i aplikacionit',
+        title: '1. Përdorimi i aplikacionit',
         text:
-          'Ky aplikacion perdoret nga studentet per akses ne sherbimet e Kartes se Studentit Shkoder, perfshire identifikimin, informacionin personal, perfitimet, aktivitetet dhe modulet e tjera te platformes.',
+          'Ky aplikacion përdoret nga studentët për akses në shërbimet e Kartës së Studentit Shkodër, përfshirë identifikimin, informacionin personal, përfitimet, aktivitetet dhe modulet e tjera të platformës.',
       },
       {
         title: '2. Llogaria dhe pergjegjesia',
         text:
-          'Perdoruesi eshte pergjegjes per saktesine e te dhenave te llogarise se vet dhe per perdorimin e sigurt te kredencialeve. Ndalohet ndarja e llogarise me persona te tjere ose perdorimi i saj per qellime jo te lejuara.',
+          'Përdoruesi është përgjegjës për saktësinë e të dhënave të llogarisë së vet dhe për përdorimin e sigurt të kredencialeve. Ndalohet ndarja e llogarisë me persona të tjerë ose përdorimi i saj për qëllime jo të lejuara.',
       },
       {
-        title: '3. Karta dhe sherbimet',
+        title: '3. Karta dhe shërbimet',
         text:
-          'Aksesi ne perfitime, kurse, aktivitete, shorte, reward-e ose sherbime te tjera varet nga statusi i kartes, rregullat e platformes dhe kushtet e caktuara nga administratori ose partneret perkates.',
+          'Aksesi ne përfitime, kurse, aktivitete, shorte, reward-e ose shërbime të tjera varet nga statusi i kartës, rregullat e platformes dhe kushtet e caktuara nga administratori ose partneret perkates.',
       },
       {
-        title: '4. Perdorimi i rregullt',
+        title: '4. Përdorimi i rregullt',
         text:
-          'Perdoruesi nuk duhet te kryeje veprime qe demtojne sistemin, cenojne sigurine, japin informacion te rreme ose perdorin aplikacionin ne menyre abuzive. Cdo perdorim i papershtatshem mund te kufizohet ose bllokohet.',
+          'Përdoruesi nuk duhet të kryeje veprime qe demtojne sistemin, cenojne sigurinë, japin informacion të rreme ose përdorin aplikacionin ne menyre abuzive. Cdo përdorim i papershtatshem mund të kufizohet ose bllokohet.',
       },
       {
-        title: '5. Ndryshime dhe perditesime',
+        title: '5. Ndryshime dhe përditësime',
         text:
-          'Platforma mund te perditesohet here pas here per permiresime funksionale, sigurie ose permbajtjeje. Disa sherbime mund te ndryshojne, pezullohen ose perditesohen sipas nevojes.',
+          'Platforma mund të përditësohet here pas here për permiresime funksionale, sigurie ose përmbajtjeje. Disa shërbime mund të ndryshojne, pezullohen ose përditësohen sipas nevojes.',
       },
       {
-        title: '6. Privatesia dhe te dhenat',
+        title: '6. Privatësia dhe të dhënat',
         text:
-          'Perdorimi i aplikacionit shoqerohet me perpunimin e disa te dhenave te nevojshme per funksionimin e sherbimeve. Per me shume informacion, perdoruesi duhet te lexoje seksionin Politika e Privatesise.',
+          'Përdorimi i aplikacionit shoqerohet me perpunimin e disa të dhënave të nevojshme për funksionimin e shërbimeve. Për me shumë informacion, përdoruesi duhet të lexoje seksionin Politika e Privatësisë.',
       },
       {
         title: '7. Pranimi i kushteve',
         text:
-          'Duke perdorur aplikacionin, perdoruesi pranon keto kushte baze te perdorimit dhe rregullat funksionale te platformes Karta e Studentit Shkoder.',
+          'Duke përdorur aplikacionin, përdoruesi pranon keto kushtë baze të përdorimit dhe rregullat funksionale të platformes Karta e Studentit Shkodër.',
       },
     ],
     [],

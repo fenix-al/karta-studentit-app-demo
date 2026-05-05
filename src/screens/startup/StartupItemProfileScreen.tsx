@@ -68,21 +68,21 @@ export default function StartupItemProfileScreen({ itemId, onBack, bottomInset }
 
     if (item.category === 'thirrje') {
       if (!item.applyLink) {
-        Alert.alert('Nuk disponohet', 'Kjo thirrje nuk ka ende nje link aplikimi.');
+        Alert.alert('Nuk disponohet', 'Kjo thirrje nuk ka ende një link aplikimi.');
         return;
       }
 
       try {
         const supported = await Linking.canOpenURL(item.applyLink);
         if (!supported) {
-          Alert.alert('Gabim', 'Nuk mund te hapet linku i aplikimit.');
+          Alert.alert('Gabim', 'Nuk mund të hapet linku i aplikimit.');
           return;
         }
 
         await Linking.openURL(item.applyLink);
         setApplied(true);
       } catch {
-        Alert.alert('Gabim', 'Nuk mund te hapet linku i aplikimit.');
+        Alert.alert('Gabim', 'Nuk mund të hapet linku i aplikimit.');
       }
       return;
     }
@@ -91,7 +91,7 @@ export default function StartupItemProfileScreen({ itemId, onBack, bottomInset }
       try {
         await Linking.openURL(item.applyLink);
       } catch {
-        Alert.alert('Gabim', 'Nuk mund te hapet materiali.');
+        Alert.alert('Gabim', 'Nuk mund të hapet materiali.');
       }
     }
   };
@@ -113,8 +113,8 @@ export default function StartupItemProfileScreen({ itemId, onBack, bottomInset }
         <ScreenState
           icon="error"
           title="Startup-i nuk u ngarkua"
-          message="Provo perseri per te pare detajet."
-          actionLabel="Provo perseri"
+          message="Provo përsëri për të pare detajet."
+          actionLabel="Provo përsëri"
           onAction={reload}
         />
       </View>
@@ -211,7 +211,7 @@ export default function StartupItemProfileScreen({ itemId, onBack, bottomInset }
                   </View>
                   <View>
                     <Text style={styles.infoLabel}>Aplikimet</Text>
-                    <Text style={styles.infoValue}>Hapur per te gjithe studentet</Text>
+                    <Text style={styles.infoValue}>Hapur për të gjithë studentet</Text>
                   </View>
                 </View>
               </>
@@ -220,12 +220,12 @@ export default function StartupItemProfileScreen({ itemId, onBack, bottomInset }
         </View>
 
         <View style={styles.descPad}>
-          <Text style={styles.descTitle}>Pershkrimi</Text>
+          <Text style={styles.descTitle}>Përshkrimi</Text>
           <View style={styles.descCard}>
             <Text style={styles.descText}>{item.fullDesc}</Text>
             {!!item.materials?.length && (
               <>
-                <Text style={styles.criteriaTitle}>Materiale te lidhura</Text>
+                <Text style={styles.criteriaTitle}>Materiale të lidhura</Text>
                 {item.materials.map((material) => (
                   <View key={material.id} style={styles.criteriaRow}>
                     <View style={styles.criteriaDot} />

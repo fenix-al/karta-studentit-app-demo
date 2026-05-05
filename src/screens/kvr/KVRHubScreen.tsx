@@ -36,7 +36,7 @@ function apiToKvrActivity(k: any): KvrActivity {
     img: k.image || PLACEHOLDER,
     desc: k.excerpt ?? '',
     fullDesc: k.content ?? k.excerpt ?? '',
-    location: k.location ?? 'Bashkia Shkoder',
+    location: k.location ?? 'Bashkia Shkodër',
   };
 }
 
@@ -99,8 +99,8 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
             <ChevronLeft size={20} color={Colors.textSecondary} strokeWidth={2.5} />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerSub}>Zeri i Rinise</Text>
-            <Text style={styles.headerTitle}>KVR Shkoder</Text>
+            <Text style={styles.headerSub}>Zeri i Rinisë</Text>
+            <Text style={styles.headerTitle}>KVR Shkodër</Text>
           </View>
         </View>
       </View>
@@ -111,9 +111,9 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
         contentContainerStyle={{ paddingBottom: bottomInset + 24 }}
       >
         <View style={styles.introPad}>
-          <Text style={styles.introTitle}>Keshilli Vendor i Rinise</Text>
+          <Text style={styles.introTitle}>Keshilli Vendor i Rinisë</Text>
           <Text style={styles.introDesc}>
-            KVR eshte nje organ keshillimor pranë Kryetarit te Bashkise dhe perfaqeson zerin e te rinjve ne nivel lokal.
+            KVR është një organ keshillimor pranë Kryetarit të Bashkisë dhe perfaqeson zerin e të rinjve ne nivel lokal.
           </Text>
 
           <TouchableOpacity activeOpacity={0.9} style={styles.videoWrap}>
@@ -138,8 +138,8 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
 
         <View style={styles.sectionMb}>
           <View style={styles.sectionPadH}>
-            <Text style={styles.sectionTitle}>Kategorite e KVR</Text>
-            <Text style={styles.sectionSubtitle}>Zgjidh nje teme dhe shiko artikujt perkates.</Text>
+            <Text style={styles.sectionTitle}>Kategoritë e KVR</Text>
+            <Text style={styles.sectionSubtitle}>Zgjidh një teme dhe shiko artikujt perkates.</Text>
           </View>
 
           {categoryLoading ? (
@@ -151,8 +151,8 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
               <ScreenState
                 icon="error"
                 title="Gabim ne ngarkim"
-                message="Kategorite e KVR nuk u ngarkuan dot."
-                actionLabel="Provo perseri"
+                message="Kategoritë e KVR nuk u ngarkuan dot."
+                actionLabel="Provo përsëri"
                 onAction={reloadCategories}
               />
             </View>
@@ -176,7 +176,7 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
                     </View>
                     <Text style={styles.groupName}>{category.name}</Text>
                     <Text style={styles.groupDesc} numberOfLines={3}>
-                      {category.count} postime te publikuara ne kete kategori.
+                      {category.count} postime të publikuara në këtë kategori.
                     </Text>
                   </TouchableOpacity>
                 );
@@ -187,7 +187,7 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
               <ScreenState
                 icon="empty"
                 title="Nuk ka kategori"
-                message="Nuk ka kategori te publikuara per momentin."
+                message="Nuk ka kategori të publikuara për momentin."
                 actionLabel="Kthehu ne Home"
                 onAction={onBack}
               />
@@ -199,13 +199,13 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
           <View style={[styles.sectionHeader, styles.sectionPadH]}>
             <View>
               <Text style={styles.sectionTitle}>Aktivitetet e KVR</Text>
-              <Text style={styles.sectionSubtitle}>Ndiqni iniciativat dhe takimet me te fundit.</Text>
+              <Text style={styles.sectionSubtitle}>Ndiqni iniciativat dhe takimet me të fundit.</Text>
             </View>
             <TouchableOpacity
               style={styles.seeAllBtn}
-              onPress={() => onList('Te gjitha Aktivitetet', 'all')}
+              onPress={() => onList('Të gjitha Aktivitetet', 'all')}
             >
-              <Text style={styles.seeAllText}>Te gjitha</Text>
+              <Text style={styles.seeAllText}>Të gjitha</Text>
             </TouchableOpacity>
           </View>
 
@@ -219,7 +219,7 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
                 icon="error"
                 title="Gabim ne ngarkim"
                 message="Postimet e KVR nuk u ngarkuan dot."
-                actionLabel="Provo perseri"
+                actionLabel="Provo përsëri"
                 onAction={reloadFeed}
               />
             </View>
@@ -238,7 +238,7 @@ export default function KVRHubScreen({ onBack, onList, onProfile, bottomInset }:
                   <ScreenState
                     icon="empty"
                     title="Nuk ka postime"
-                    message="Kur te publikohen lajme te reja te KVR, do te shfaqen ketu."
+                    message="Kur të publikohen lajme të reja të KVR, do të shfaqen këtu."
                     actionLabel="Kthehu ne Home"
                     onAction={onBack}
                     compact
@@ -279,7 +279,7 @@ export function KVRActivityCard({
             <Text style={styles.actDate}>{activity.date}</Text>
           </View>
           <View style={styles.actReadMoreRow}>
-            <Text style={styles.actReadMore}>Lexo me shume</Text>
+            <Text style={styles.actReadMore}>Lexo me shumë</Text>
             <ArrowRight size={12} color={NAVY} strokeWidth={2.5} />
           </View>
         </View>

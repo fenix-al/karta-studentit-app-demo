@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -65,9 +65,9 @@ function apiToCourseItem(k: any): CourseItem {
     categorySlugs: k.category_slugs ?? [],
     badgeColor: '#0891b2',
     date: k.start_date ?? '',
-    location: k.location ?? 'Shkoder',
+    location: k.location ?? 'Shkodër',
     duration: k.duration ?? '-',
-    cert: k.certification_text ?? 'Po, pas perfundimit',
+    cert: k.certification_text ?? 'Po, pas përfundimit',
     seats:
       typeof k.free_spots === 'number' && k.total_spots
         ? `${k.free_spots} / ${k.total_spots} vende`
@@ -85,7 +85,7 @@ function apiToCourseItem(k: any): CourseItem {
 
 function apiToJobItem(o: any): JobItem {
   const typeSlug = o.type_slugs?.[0] ?? 'all';
-  const type = (o.types?.[0] ?? 'Mundesi').toUpperCase();
+  const type = (o.types?.[0] ?? 'Mundësi').toUpperCase();
   let badgeBg = '#e0f2fe';
   let badgeText = '#0369a1';
   let badgeBorder = '#bae6fd';
@@ -111,7 +111,7 @@ function apiToJobItem(o: any): JobItem {
     badgeText,
     badgeBorder,
     date: o.deadline || o.date || '',
-    location: o.location || 'Shkoder',
+    location: o.location || 'Shkodër',
     salary: o.salary ?? '',
     duration: '',
     img: o.image || 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800',
@@ -231,7 +231,7 @@ export default function HomeScreen() {
       if (status !== 'granted') {
         Alert.alert(
           'Vendndodhja e bllokuar',
-          'Lejo qasjen te vendndodhja në Cilësimet e telefonit për të gjetur ofertat afër teje.',
+          'Lejo qasjen të vendndodhja në Cilësimet e telefonit për të gjetur ofertat afër teje.',
           [{ text: 'OK' }],
         );
         return;
@@ -267,7 +267,7 @@ export default function HomeScreen() {
   const openCourseProfile = (courseId: string) => {
     const selectedCourse = courseItems.find((course) => course.id === courseId);
     if (!selectedCourse) {
-      openCourses('Te gjitha Kurset');
+      openCourses('Të gjitha Kurset');
       return;
     }
     setActiveCarousel(null);
@@ -286,7 +286,7 @@ export default function HomeScreen() {
   const openJobProfile = (jobId: string) => {
     const selectedJob = (((jobsData as any)?.items ?? []) as any[]).map(apiToJobItem).find((job) => job.id === jobId);
     if (!selectedJob) {
-      openJobs('Te gjitha Mundesite');
+      openJobs('Të gjitha Mundësitë');
       return;
     }
     setActiveCarousel(null);
@@ -432,19 +432,19 @@ export default function HomeScreen() {
           openOfferProfile(business);
         } else {
           setTabReturnTarget('perfitimet', returnTab);
-          openOffers('Te Gjitha Ofertat');
+          openOffers('Të Gjitha Ofertat');
         }
         return;
       }
       case 'course':
         setTabReturnTarget('kurset', returnTab);
         if (targetId) openCourseProfile(targetId);
-        else openCourses('Te Gjitha Kurset');
+        else openCourses('Të Gjitha Kurset');
         return;
       case 'job':
         setTabReturnTarget('mundesit', returnTab);
         if (targetId) openJobProfile(targetId);
-        else openJobs('Te Gjitha Mundesite');
+        else openJobs('Të Gjitha Mundësitë');
         return;
       case 'startup':
         setTabReturnTarget('startupet', returnTab);
@@ -466,6 +466,36 @@ export default function HomeScreen() {
         resetRewardsRoute();
         goToTab('dhurata', returnTab);
         return;
+      case 'live_raffle': {
+        const sessionId = notification.postId || 0;
+        if (!sessionId || liveRaffleLaunching) {
+          resetRewardsRoute();
+          goToTab('dhurata', returnTab);
+          return;
+        }
+
+        setLiveRaffleLaunching(true);
+        void (async () => {
+          try {
+            const result = await fetchLiveRaffleLaunchUrl(sessionId);
+            if (result.ok && result.launch_url) {
+              setLiveRaffleWebViewUrl(result.launch_url);
+              goToTab('shortiLive', returnTab);
+            } else {
+              Alert.alert('Live Raffle', result.message || 'Nuk mund të hysh në këtë sesion.');
+              resetRewardsRoute();
+              goToTab('dhurata', returnTab);
+            }
+          } catch (error: any) {
+            Alert.alert('Gabim', error?.message || 'Nuk u lidh me serverin.');
+            resetRewardsRoute();
+            goToTab('dhurata', returnTab);
+          } finally {
+            setLiveRaffleLaunching(false);
+          }
+        })();
+        return;
+      }
       case 'support_ticket':
         goToTab('home', returnTab);
         setSupportModalRequest({ key: Date.now(), tab: 'history' });

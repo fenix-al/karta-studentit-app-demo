@@ -13,7 +13,7 @@ interface Props {
 
 export default function ModernLoader({
   title = 'Po ngarkohet...',
-  subtitle = 'Ju lutem prisni nje moment.',
+  subtitle = 'Ju lutem prisni një moment.',
   fullscreen = false,
 }: Props) {
   const pulse = useRef(new Animated.Value(0)).current;

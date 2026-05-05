@@ -205,7 +205,7 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
                     </View>
                   </View>
                 </TouchableOpacity>
-              )) : <View style={s.inlineEmpty}><FeatureEmpty kind="raffle" text="Nuk ka shorte aktive për momentin." actionLabel="Kthehu në Home" onPress={onBack} /></View>}
+              )) : <View style={s.inlineEmpty}><FeatureEmpty kind="raffle" text="Nuk ka shortë aktive për momentin." actionLabel="Kthehu në Home" onPress={onBack} /></View>}
             </ScrollView>
 
             <Section title="Tërhiq Tani" meta={`${filteredClaimable.length} aktive`} />
@@ -223,7 +223,7 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
                     <Text style={s.claimCostCoin}>🟡</Text>
                   </View>
                 </TouchableOpacity>
-              )) : <FeatureEmpty kind="reward" text="Nuk ka dhurata direkte për këtë numër pikësh." />}
+              )) : <FeatureEmpty kind="reward" text="Nuk ka dhurata direktë për këtë numër pikësh." />}
             </SectionPad>
 
             {currentLiveSession ? (

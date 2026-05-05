@@ -47,10 +47,10 @@ export default function SettingsSubscreen({
           <View style={styles.sectionStack}>{children}</View>
         ) : (
           <View style={styles.placeholderCard}>
-            <Text style={styles.placeholderTitle}>Kjo faqe eshte gati per permbajtje</Text>
+            <Text style={styles.placeholderTitle}>Kjo faqe është gati për përmbajtje</Text>
             <Text style={styles.placeholderText}>
-              Struktura, header-i dhe navigimi jane aktivizuar. Hapi tjeter eshte te
-              mbushet vetem permbajtja e kesaj faqeje.
+              Struktura, header-i dhe navigimi janë aktivizuar. Hapi tjetër është te
+              mbushet vetëm përmbajtja e kësaj faqeje.
             </Text>
           </View>
         )}

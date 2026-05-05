@@ -123,7 +123,7 @@ export default function ActListScreen({ title, initialCatId, onBack, onProfile, 
           <ScreenState
             icon="empty"
             title="Nuk ka aktivitete"
-            message="Nuk ka aktivitete për këtë kategori aktualisht."
+            message="Nuk ka aktivitetë për këtë kategori aktualisht."
             actionLabel="Kthehu ne Home"
             onAction={onBack}
           />

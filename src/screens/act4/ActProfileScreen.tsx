@@ -44,7 +44,7 @@ export default function ActProfileScreen({ activityId, onBack, bottomInset }: Pr
       dateStr: data.date ?? '',
       fullDate: data.date_raw ?? data.date ?? '',
       time: '',
-      location: data.location ?? 'Shkoder',
+      location: data.location ?? 'Shkodër',
       img: data.image || PLACEHOLDER,
       desc: textContent || '',
       fullDesc: textContent || '',
@@ -69,8 +69,8 @@ export default function ActProfileScreen({ activityId, onBack, bottomInset }: Pr
         <ScreenState
           icon="error"
           title="Aktiviteti nuk u ngarkua"
-          message="Provo perseri per te pare detajet e aktivitetit."
-          actionLabel="Provo perseri"
+          message="Provo përsëri për të pare detajet e aktivitetit."
+          actionLabel="Provo përsëri"
           onAction={reload}
         />
       </View>

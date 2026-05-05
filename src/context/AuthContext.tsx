@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setRole('business');
             setIsLoggedIn(true);
           } else if (result?.role === 'no_card') {
-            setAuthNotice('Kjo llogari nuk ka nje karte aktive per momentin.');
+            setAuthNotice('Kjo llogari nuk ka një kartë aktive për momentin.');
             await apiLogout();
           } else {
             // null = token invalid, network error, or unrecognised role
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (err instanceof ApiError && err.code === 'no_card') {
         setCard(null);
         setIsLoggedIn(false);
-        setAuthNotice('Kjo llogari nuk ka nje karte aktive per momentin.');
+        setAuthNotice('Kjo llogari nuk ka një kartë aktive për momentin.');
         await apiLogout();
       }
     }

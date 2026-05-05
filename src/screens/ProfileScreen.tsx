@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   Image, Alert, StyleSheet, ActivityIndicator, Animated,
@@ -826,7 +826,7 @@ export default function ProfileScreen({
             error={startupIdeasError}
             empty={startupIdeas.length === 0}
             emptyText="Nuk ka ide startup të ruajtura për momentin."
-            emptyActionLabel="Shko te Startup"
+            emptyActionLabel="Shko të Startup"
             onEmptyAction={onOpenStartupIdea}
           >
             {startupIdeas.map((idea) => (
@@ -887,7 +887,7 @@ export default function ProfileScreen({
             loading={rafflesLoading}
             error={rafflesError}
             empty={raffleEntries.length === 0}
-            emptyText="Nuk ka pjesëmarrje në shorte për momentin."
+            emptyText="Nuk ka pjesëmarrje në shortë për momentin."
             emptyActionLabel="Kthehu në Home"
             onEmptyAction={onBack}
           >
@@ -1174,7 +1174,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(244,114,182,0.18)',
   },
 
-  // Absolute decorative bands (sit above BlurView, behind content)
+  // Absolutë decorative bands (sit above BlurView, behind content)
   cardHeaderGrad: {
     position: 'absolute', left: 0, right: 0, top: 0, height: 76,
   },

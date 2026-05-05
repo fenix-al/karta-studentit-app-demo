@@ -110,7 +110,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
       setCatData(offersHubCache.categories);
       setPromotions(offersHubCache.promotions ?? []);
     } catch (e: any) {
-      setError(e?.message ?? 'Gabim ne ngarkimin e te dhenave.');
+      setError(e?.message ?? 'Gabim ne ngarkimin e të dhënave.');
     } finally {
       setLoading(false);
     }
@@ -161,12 +161,12 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
     );
   }, [allBiz, search]);
 
-  // Priority: Private first, then Publike, then Other; no duplicates
+  // Priority: Privatë first, then Publike, then Other; no duplicates
   const isPrivate = (slugs: string[]) =>
-    slugs.some(s => s === 'sherbime-private' || s.includes('-private'));
+    slugs.some(s => s === 'shërbime-private' || s.includes('-private'));
   const isPublic = (slugs: string[]) =>
     slugs.some(s =>
-      s === 'sherbime-publike' || s.includes('-publike') ||
+      s === 'shërbime-publike' || s.includes('-publike') ||
       s === 'transport' || s === 'histori-muze' ||
       s.includes('teatr') || s.includes('muzeu')
     );
@@ -181,11 +181,11 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
     else otherBiz.push(biz);
   });
 
-  // Categories from WordPress; "Te gjitha" pill prepended
+  // Categories from WordPress; "Të gjitha" pill prepended
   const wpcats: Array<{ id: string; slug: string; name: string; icon?: string }> =
     Array.isArray(catData)
-      ? [{ id: 'all', slug: 'all', name: 'Te gjitha' }, ...catData.map(t => ({ id: t.slug, slug: t.slug, name: t.name }))]
-      : [{ id: 'all', slug: 'all', name: 'Te gjitha' }];
+      ? [{ id: 'all', slug: 'all', name: 'Të gjitha' }, ...catData.map(t => ({ id: t.slug, slug: t.slug, name: t.name }))]
+      : [{ id: 'all', slug: 'all', name: 'Të gjitha' }];
 
   const topRow = wpcats.filter((_, i) => i % 2 === 0);
   const bottomRow = wpcats.filter((_, i) => i % 2 === 1);
@@ -235,7 +235,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
       try {
         await Linking.openURL(promo.target_url);
       } catch {
-        Alert.alert('Gabim', 'Nuk mund te hapet kjo faqe tani.');
+        Alert.alert('Gabim', 'Nuk mund të hapet kjo faqe tani.');
       }
     }
   }, [allBiz, onProfile]);
@@ -266,7 +266,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
         ...prev,
         [biz.id]: current,
       }));
-      Alert.alert('Gabim', 'Nuk mund te regjistrohet rekomandimi. Provo perseri.');
+      Alert.alert('Gabim', 'Nuk mund të regjistrohet rekomandimi. Provo përsëri.');
     }
   }
 
@@ -410,7 +410,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
               icon="error"
               title="Gabim ne ngarkim"
               message={typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
-              actionLabel="Provo perseri"
+              actionLabel="Provo përsëri"
               onAction={reload}
             />
           </View>
@@ -441,7 +441,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           <HSection
             title="Biznese Private"
             data={visiblePrivBiz}
-            onSeeAll={() => onList('Biznese Private', 'sherbime-private')}
+            onSeeAll={() => onList('Biznese Private', 'shërbime-private')}
             onCard={onProfile}
             onToggleRecommend={handleToggleRecommend}
           />
@@ -451,7 +451,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           <HSection
             title="Biznese Publike"
             data={visiblePubBiz}
-            onSeeAll={() => onList('Biznese Publike', 'sherbime-publike')}
+            onSeeAll={() => onList('Biznese Publike', 'shërbime-publike')}
             onCard={onProfile}
             onToggleRecommend={handleToggleRecommend}
           />
@@ -472,7 +472,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
             <ScreenState
               icon={search.trim() ? 'search' : 'briefcase'}
               title={search.trim() ? 'Nuk u gjet asgje' : 'Nuk ka biznese'}
-              message={search.trim() ? 'Provo nje kerkese tjeter ose hiqe filtrin aktual.' : 'Kur te shtohen partneret e rinj, do te shfaqen ketu.'}
+              message={search.trim() ? 'Provo një kërkesë tjetër ose hiqe filtrin aktual.' : 'Kur të shtohen partneret e rinj, do të shfaqen këtu.'}
               actionLabel={search.trim() ? 'Kthehu ne Home' : undefined}
               onAction={search.trim() ? onBack : undefined}
             />

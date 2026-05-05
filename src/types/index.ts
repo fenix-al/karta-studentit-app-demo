@@ -457,7 +457,7 @@ export interface CourseItem {
 // ── Notification ─────────────────────────────────────────────────────────────
 export interface AppNotification {
   id:         string;
-  type:       'points' | 'job' | 'course' | 'offer' | 'act4' | 'startup' | 'kvr' | 'raffle' | 'support_ticket' | 'system';
+  type:       'points' | 'job' | 'course' | 'offer' | 'act4' | 'startup' | 'kvr' | 'raffle' | 'live_raffle' | 'support_ticket' | 'system';
   postId:     number;
   title:      string;
   message:    string;

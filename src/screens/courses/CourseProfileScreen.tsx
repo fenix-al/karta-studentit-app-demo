@@ -27,7 +27,7 @@ export default function CourseProfileScreen({ course, onBack, bottomInset }: Pro
       date: k.start_date ?? course.date,
       location: k.location ?? course.location,
       duration: k.duration ?? course.duration,
-      cert: k.certification_text ?? course.cert ?? 'Po, pas perfundimit',
+      cert: k.certification_text ?? course.cert ?? 'Po, pas përfundimit',
       seats: typeof k.free_spots === 'number' && k.total_spots ? `${k.free_spots} / ${k.total_spots} vende` : (k.total_spots ? `${k.total_spots} vende` : course.seats),
       totalSpots: k.total_spots ?? course.totalSpots,
       freeSpots: typeof k.free_spots === 'number' ? k.free_spots : course.freeSpots,
@@ -47,7 +47,7 @@ export default function CourseProfileScreen({ course, onBack, bottomInset }: Pro
       Alert.alert('U krye', res.msg || 'Regjistrimi u krye me sukses.');
       await reload();
     } catch (err: any) {
-      Alert.alert('Gabim', err?.message ?? 'Nuk mund te regjistroheni per momentin.');
+      Alert.alert('Gabim', err?.message ?? 'Nuk mund të regjistroheni për momentin.');
     } finally {
       setBusy(false);
     }
@@ -59,7 +59,7 @@ export default function CourseProfileScreen({ course, onBack, bottomInset }: Pro
       ? 'Regjistrohu me 1 Klik'
       : item.totalSpots && item.freeSpots === 0
         ? 'Vendet u plotesuan'
-        : 'Regjistrimi nuk eshte i disponueshem';
+        : 'Regjistrimi nuk është i disponueshem';
 
   return (
     <View style={styles.root}>
@@ -88,7 +88,7 @@ export default function CourseProfileScreen({ course, onBack, bottomInset }: Pro
               icon="error"
               title="Gabim ne ngarkim"
               message={error}
-              actionLabel="Provo perseri"
+              actionLabel="Provo përsëri"
               onAction={reload}
               compact
             />
@@ -107,16 +107,16 @@ export default function CourseProfileScreen({ course, onBack, bottomInset }: Pro
           <View style={styles.highlightsCard}>
             <InfoRow icon={<Clock size={20} color="#f59e0b" />} label="Kohezgjatja" value={item.duration || '—'} bg="#fffbeb" />
             <View style={styles.divider} />
-            <InfoRow icon={<Award size={20} color="#10b981" />} label="Certifikimi" value={item.cert || 'Po, pas perfundimit'} bg="#ecfdf5" />
+            <InfoRow icon={<Award size={20} color="#10b981" />} label="Certifikimi" value={item.cert || 'Po, pas përfundimit'} bg="#ecfdf5" />
             <View style={styles.divider} />
-            <InfoRow icon={<Users size={20} color="#0ea5e9" />} label="Vende te Lira" value={item.seats || '—'} bg="#f0f9ff" />
+            <InfoRow icon={<Users size={20} color="#0ea5e9" />} label="Vende të Lira" value={item.seats || '—'} bg="#f0f9ff" />
           </View>
         </View>
 
         <View style={styles.descPad}>
           <Text style={styles.descTitle}>Detajet e Kursit</Text>
           <View style={styles.descCard}>
-            <Text style={styles.descText}>{stripHtml(item.content || item.desc || 'Nuk ka pershkrim per momentin.')}</Text>
+            <Text style={styles.descText}>{stripHtml(item.content || item.desc || 'Nuk ka përshkrim për momentin.')}</Text>
           </View>
         </View>
 
@@ -129,7 +129,7 @@ export default function CourseProfileScreen({ course, onBack, bottomInset }: Pro
           >
             {busy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.registerBtnText}>{buttonLabel}</Text>}
           </TouchableOpacity>
-          <Text style={styles.helperText}>Regjistrimi behet automatikisht me te dhenat e kartes suaj.</Text>
+          <Text style={styles.helperText}>Regjistrimi behet automatikisht me të dhënat e kartës suaj.</Text>
         </View>
       </ScrollView>
     </View>

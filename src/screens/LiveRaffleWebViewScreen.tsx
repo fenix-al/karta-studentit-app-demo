@@ -64,7 +64,7 @@ export default function LiveRaffleWebViewScreen({ url, title = 'Live Raffle', on
         {header}
         <View style={s.errorWrap}>
           <Text style={s.errorTitle}>Link i pavlefshem</Text>
-          <Text style={s.errorSub}>Ky link nuk eshte nga domain-i zyrtar i aplikacionit.</Text>
+          <Text style={s.errorSub}>Ky link nuk është nga domain-i zyrtar i aplikacionit.</Text>
         </View>
       </View>
     );

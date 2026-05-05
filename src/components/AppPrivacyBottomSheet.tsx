@@ -128,7 +128,7 @@ export default function AppPrivacyBottomSheet({ onOpenPolicy }: Props) {
             <View style={styles.headerCopy}>
               <View style={styles.titleRow}>
                 <ShieldCheck size={18} color="#10b981" strokeWidth={2.2} />
-                <Text style={styles.title}>Privatesia Jote</Text>
+                <Text style={styles.title}>Privatësia Jote</Text>
               </View>
               <Text style={styles.kicker}>KUSHTET E PERDORIMIT</Text>
             </View>
@@ -141,9 +141,9 @@ export default function AppPrivacyBottomSheet({ onOpenPolicy }: Props) {
               </View>
 
               <Text style={styles.summaryText}>
-                Miresevini! Ky aplikacion administrohet nga <Text style={styles.strong}>Bashkia Shkoder</Text>. Te
-                dhenat tuaja perdoren vetem per funksionimin e Kartes se Studentit, per sherbime dhe zbritje te
-                personalizuara, dhe ruhen me standarde te larta sigurie.
+                Mirësevini! Ky aplikacion administrohet nga <Text style={styles.strong}>Bashkia Shkodër</Text>. Të
+                dhënat tuaja përdoren vetëm për funksionimin e Kartës së Studentit, për shërbime dhe zbritje të
+                personalizuara, dhe ruhen me standarde të larta sigurie.
               </Text>
             </View>
           </View>

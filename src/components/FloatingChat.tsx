@@ -164,7 +164,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
   const handleAttachmentPress = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Leja mungon', 'Lejo aksesin te fotot për të bashkëngjitur një screenshot.');
+      Alert.alert('Leja mungon', 'Lejo aksesin të fotot për të bashkëngjitur një screenshot.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -316,7 +316,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
                       <CheckCircle2 size={42} color="#16a34a" strokeWidth={2.2} />
                     </View>
                     <Text style={styles.successTitle}>Mesazhi u dërgua</Text>
-                    <Text style={styles.successText}>Përgjigjet e stafit do t'i shohësh te skeda Mesazhet.</Text>
+                    <Text style={styles.successText}>Përgjigjet e stafit do t'i shohësh të skeda Mesazhet.</Text>
                   </View>
                 ) : (
                   <>

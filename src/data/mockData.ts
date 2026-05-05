@@ -89,7 +89,7 @@ export const STARTUPS: CardItem[] = [
     badgeColor:     '#6366f1',
     img:            'https://images.unsplash.com/photo-1432888117426-14660d13885b?auto=format&fit=crop&w=800&q=80',
     meta:           'Qendra e Biznesit • Udhëzues hap-pas-hapi',
-    fullDesc:       'Gjithçka që duhet të dini për të hapur biznesin tuaj të parë — nga NIPT deri te llogaria bankare.',
+    fullDesc:       'Gjithçka që duhet të dini për të hapur biznesin tuaj të parë — nga NIPT deri të llogaria bankare.',
     actionText:     'Lexo më shumë',
     actionIconName: 'FileText',
     btnGradient:    ['#6366f1', '#4338ca'],
@@ -291,7 +291,7 @@ export const DIRECT_REWARDS: DirectReward[] = [
   {
     id: 'd1', title: 'Kafe Falas', business: 'Cliché Bar & Bistro',
     cost: 30, icon: '☕', bgColor: '#fff7ed',
-    desc: 'Tërhiq një kupon për një kafe ose kapuçino falas te Cliché Bar. E vlefshme për 7 ditë.',
+    desc: 'Tërhiq një kupon për një kafe ose kapuçino falas të Cliché Bar. E vlefshme për 7 ditë.',
   },
   {
     id: 'd2', title: '1 Biletë Kinemaje', business: 'Kinema Republika',
@@ -301,7 +301,7 @@ export const DIRECT_REWARDS: DirectReward[] = [
   {
     id: 'd3', title: 'Menu Fast Food', business: 'Opa Shkodër',
     cost: 150, icon: '🍔', bgColor: '#fef2f2',
-    desc: 'Një menu e plotë (Pite + Pije + Patate) falas te Opa Shkodër. Tregoni kodin në arkë.',
+    desc: 'Një menu e plotë (Pitë + Pije + Patate) falas të Opa Shkodër. Tregoni kodin në arkë.',
   },
   {
     id: 'd4', title: 'Abonim 1 Mujor', business: 'Palestër "FitLife"',
@@ -525,7 +525,7 @@ export const STARTUP_ITEMS: StartupItem[] = [
     badgeBg: '#eff6ff', badgeText: '#1e40af', badgeBorder: '#bfdbfe',
     date: 'Gjithmonë i disponueshëm',
     img: 'https://images.unsplash.com/photo-1432888117426-14660d13885b?auto=format&fit=crop&w=800&q=80',
-    desc: 'Gjithçka që duhet të dini për të hapur biznesin tuaj të parë — nga NIPT deri te llogaria bankare dhe sigurimet.',
+    desc: 'Gjithçka që duhet të dini për të hapur biznesin tuaj të parë — nga NIPT deri të llogaria bankare dhe sigurimet.',
     fullDesc: 'Ky udhëzues i hartuar nga Qendra e Biznesit Shkodër mbulon çdo hap të nevojshëm: regjistrimin në QKB, hapjen e llogarisë bankare, procedurat tatimore dhe marrjen e licencave të nevojshme.',
     criteria: [
       'Nuk nevojitet asnjë kusht paraprak.',
@@ -610,7 +610,7 @@ export const KVR_GROUPS: KvrGroup[] = [
   {
     id: 'sport', name: 'Sporti dhe Kultura',
     iconName: 'Trophy', color: '#e11d48', bg: '#fff1f2', border: '#fecdd3',
-    desc: 'Aktivitete kulturore, evente sportive dhe promovim i jetesës së shëndetshme mes të rinjve.',
+    desc: 'Aktivitete kulturore, eventë sportive dhe promovim i jetesës së shëndetshme mes të rinjve.',
   },
   {
     id: 'inovacion', name: 'Inovacioni dhe Sipërmarrja',
@@ -637,7 +637,7 @@ export const KVR_ACTIVITIES: KvrActivity[] = [
     date: '22 Mars 2026',
     img: 'https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=800&q=80',
     desc: 'KVR zhvilloi mbledhjen e parë vjetore ku u diskutuan buxhetet dhe prioritetet për projektet rinore.',
-    fullDesc: 'Këshilli Vendor i Rinisë zhvilloi mbledhjen e parë vjetore në sallën e Këshillit Bashkiak. Gjatë këtij takimi, anëtarët prezantuan planin e veprimit për vitin 2026, duke theksuar mbështetjen për idetë inovative të të rinjve dhe ngritjen e fondeve për start-up-et lokale. Takimi ishte i hapur për çdo student të pajisur me Kartën e Studentit.',
+    fullDesc: 'Këshilli Vendor i Rinisë zhvilloi mbledhjen e parë vjetore në sallën e Këshillit Bashkiak. Gjatë këtij takimi, anëtarët prezantuan planin e veprimit për vitin 2026, duke theksuar mbështetjen për idetë inovative të të rinjve dhe ngritjen e fondeve për start-up-et lokale. Takimi ishtë i hapur për çdo student të pajisur me Kartën e Studentit.',
     location: 'Salla e Këshillit Bashkiak',
   },
   {
@@ -647,7 +647,7 @@ export const KVR_ACTIVITIES: KvrActivity[] = [
     date: '20 Mars 2026',
     img: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=800&q=80',
     desc: 'Evente, trajnime, diskutime, art & kulturë — hapësira ku të rinjtë shprehen dhe bashkëpunojnë.',
-    fullDesc: 'Fundjava ishte plot gjallëri në pedonalen "Kolë Idromeno". Grupi tematik i Sportit dhe Kulturës organizoi një sërë aktivitetesh, nga ekspozita e pikturave të studentëve të arteve deri te një mini-kampionat shahu dhe ping-pongu. Qëllimi ishte krijimi i një hapësire ku të rinjtë mund të kalojnë kohën e lirë në mënyrë cilësore.',
+    fullDesc: 'Fundjava ishtë plot gjallëri në pedonalen "Kolë Idromeno". Grupi tematik i Sportit dhe Kulturës organizoi një sërë aktivitetesh, nga ekspozita e pikturave të studentëve të arteve deri të një mini-kampionat shahu dhe ping-pongu. Qëllimi ishtë krijimi i një hapësire ku të rinjtë mund të kalojnë kohën e lirë në mënyrë cilësore.',
     location: 'Pedonalja e Qytetit',
   },
   {
@@ -669,7 +669,7 @@ export const NOTIFICATIONS: AppNotification[] = [
     type:       'points',
     postId:     0,
     title:      'Urime! Ke fituar pikë 🟡',
-    message:    'Skanimi yt tek "Opa Shkodër" ishte i suksesshëm. Ke fituar +5 SCoins në llogarinë tënde.',
+    message:    'Skanimi yt tek "Opa Shkodër" ishtë i suksesshëm. Ke fituar +5 SCoins në llogarinë tënde.',
     time:       'Para 10 minutash',
     isRead:     false,
     iconName:   'Gift',

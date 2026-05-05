@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Karta e Studentit Shkoder",
+    "name": "Karta e Studentit Shkodër",
     "slug": "karta-studentit-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,9 +16,9 @@
       "bundleIdentifier": "com.vini01.kartastudentitapp",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Kamera perdoret nga bizneset partnere per te skanuar QR-ne e Kartes se Studentit.",
-        "NSLocationWhenInUseUsageDescription": "Vendndodhja perdoret vetem kur kerkoni oferta dhe biznese afer jush.",
-        "NSPhotoLibraryUsageDescription": "Fotot perdoren vetem kur bashkengjitni nje screenshot ose foto ne kerkesen per suport."
+        "NSCameraUsageDescription": "Kamera përdoret nga bizneset partnere për të skanuar QR-në e Kartës së Studentit.",
+        "NSLocationWhenInUseUsageDescription": "Vendndodhja përdoret vetëm kur kërkoni oferta dhe biznese afër jush.",
+        "NSPhotoLibraryUsageDescription": "Fotot përdoren vetëm kur bashkëngjitni një screenshot ose foto në kërkesën për suport."
       }
     },
     "android": {
@@ -45,7 +45,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Lejo aksesin te kamera per te perdorur skanerin e QR."
+          "cameraPermission": "Lejo aksesin te kamera për të përdorur skanerin e QR."
         }
       ]
     ],

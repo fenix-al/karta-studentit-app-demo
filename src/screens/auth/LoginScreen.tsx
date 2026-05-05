@@ -78,14 +78,14 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
     let ok = true;
 
     if (!nextUsername.trim()) {
-      setUserError('Shkruaj emrin e perdoruesit.');
+      setUserError('Shkruaj emrin e përdoruesit.');
       ok = false;
     } else {
       setUserError('');
     }
 
     if (!nextPassword) {
-      setPassError('Shkruaj fjalekalimin.');
+      setPassError('Shkruaj fjalëkalimin.');
       ok = false;
     } else {
       setPassError('');
@@ -159,14 +159,14 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
         onBizSuccess(result.bizProfile);
       } else if (result?.role === 'no_card') {
         await logout();
-        Alert.alert('Nuk disponohet', 'Kjo llogari nuk ka nje karte aktive per momentin.');
+        Alert.alert('Nuk disponohet', 'Kjo llogari nuk ka një kartë aktive për momentin.');
       } else {
         await logout();
         Alert.alert('Gabim', 'Kjo llogari nuk ka akses ne aplikacion.');
       }
     } catch (err: any) {
-      const msg: string = err?.message ?? 'Ndodhi nje gabim. Provo perseri.';
-      if (msg.toLowerCase().includes('fjalekalim') || msg.toLowerCase().includes('password')) {
+      const msg: string = err?.message ?? 'Ndodhi një gabim. Provo përsëri.';
+      if (msg.toLowerCase().includes('fjalëkalim') || msg.toLowerCase().includes('password')) {
         setPassError(msg);
       } else {
         Alert.alert('Gabim', msg);
@@ -183,14 +183,14 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
 
     setUsername(savedLogin.username);
     setPassword('');
-    setPassError('Shkruaj fjalekalimin per te hyre ne kete pajisje.');
+    setPassError('Shkruaj fjalëkalimin për të hyrë në këtë pajisje.');
   };
 
   const handleOpenPasswordReset = async () => {
     try {
       await Linking.openURL(resetPrefillUrl);
     } catch (_) {
-      Alert.alert('Gabim', 'Nuk u hap faqja e rikuperimit. Provo perseri.');
+      Alert.alert('Gabim', 'Nuk u hap faqja e rikuperimit. Provo përsëri.');
     }
   };
 
@@ -249,7 +249,7 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Hyrja ne llogari</Text>
-          <Text style={styles.cardSub}>Perdor kredencialet e dhena nga bashkia.</Text>
+          <Text style={styles.cardSub}>Përdor kredencialet e dhena nga bashkia.</Text>
 
           {!!notice && (
             <View style={styles.noticeBox}>
@@ -276,7 +276,7 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
                   disabled={isLoading}
                 >
                   <LogIn size={16} color={Colors.brandGreenDark} strokeWidth={2} />
-                  <Text style={styles.savedBtnText}>Perdor llogarine</Text>
+                  <Text style={styles.savedBtnText}>Përdor llogarine</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -292,7 +292,7 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
           )}
 
           <View style={styles.fieldWrap}>
-            <Text style={styles.label}>Emri i perdoruesit</Text>
+            <Text style={styles.label}>Emri i përdoruesit</Text>
             <View style={[styles.inputBox, !!userError && styles.inputError]}>
               <TextInput
                 style={styles.input}
@@ -312,7 +312,7 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
           </View>
 
           <View style={styles.fieldWrap}>
-            <Text style={styles.label}>Fjalekalimi</Text>
+            <Text style={styles.label}>Fjalëkalimi</Text>
             <View style={[styles.inputBox, !!passError && styles.inputError]}>
               <TextInput
                 style={[styles.input, styles.passwordInput]}
@@ -352,7 +352,7 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
               <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
                 {rememberMe ? <Check size={14} color="#fff" strokeWidth={3} /> : null}
               </View>
-              <Text style={styles.rememberText}>Mbaje mend kete llogari</Text>
+              <Text style={styles.rememberText}>Mbaje mend këtë llogari</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -360,13 +360,13 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
               activeOpacity={0.8}
               style={styles.resetLink}
             >
-              <Text style={styles.resetLinkText}>Rikupero fjalekalimin</Text>
+              <Text style={styles.resetLinkText}>Rikupero fjalëkalimin</Text>
               <ExternalLink size={14} color={Colors.brandGreenDark} strokeWidth={2} />
             </TouchableOpacity>
           </View>
 
           <Text style={styles.helperText}>
-            Ruhet vetem llogaria ne kete pajisje. Fjalekalimi nuk ruhet ne aplikacion.
+            Ruhet vetëm llogaria në këtë pajisje. Fjalëkalimi nuk ruhet në aplikacion.
           </Text>
 
           <TouchableOpacity

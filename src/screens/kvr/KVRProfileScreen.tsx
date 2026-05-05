@@ -71,8 +71,8 @@ export default function KVRProfileScreen({ activityId, onBack, bottomInset }: Pr
           <ScreenState
             icon="error"
             title="Nuk u ngarkua artikulli"
-            message="Provo perseri per te pare lajmin e KVR."
-            actionLabel="Provo perseri"
+            message="Provo përsëri për të pare lajmin e KVR."
+            actionLabel="Provo përsëri"
             onAction={reload}
           />
         </View>
@@ -115,7 +115,7 @@ export default function KVRProfileScreen({ activityId, onBack, bottomInset }: Pr
           <View style={styles.articlePad}>
             <View style={styles.articleCard}>
               <Text style={styles.articleText}>
-                {articleText || data?.excerpt || 'Ky artikull nuk ka pershkrim shtese.'}
+                {articleText || data?.excerpt || 'Ky artikull nuk ka përshkrim shtesë.'}
               </Text>
 
               {!!data?.url && (

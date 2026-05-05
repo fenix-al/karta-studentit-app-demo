@@ -10,84 +10,84 @@ export default function SettingsFaqContent() {
   const faqItems = useMemo(
     () => [
       {
-        question: 'Cfare eshte Karta e Studentit?',
+        question: 'Cfare është Karta e Studentit?',
         answer:
-          'Eshte aplikacioni ku studenti sheh karten digjitale, perfitimet, piket, dhuratat, njoftimet dhe aktivitetin e vet.',
+          'Është aplikacioni ku studenti sheh kartën digjitale, përfitimet, pikët, dhuratat, njoftimet dhe aktivitetin e vet.',
       },
       {
         question: 'Si hyj ne aplikacion?',
         answer:
-          'Hyn me llogarine tende te studentit. Nese kredencialet jane te sakta dhe karta eshte aktive, aplikacioni hap sherbimet e tua.',
+          'Hyn me llogarine tende të studentit. Nese kredencialet janë të sakta dhe karta është aktive, aplikacioni hap shërbimet e tua.',
       },
       {
         question: 'Cfare bej ne faqen kryesore?',
         answer:
-          'Ne faqen kryesore mund te shohesh ofertat, te kerkosh permbajtje, te hapesh njoftimet, te futesh te profili dhe te navigosh ne modulet e tjera te app-it.',
+          'Ne faqen kryesore mund të shohesh ofertat, të kërkosh përmbajtje, të hapesh njoftimet, të futesh të profili dhe të navigosh ne modulet e tjera të app-it.',
       },
       {
-        question: 'Si funksionojne perfitimet?',
+        question: 'Si funksionojnë përfitimet?',
         answer:
-          'Te perfitimet shfaqen bizneset dhe ofertat aktive. Mund te hapesh biznesin, te lexosh detajet dhe te perdoresh karten sipas rregullave te ofertes.',
+          'Te përfitimet shfaqen bizneset dhe ofertat aktive. Mund të hapësh biznesin, të lexosh detajet dhe të përdorësh kartën sipas rregullave të ofertës.',
       },
       {
-        question: 'Si funksionojne piket dhe dhuratat?',
+        question: 'Si funksionojne pikët dhe dhuratat?',
         answer:
-          'Piket mblidhen sipas rregullave te platformes dhe perdoren te seksioni i dhuratave ose shorteve, kur ka aktivitete aktive.',
+          'Pikët mblidhen sipas rregullave të platformes dhe përdoren të seksioni i dhuratave ose shorteve, kur ka aktivitetë aktive.',
       },
       {
-        question: 'Cfare eshte karta digjitale?',
+        question: 'Cfare është karta digjitale?',
         answer:
-          'Karta digjitale eshte identifikimi yt ne app dhe perdoret per verifikim dhe akses ne sherbimet e Kartes se Studentit.',
+          'Karta digjitale është identifikimi yt ne app dhe përdoret për verifikim dhe akses ne shërbimet e Kartës se Studentit.',
       },
       {
-        question: 'Cfare shoh te profili im?',
+        question: 'Cfare shoh të profili im?',
         answer:
-          'Te profili mund te shohesh aplikimet, kurset, historikun, aktivitetet ACT4, startup-et, shortet, reward-et e perdorura dhe mesazhet e support-it.',
+          'Të profili mund të shohesh aplikimet, kurset, historikun, aktivitetet ACT4, startup-et, shortet, reward-et e përdorura dhe mesazhet e support-it.',
       },
       {
         question: 'Si funksionojne kurset?',
         answer:
-          'Te kurset mund te shohesh listen, kategorite, detajet e kursit dhe te regjistrohesh kur kursi eshte i hapur.',
+          'Të kurset mund të shohesh listen, kategorite, detajet e kursit dhe të regjistrohesh kur kursi është i hapur.',
       },
       {
-        question: 'Si funksionojne mundesite?',
+        question: 'Si funksionojnë mundësitë?',
         answer:
-          'Te mundesite mund te shohesh vende praktike, pune ose thirrje dhe te aplikosh direkt nga aplikacioni kur lejohet.',
+          'Te mundësitë mund të shohësh vende praktike, pune ose thirrje dhe të aplikosh direkt nga aplikacioni kur lejohet.',
       },
       {
         question: 'Si funksionon Startup?',
         answer:
-          'Te Startup mund te lexosh materiale ose thirrje dhe, kur lejohet, te dergosh idene tende nga aplikacioni.',
+          'Të Startup mund të lexosh materiale ose thirrje dhe, kur lejohet, të dërgosh idene tende nga aplikacioni.',
       },
       {
         question: 'Si funksionon ACT4?',
         answer:
-          'Te ACT4 mund te shohesh aktivitete, te lexosh detajet dhe te regjistrohesh si vullnetar kur aktiviteti eshte aktiv.',
+          'Të ACT4 mund të shohesh aktivitete, të lexosh detajet dhe të regjistrohesh si vullnetar kur aktiviteti është aktiv.',
       },
       {
-        question: 'Cfare eshte KVR?',
+        question: 'Cfare është KVR?',
         answer:
-          'KVR eshte seksioni informues ku lexohen lajme, njoftime dhe materiale te lidhura me Keshillin Vendor te Rinise.',
+          'KVR është seksioni informues ku lexohen lajme, njoftime dhe materiale të lidhura me Keshillin Vendor të Rinisë.',
       },
       {
         question: 'Si funksionojne njoftimet?',
         answer:
-          'Kur njoftimet push jane aktive, aplikacioni mund te te dergoje sinjalizime per oferta, permbajtje, shorte ose veprime te rendesishme.',
+          'Kur njoftimet push janë aktive, aplikacioni mund të të dërgoje sinjalizime për oferta, përmbajtje, shortë ose veprime të rendesishme.',
       },
       {
-        question: 'Cfare bejne cilesimet?',
+        question: 'Cfare bejne cilësimet?',
         answer:
-          'Te cilesimet mund te shohesh te dhenat personale, te hapesh rikuperimin e fjalekalimit, te kontrollosh njoftimet push, te lexosh FAQ, kushtet dhe privatesine, si edhe te dalesh nga llogaria.',
+          'Të cilësimet mund të shohesh të dhënat personale, të hapesh rikuperimin e fjalëkalimit, të kontrollosh njoftimet push, të lexosh FAQ, kushtet dhe privatësine, si edhe të dalesh nga llogaria.',
       },
       {
-        question: 'Si ndryshoj fjalekalimin?',
+        question: 'Si ndryshoj fjalëkalimin?',
         answer:
-          'Nga Siguria & Fjalekalimi hapet faqja zyrtare e rikuperimit, ku mund te kerkosh linkun per ndryshimin e fjalekalimit.',
+          'Nga Siguria & Fjalëkalimi hapet faqja zyrtare e rikuperimit, ku mund të kërkosh linkun për ndryshimin e fjalëkalimit.',
       },
       {
-        question: 'Cfare te bej nese dicka nuk punon?',
+        question: 'Cfare të bej nese dicka nuk punon?',
         answer:
-          'Kontrollo internetin, mbylle dhe hape perseri app-in, dhe nese problemi vazhdon perdor kanalet e ndihmes ose support-it.',
+          'Kontrollo internetin, mbylle dhe hape përsëri app-in, dhe nese problemi vazhdon përdor kanalet e ndihmes ose support-it.',
       },
     ],
     [],

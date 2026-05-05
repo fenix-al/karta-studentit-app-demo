@@ -66,16 +66,16 @@ function isJwtErrorCode(code?: string) {
 
 function friendlyApiMessage(status: number, code?: string, fallback?: string) {
   if (code === 'no_card') {
-    return 'Nuk u gjet nje karte aktive per kete llogari.';
+    return 'Nuk u gjet një kartë aktive për këtë llogari.';
   }
   if (code === 'not_found') {
-    return 'Ky element nuk eshte me i disponueshem.';
+    return 'Ky element nuk është me i disponueshem.';
   }
   if (code === 'scan_cooldown_active') {
-    return fallback || 'Ky student eshte skanuar se fundi nga ky biznes.';
+    return fallback || 'Ky student është skanuar se fundi nga ky biznes.';
   }
   if (isAuthStatus(status) || isJwtErrorCode(code)) {
-    return 'Sesioni ka skaduar. Ju lutem hyni perseri.';
+    return 'Sesioni ka skaduar. Ju lutem hyni përsëri.';
   }
   if (status === 404) {
     return 'Permbajtja nuk u gjet.';
@@ -173,7 +173,7 @@ async function publicFetch<T>(path: string): Promise<T> {
     return res.json() as Promise<T>;
   } catch (error: any) {
     if (error?.name === 'AbortError') {
-      throw new ApiError('Serveri vonoi shume. Provo perseri pas pak.', 408);
+      throw new ApiError('Serveri vonoi shumë. Provo përsëri pas pak.', 408);
     }
     if (error instanceof ApiError) {
       throw error;
@@ -212,7 +212,7 @@ async function apiFetch<T>(
 
       if (isAuthStatus(res.status) || isJwtErrorCode(code)) {
         await removeToken();
-        emitAuthError('Sesioni juaj ka skaduar. Ju lutem hyni perseri.');
+        emitAuthError('Sesioni juaj ka skaduar. Ju lutem hyni përsëri.');
       }
 
       throw new ApiError(message, res.status, code, details);
@@ -221,7 +221,7 @@ async function apiFetch<T>(
     return res.json() as Promise<T>;
   } catch (error: any) {
     if (error?.name === 'AbortError') {
-      throw new ApiError('Serveri vonoi shume. Provo perseri pas pak.', 408);
+      throw new ApiError('Serveri vonoi shumë. Provo përsëri pas pak.', 408);
     }
     if (error instanceof ApiError) {
       throw error;
@@ -253,7 +253,7 @@ async function apiUpload<T>(path: string, body: FormData): Promise<T> {
 
     if (isAuthStatus(res.status) || isJwtErrorCode(code)) {
       await removeToken();
-      emitAuthError('Sesioni juaj ka skaduar. Ju lutem hyni perseri.');
+      emitAuthError('Sesioni juaj ka skaduar. Ju lutem hyni përsëri.');
     }
 
     throw new ApiError(message, res.status, code, details);
@@ -286,7 +286,7 @@ export async function login(username: string, password: string): Promise<LoginRe
       body: JSON.stringify({ username, password }),
     });
   } catch (_) {
-    throw new Error('Nuk u arrit serveri. Provo perseri.');
+    throw new Error('Nuk u arrit serveri. Provo përsëri.');
   }
 
   if (!res.ok) {
@@ -826,20 +826,20 @@ export async function createSupportTicket(input: {
 export async function requestAccountDeletion(message?: string): Promise<CreateSupportTicketResult> {
   const profile = await fetchMe();
   const details = [
-    'Kerkese per fshirjen e llogarise dhe te dhenave personale nga aplikacioni Karta e Studentit Shkoder.',
+    'Kërkesë për fshirjen e llogarisë dhe të dhënave personale nga aplikacioni Karta e Studentit Shkodër.',
     '',
     `Student: ${profile.emeri} ${profile.mbiemeri}`,
     `Email: ${profile.email || '-'}`,
     `NIM: ${profile.nim || '-'}`,
-    `Nr. karte: ${profile.nr_karte || '-'}`,
+    `Nr. kartë: ${profile.nr_karte || '-'}`,
     '',
-    'Shenim i perdoruesit:',
-    message?.trim() || 'Pa shenim shtese.',
+    'Shenim i përdoruesit:',
+    message?.trim() || 'Pa shenim shtesë.',
   ].join('\n');
 
   return createSupportTicket({
     category: 'account_deletion',
-    subject: 'Kerkese per fshirje llogarie',
+    subject: 'Kërkesë për fshirje llogarie',
     message: details,
   });
 }
@@ -889,11 +889,11 @@ export async function fetchBizCampaigns(): Promise<BizCampaign[]> {
 export async function postBizCampaign(
   titulli:    string,
   lloji:      string,
-  pershkrimi: string,
+  përshkrimi: string,
 ): Promise<{ success: boolean; id: number; msg: string }> {
   return apiFetch('/biz/campaigns', {
     method: 'POST',
-    body: JSON.stringify({ titulli, lloji, pershkrimi }),
+    body: JSON.stringify({ titulli, lloji, përshkrimi }),
   });
 }
 

@@ -29,12 +29,12 @@ export function apiToJobItem(o: any): JobItem {
     id:       String(o.id),
     title:    o.title ?? '',
     company:  o.company ?? '',
-    type:     (o.types?.[0] ?? 'Mundesi').toUpperCase(),
+    type:     (o.types?.[0] ?? 'Mundësi').toUpperCase(),
     typeSlug: o.type_slugs?.[0] ?? 'all',
     typeSlugs: o.type_slugs ?? [],
     ...badge,
     date:     o.deadline || o.date || '',
-    location: o.location || 'Shkoder',
+    location: o.location || 'Shkodër',
     salary:   o.salary ?? '',
     duration: '',
     img:      o.image || PLACEHOLDER,
@@ -65,7 +65,7 @@ export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bott
 
   const categories = useMemo<JobCategory[]>(() => {
     const live = (catData ?? []).map((c) => ({ id: c.slug, name: c.name, icon: '•' }));
-    return [{ id: 'all', name: 'Te gjitha', icon: '•' }, ...live];
+    return [{ id: 'all', name: 'Të gjitha', icon: '•' }, ...live];
   }, [catData]);
 
   return (
@@ -76,13 +76,13 @@ export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bott
             <ChevronLeft size={20} color={Colors.textSecondary} strokeWidth={2.5} />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerSub}>Qendra e Mundesive</Text>
+            <Text style={styles.headerSub}>Qendra e Mundësive</Text>
             <Text style={styles.headerTitle}>Karriera & Praktika</Text>
           </View>
         </View>
         <View style={styles.searchBar}>
           <Search size={15} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.searchPlaceholder}>Kerko pozicion ose kompani...</Text>
+          <Text style={styles.searchPlaceholder}>Kërko pozicion ose kompani...</Text>
         </View>
       </View>
 
@@ -112,7 +112,7 @@ export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bott
             icon="error"
             title="Gabim ne ngarkim"
             message={typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
-            actionLabel="Provo perseri"
+            actionLabel="Provo përsëri"
             onAction={reload}
           />
         </View>
@@ -125,17 +125,17 @@ export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bott
           <View style={styles.sectionMb}>
             <View style={[styles.sectionHeader, styles.sectionPadH]}>
               <View>
-                <Text style={styles.sectionTitle}>Me te fundit</Text>
-                <Text style={styles.sectionSubtitle}>{jobs.length} mundesi pune dhe praktikash.</Text>
+                <Text style={styles.sectionTitle}>Me të fundit</Text>
+                <Text style={styles.sectionSubtitle}>{jobs.length} mundësi pune dhe praktikash.</Text>
               </View>
               <TouchableOpacity
                 style={styles.seeAllBtn}
                 onPress={() => onList(
-                  activeCat === 'all' ? 'Te gjitha Mundesite' : `Kategoria: ${categories.find((c) => c.id === activeCat)?.name ?? ''}`,
+                  activeCat === 'all' ? 'Të gjitha Mundësitë' : `Kategoria: ${categories.find((c) => c.id === activeCat)?.name ?? ''}`,
                   activeCat === 'all' ? undefined : activeCat,
                 )}
               >
-                <Text style={styles.seeAllText}>Shiko te gjitha</Text>
+                <Text style={styles.seeAllText}>Shiko të gjitha</Text>
               </TouchableOpacity>
             </View>
 
@@ -147,8 +147,8 @@ export default function OpportunitiesHubScreen({ onBack, onList, onProfile, bott
               ) : (
                 <ScreenState
                   icon="briefcase"
-                  title="Nuk ka mundesi"
-                  message="Kur te publikohen mundesi te reja, do te shfaqen ketu."
+                  title="Nuk ka mundësi"
+                  message="Kur të publikohen mundësi të reja, do të shfaqen këtu."
                   actionLabel="Kthehu ne Home"
                   onAction={onBack}
                 />
@@ -188,7 +188,7 @@ export function JobCard({ job, onPress }: { job: JobItem; onPress: () => void })
       <View style={styles.jobFooter}>
         <View style={styles.jobLocation}>
           <MapPin size={12} color={Colors.textMuted} strokeWidth={2} />
-          <Text style={styles.jobLocationText}>{job.location || 'Shkoder'}</Text>
+          <Text style={styles.jobLocationText}>{job.location || 'Shkodër'}</Text>
         </View>
         {job.date ? (
           <View style={styles.jobDeadline}>
