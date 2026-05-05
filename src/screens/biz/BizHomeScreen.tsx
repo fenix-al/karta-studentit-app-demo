@@ -23,6 +23,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -50,6 +51,7 @@ import {
   ApiError,
   fetchBizTopStudents,
   fetchBizCampaigns,
+  fetchBizVerifyCard,
   postBizCampaign,
   postBizScan,
 } from '../../services/api';
@@ -217,6 +219,9 @@ export default function BizHomeScreen() {
   const [formSuccess,    setFormSuccess]    = useState('');
   const [scannerCapture, setScannerCapture] = useState<ScannerCapture | null>(null);
   const [scannerError,   setScannerError]   = useState('');
+  const [scanPreview,    setScanPreview]    = useState<BizScanResponse | null>(null);
+  const [scanPreviewLoading, setScanPreviewLoading] = useState(false);
+  const [scanPreviewError, setScanPreviewError] = useState('');
   const [scanSubmitting, setScanSubmitting] = useState(false);
   const [scanResult,     setScanResult]     = useState<BizScanResponse | null>(null);
   const [scanSubmitError, setScanSubmitError] = useState('');
@@ -289,14 +294,17 @@ export default function BizHomeScreen() {
   const resetScannerCapture = () => {
     setScannerCapture(null);
     setScannerError('');
+    setScanPreview(null);
+    setScanPreviewLoading(false);
+    setScanPreviewError('');
     setScanResult(null);
     setScanSubmitError('');
     setCooldownRemaining(null);
     setScanRequiresReset(false);
   };
 
-  const handleBarcodeScanned = (result: BarcodeScanningResult) => {
-    if (scannerCapture) return;
+  const handleBarcodeScanned = async (result: BarcodeScanningResult) => {
+    if (scannerCapture || scanPreviewLoading) return;
 
     const rawValue = result.data?.trim() ?? '';
     const token = extractScanToken(rawValue);
@@ -307,6 +315,8 @@ export default function BizHomeScreen() {
     }
 
     setScannerError('');
+    setScanPreview(null);
+    setScanPreviewError('');
     setScanResult(null);
     setScanSubmitError('');
     setCooldownRemaining(null);
@@ -316,6 +326,20 @@ export default function BizHomeScreen() {
       rawValue,
       token,
     });
+
+    setScanPreviewLoading(true);
+    try {
+      const preview = await fetchBizVerifyCard(token);
+      setScanPreview(preview);
+    } catch (error) {
+      setScanPreviewError(
+        error instanceof Error
+          ? error.message
+          : 'Nuk u ngarkuan te dhenat e kartes per kontroll me foto.'
+      );
+    } finally {
+      setScanPreviewLoading(false);
+    }
   };
 
   const handleScanSubmit = async () => {
@@ -528,14 +552,22 @@ export default function BizHomeScreen() {
     const canAskAgain = cameraPermission?.canAskAgain !== false;
     const scanHasResolvedResult = !!(scanResult?.msg || scanSubmitError);
     const scanStatusIsError = !!scanSubmitError;
-    const scanActionDisabled = scanSubmitting || cooldownRemaining != null || scanRequiresReset;
+    const previewStudent = scanPreview ?? scanResult;
+    const previewIsValid = previewStudent?.valid === true || previewStudent?.msg === 'E VLEFSHME';
+    const scanPreviewIsInvalid = !!scanPreview && !previewIsValid;
+    const scanActionDisabled = scanSubmitting || scanPreviewLoading || cooldownRemaining != null || scanRequiresReset || scanPreviewIsInvalid;
     const scanActionLabel = scanSubmitting
       ? 'Duke verifikuar...'
-      : cooldownRemaining != null
+      : scanPreviewLoading
+        ? 'Duke ngarkuar te dhenat...'
+        : cooldownRemaining != null
         ? `Prit ${formatCountdown(cooldownRemaining)}`
         : scanRequiresReset
           ? 'Skano QR tjetër'
           : 'Verifiko Karten';
+    const previewInitials = previewStudent?.student
+      ? previewStudent.student.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase()
+      : '?';
 
     return (
       <ScrollView
@@ -582,22 +614,50 @@ export default function BizHomeScreen() {
 
         {(scannerCapture || scannerError) && (
           <View style={styles.scannerInfoCard}>
-            <Text style={styles.scannerInfoTitle}>
-              {scannerCapture ? 'QR u lexua' : 'QR nuk u kuptua'}
-            </Text>
-
             {scannerCapture ? (
               <>
-                <Text style={styles.scannerInfoText}>
-                  Tipi: {scannerCapture.type} {'\u2022'} QR u lexua me sukses dhe është
-                  gati për verifikim.
-                </Text>
-                <View style={styles.scannerResultBox}>
-                  <Text style={styles.scannerResultLabel}>Token</Text>
-                  <Text style={styles.scannerResultValue}>{scannerCapture.token}</Text>
-                  <Text style={styles.scannerResultLabel}>Vlera e lexuar</Text>
-                  <Text style={styles.scannerResultRaw}>{scannerCapture.rawValue}</Text>
-                </View>
+                {scanPreviewLoading ? (
+                  <View style={styles.studentPreviewCard}>
+                    <ActivityIndicator size="small" color="#003366" />
+                    <Text style={styles.studentPreviewLoadingText}>
+                      Po ngarkohet foto dhe identiteti i studentit...
+                    </Text>
+                  </View>
+                ) : previewStudent ? (
+                  <View style={styles.studentPreviewCard}>
+                    {previewStudent.foto ? (
+                      <Image source={{ uri: previewStudent.foto }} style={styles.studentPreviewPhoto} />
+                    ) : (
+                      <View style={styles.studentPreviewFallback}>
+                        <Text style={styles.studentPreviewFallbackText}>{previewInitials}</Text>
+                      </View>
+                    )}
+                    <View style={styles.studentPreviewInfo}>
+                      <Text style={styles.studentPreviewEyebrow}>Kontrollo personin</Text>
+                      <Text style={styles.studentPreviewName}>{previewStudent.student}</Text>
+                      <Text style={styles.studentPreviewMeta}>NIM: {previewStudent.nim}</Text>
+                      {!!previewStudent.nr_karte && (
+                        <Text style={styles.studentPreviewMeta}>Nr. kartes: {previewStudent.nr_karte}</Text>
+                      )}
+                      {!!previewStudent.msg && (
+                        <Text style={[
+                          styles.studentPreviewStatus,
+                          previewIsValid
+                            ? styles.studentPreviewStatusOk
+                            : styles.studentPreviewStatusWarn,
+                        ]}>
+                          {previewStudent.msg}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                ) : scanPreviewError ? (
+                  <View style={[styles.scanStatusBox, styles.scanStatusErrorBox]}>
+                    <Text style={[styles.scanStatusText, styles.scanStatusErrorText]}>
+                      {scanPreviewError}
+                    </Text>
+                  </View>
+                ) : null}
 
                 {scanHasResolvedResult ? (
                   <View style={[
@@ -638,19 +698,21 @@ export default function BizHomeScreen() {
                   </View>
                 ) : null}
 
-                <TouchableOpacity
-                  style={[
-                    styles.scannerPrimaryBtn,
-                    scanActionDisabled && styles.formBtnDisabled,
-                  ]}
-                  onPress={handleScanSubmit}
-                  activeOpacity={0.85}
-                  disabled={scanActionDisabled}
-                >
-                  <Text style={styles.scannerPrimaryBtnText}>
-                    {scanActionLabel}
-                  </Text>
-                </TouchableOpacity>
+                {!scanPreviewIsInvalid && (
+                  <TouchableOpacity
+                    style={[
+                      styles.scannerPrimaryBtn,
+                      scanActionDisabled && styles.formBtnDisabled,
+                    ]}
+                    onPress={handleScanSubmit}
+                    activeOpacity={0.85}
+                    disabled={scanActionDisabled}
+                  >
+                    <Text style={styles.scannerPrimaryBtnText}>
+                      {scanActionLabel}
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 {scanSubmitError && !scanResult?.msg ? (
                   <View style={[styles.scanStatusBox, styles.scanStatusErrorBox]}>
@@ -661,7 +723,10 @@ export default function BizHomeScreen() {
                 ) : null}
               </>
             ) : (
-              <Text style={styles.scannerInfoText}>{scannerError}</Text>
+              <>
+                <Text style={styles.scannerInfoTitle}>QR nuk u kuptua</Text>
+                <Text style={styles.scannerInfoText}>{scannerError}</Text>
+              </>
             )}
 
             <TouchableOpacity
@@ -676,13 +741,14 @@ export default function BizHomeScreen() {
 
         <View style={styles.cameraShell}>
           {isPermissionReady ? (
+            <>
             <CameraView
               style={styles.cameraPreview}
               facing="back"
               barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
               mute
               onBarcodeScanned={handleBarcodeScanned}
-            >
+            />
               <View style={styles.cameraOverlay}>
                 <View style={styles.scannerFrame} />
                 <Text style={styles.cameraOverlayText}>
@@ -690,7 +756,7 @@ export default function BizHomeScreen() {
                   verifikohet menjëherë.
                 </Text>
               </View>
-            </CameraView>
+            </>
           ) : (
             <View style={styles.cameraPlaceholder}>
               <QrCode size={56} color={Colors.textMuted} strokeWidth={1.5} />
@@ -898,6 +964,34 @@ export default function BizHomeScreen() {
         ))}
       </View>
 
+      <TouchableOpacity
+        style={styles.profileActionCard}
+        onPress={() => setActiveTab('promo')}
+        activeOpacity={0.88}
+      >
+        <View style={styles.profileActionIcon}>
+          <Megaphone size={22} color="#003366" strokeWidth={2.2} />
+        </View>
+        <View style={styles.profileActionContent}>
+          <Text style={styles.profileActionTitle}>{'K\u00ebrko promovim'}</Text>
+          <Text style={styles.profileActionText}>
+            {'D\u00ebrgo nj\u00eb ofert\u00eb, zbritje ose ngjarje p\u00ebr student\u00ebt.'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      <View style={styles.desktopInfoCard}>
+        <View style={styles.desktopInfoIcon}>
+          <TrendingUp size={20} color="#0f766e" strokeWidth={2.2} />
+        </View>
+        <View style={styles.desktopInfoContent}>
+          <Text style={styles.desktopInfoTitle}>{'Raporte dhe t\u00eb dh\u00ebna t\u00eb detajuara'}</Text>
+          <Text style={styles.desktopInfoText}>
+            {'P\u00ebr analiza m\u00eb t\u00eb plota, eksportime dhe shkarkim t\u00eb dh\u00ebnash, hyni n\u00eb platform\u00eb nga desktop.'}
+          </Text>
+        </View>
+      </View>
+
       {/* Logout */}
       <TouchableOpacity style={styles.logoutBtn} onPress={onLogout} activeOpacity={0.85}>
         <LogOut size={16} color="#fff" strokeWidth={2} style={{ marginRight: 8 }} />
@@ -939,22 +1033,6 @@ export default function BizHomeScreen() {
           />
           <Text style={[styles.navLabel, activeTab === 'dashboard' && styles.navLabelActive]}>
             Kreu
-          </Text>
-        </TouchableOpacity>
-
-        {/* Promovo */}
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setActiveTab('promo')}
-          activeOpacity={0.7}
-        >
-          <Megaphone
-            size={24}
-            color={activeTab === 'promo' ? '#003366' : Colors.tabInactive}
-            strokeWidth={activeTab === 'promo' ? 2.5 : 2}
-          />
-          <Text style={[styles.navLabel, activeTab === 'promo' && styles.navLabelActive]}>
-            Promovo
           </Text>
         </TouchableOpacity>
 
@@ -1361,7 +1439,7 @@ const styles = StyleSheet.create({
     minHeight: 420,
   },
   cameraOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: Spacing.xl,
@@ -1384,31 +1462,79 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  scannerResultBox: {
-    backgroundColor: Colors.surfaceBg,
-    borderRadius: Radius.lg,
+  studentPreviewCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: Radius.xl,
     borderWidth: 1,
     borderColor: Colors.borderLight,
     padding: Spacing.lg,
-    gap: 6,
+    gap: Spacing.md,
   },
-  scannerResultLabel: {
-    fontSize: Typography.xs,
-    fontFamily: Typography.fontBold,
-    color: Colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+  studentPreviewPhoto: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: Colors.surfaceBg,
+    borderWidth: 3,
+    borderColor: '#0aa8a7',
   },
-  scannerResultValue: {
-    fontSize: Typography.sm,
+  studentPreviewFallback: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: '#e0f2fe',
+    borderWidth: 3,
+    borderColor: '#0aa8a7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  studentPreviewFallbackText: {
+    fontSize: Typography.xl,
     fontFamily: Typography.fontExtraBold,
     color: '#003366',
   },
-  scannerResultRaw: {
+  studentPreviewInfo: {
+    flex: 1,
+  },
+  studentPreviewEyebrow: {
     fontSize: Typography.xs,
+    fontFamily: Typography.fontExtraBold,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  studentPreviewName: {
+    fontSize: Typography.lg,
+    fontFamily: Typography.fontExtraBold,
+    color: Colors.textPrimary,
+    lineHeight: 24,
+  },
+  studentPreviewMeta: {
+    marginTop: 3,
+    fontSize: Typography.sm,
     fontFamily: Typography.fontMedium,
     color: Colors.textSecondary,
-    lineHeight: 18,
+  },
+  studentPreviewStatus: {
+    marginTop: 8,
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontExtraBold,
+  },
+  studentPreviewStatusOk: {
+    color: '#065f46',
+  },
+  studentPreviewStatusWarn: {
+    color: '#92400e',
+  },
+  studentPreviewLoadingText: {
+    flex: 1,
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontMedium,
+    color: Colors.textSecondary,
+    lineHeight: 19,
   },
   scanStatusBox: {
     borderRadius: Radius.lg,
@@ -1535,6 +1661,81 @@ const styles = StyleSheet.create({
 
   // ── Full-screen placeholders (scanner / promo / chat) ────────────────────────
   // (profile tab is now a ScrollView, not a placeholder)
+  profileActionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  profileActionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: Radius.lg,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  profileActionContent: {
+    flex: 1,
+  },
+  profileActionTitle: {
+    fontSize: Typography.md,
+    fontFamily: Typography.fontExtraBold,
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  profileActionText: {
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontMedium,
+    color: Colors.textSecondary,
+    lineHeight: 19,
+  },
+  desktopInfoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#ecfdf5',
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+    padding: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  desktopInfoIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: Radius.lg,
+    backgroundColor: '#d1fae5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  desktopInfoContent: {
+    flex: 1,
+  },
+  desktopInfoTitle: {
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontExtraBold,
+    color: '#064e3b',
+    marginBottom: 5,
+  },
+  desktopInfoText: {
+    fontSize: Typography.sm,
+    fontFamily: Typography.fontMedium,
+    color: '#0f766e',
+    lineHeight: 19,
+  },
   placeholderScreen: {
     flex: 1,
     justifyContent: 'center',

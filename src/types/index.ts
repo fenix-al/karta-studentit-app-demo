@@ -524,6 +524,7 @@ export interface BizScanResponse {
   nr_karte: string;
   foto: string | null;
   msg: string;
+  valid?: boolean;
   scan_count?: number;
   last_scan_at?: string;
   next_allowed_at?: string;

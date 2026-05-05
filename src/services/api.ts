@@ -896,3 +896,7 @@ export async function postBizScan(token: string): Promise<BizScanResponse> {
     body: JSON.stringify({ token }),
   });
 }
+
+export async function fetchBizVerifyCard(token: string): Promise<BizScanResponse> {
+  return publicFetch<BizScanResponse>(`/verify/${encodeURIComponent(token)}`);
+}
