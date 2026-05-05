@@ -12,10 +12,13 @@
       "backgroundColor": "#F7F9FC"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.vini01.kartastudentitapp",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Kamera perdoret nga bizneset partnere per te skanuar QR-ne e Kartes se Studentit.",
+        "NSLocationWhenInUseUsageDescription": "Vendndodhja perdoret vetem kur kerkoni oferta dhe biznese afer jush.",
+        "NSPhotoLibraryUsageDescription": "Fotot perdoren vetem kur bashkengjitni nje screenshot ose foto ne kerkesen per suport."
       }
     },
     "android": {

@@ -21,6 +21,8 @@ import {
   TextInput,
   StyleSheet,
   ActivityIndicator,
+  Alert,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -42,6 +44,7 @@ import {
 } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
+import { ACCOUNT_DELETION_URL } from '../../constants/config';
 import { useAuth } from '../../context/AuthContext';
 import {
   ApiError,
@@ -345,6 +348,14 @@ export default function BizHomeScreen() {
       setScanSubmitError(getScannerSubmitErrorMessage(error));
     } finally {
       setScanSubmitting(false);
+    }
+  };
+
+  const openAccountDeletionPage = async () => {
+    try {
+      await Linking.openURL(ACCOUNT_DELETION_URL);
+    } catch {
+      Alert.alert('Gabim', 'Nuk u arrit te hapej faqja publike per fshirjen e llogarise.');
     }
   };
 
@@ -891,6 +902,10 @@ export default function BizHomeScreen() {
       <TouchableOpacity style={styles.logoutBtn} onPress={onLogout} activeOpacity={0.85}>
         <LogOut size={16} color="#fff" strokeWidth={2} style={{ marginRight: 8 }} />
         <Text style={styles.logoutText}>Çkyçu nga llogaria</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.accountDeleteBtn} onPress={openAccountDeletionPage} activeOpacity={0.85}>
+        <Text style={styles.accountDeleteText}>Kerko fshirjen e llogarise</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -1735,6 +1750,22 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: Typography.md,
     fontFamily: Typography.fontBold,
+  },
+  accountDeleteBtn: {
+    marginTop: Spacing.md,
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: 13,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  accountDeleteText: {
+    color: '#dc2626',
+    fontSize: Typography.md,
+    fontFamily: Typography.fontBold,
+    textAlign: 'center',
   },
 
   // ── Bottom navigation ────────────────────────────────────────────────────────

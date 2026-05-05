@@ -16,10 +16,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, ChevronRight, User, Lock, Bell, HelpCircle, FileText, Shield, LogOut } from 'lucide-react-native';
 
 import { BRANDING } from '../constants/branding';
-import { PASSWORD_RESET_URL } from '../constants/config';
+import { ACCOUNT_DELETION_URL, PASSWORD_RESET_URL } from '../constants/config';
 import { Colors, Typography, Spacing, Radius } from '../constants/Theme';
 import { useAuth } from '../context/AuthContext';
-import { fetchPrivacyPolicy, PrivacyPolicyApiResponse } from '../services/api';
+import { fetchPrivacyPolicy, PrivacyPolicyApiResponse, requestAccountDeletion } from '../services/api';
 import {
   getPushNotificationsPreference,
   PUSH_NOTIFICATIONS_ENABLED_KEY,
@@ -91,6 +91,7 @@ export default function SettingsScreen({
   const [policyError, setPolicyError] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [deletionLoading, setDeletionLoading] = useState(false);
 
   useEffect(() => {
     setActiveView(initialScreen);
@@ -131,6 +132,45 @@ export default function SettingsScreen({
     } catch {
       Alert.alert('Gabim', 'Nuk u arrit te hapej faqja e rikuperimit te fjalekalimit.');
     }
+  };
+
+  const openAccountDeletionPage = async () => {
+    try {
+      await Linking.openURL(ACCOUNT_DELETION_URL);
+    } catch {
+      Alert.alert('Gabim', 'Nuk u arrit te hapej faqja publike per fshirjen e llogarise.');
+    }
+  };
+
+  const confirmAccountDeletionRequest = () => {
+    if (deletionLoading) return;
+
+    Alert.alert(
+      'Fshirja e llogarise',
+      'Do te dergohet nje kerkese zyrtare te stafi per fshirjen e llogarise dhe te dhenave qe lidhen me aplikacionin. Llogaria nuk fshihet automatikisht pa verifikim.',
+      [
+        { text: 'Anulo', style: 'cancel' },
+        {
+          text: 'Dergo kerkesen',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletionLoading(true);
+            try {
+              await requestAccountDeletion();
+              Alert.alert(
+                'Kerkesa u dergua',
+                'Kerkesa per fshirjen e llogarise u regjistrua. Stafi do ta shqyrtoje dhe do tju kontaktoje per verifikim.',
+              );
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Nuk u dergua kerkesa. Provo perseri.';
+              Alert.alert('Gabim', message);
+            } finally {
+              setDeletionLoading(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleNotificationsToggle = async (nextValue: boolean) => {
@@ -277,6 +317,23 @@ export default function SettingsScreen({
 
         <TouchableOpacity style={styles.primaryAction} activeOpacity={0.85} onPress={openPasswordReset}>
           <Text style={styles.primaryActionText}>Hap rikuperimin e fjalekalimit</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.destructiveAction, deletionLoading && styles.actionDisabled]}
+          activeOpacity={0.85}
+          onPress={confirmAccountDeletionRequest}
+          disabled={deletionLoading}
+        >
+          {deletionLoading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.destructiveActionText}>Kerko fshirjen e llogarise</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.secondaryLinkAction} activeOpacity={0.85} onPress={openAccountDeletionPage}>
+          <Text style={styles.secondaryLinkActionText}>Hap faqen publike te fshirjes</Text>
         </TouchableOpacity>
       </SettingsSubscreen>
     );
@@ -642,6 +699,41 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontBold,
     fontSize: Typography.base,
     color: Colors.white,
+    textAlign: 'center',
+  },
+  destructiveAction: {
+    minHeight: 52,
+    marginTop: Spacing.md,
+    borderRadius: 12,
+    backgroundColor: '#dc2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  destructiveActionText: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.base,
+    color: Colors.white,
+    textAlign: 'center',
+  },
+  actionDisabled: {
+    opacity: 0.7,
+  },
+  secondaryLinkAction: {
+    minHeight: 48,
+    marginTop: Spacing.sm,
+    borderRadius: 12,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  secondaryLinkActionText: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.base,
+    color: Colors.textPrimary,
     textAlign: 'center',
   },
   loadingInline: {

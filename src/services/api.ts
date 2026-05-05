@@ -816,6 +816,27 @@ export async function createSupportTicket(input: {
   });
 }
 
+export async function requestAccountDeletion(message?: string): Promise<CreateSupportTicketResult> {
+  const profile = await fetchMe();
+  const details = [
+    'Kerkese per fshirjen e llogarise dhe te dhenave personale nga aplikacioni Karta e Studentit Shkoder.',
+    '',
+    `Student: ${profile.emeri} ${profile.mbiemeri}`,
+    `Email: ${profile.email || '-'}`,
+    `NIM: ${profile.nim || '-'}`,
+    `Nr. karte: ${profile.nr_karte || '-'}`,
+    '',
+    'Shenim i perdoruesit:',
+    message?.trim() || 'Pa shenim shtese.',
+  ].join('\n');
+
+  return createSupportTicket({
+    category: 'account_deletion',
+    subject: 'Kerkese per fshirje llogarie',
+    message: details,
+  });
+}
+
 export async function fetchMySupportTickets(): Promise<SupportTicketApiItem[]> {
   return apiFetch<SupportTicketApiItem[]>('/me/support-tickets');
 }
