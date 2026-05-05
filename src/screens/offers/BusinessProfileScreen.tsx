@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  Image, StyleSheet, Linking, Alert,
+  Image, StyleSheet, Linking, Alert, TextInput, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, Share2, Heart, Star, Gift, MapPin, Phone, Navigation, ThumbsUp } from 'lucide-react-native';
+import { ChevronLeft, Share2, Heart, Star, Gift, MapPin, Phone, Navigation, ThumbsUp, AlertTriangle } from 'lucide-react-native';
 
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
-import { recommendBusiness, fetchOffer } from '../../services/api';
+import { recommendBusiness, fetchOffer, reportBusiness } from '../../services/api';
 
 interface Props {
   business:    Business;
@@ -26,6 +26,9 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
   const [reviewUrl,   setReviewUrl]   = useState(biz.review_url   ?? '');
   const [rules,       setRules]       = useState(biz.rules        ?? '');
   const [recLoading,  setRecLoading]  = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
 
   // ── Fetch full business details (list endpoint omits map/review/has_recommended/content)
   useEffect(() => {
@@ -85,6 +88,27 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
       Linking.openURL(reviewUrl);
     } else {
       Alert.alert('Gabim', 'Nuk mund të hapet Google Reviews.');
+    }
+  }
+
+  async function handleReportSubmit() {
+    const reason = reportReason.trim();
+    if (!reason) {
+      Alert.alert('Kujdes', 'Ju lutem pershkruani problemin para se ta dergoni.');
+      return;
+    }
+    if (reportLoading) return;
+
+    setReportLoading(true);
+    try {
+      const res = await reportBusiness(biz.id, reason);
+      setReportReason('');
+      setReportOpen(false);
+      Alert.alert('U dergua', res.message || 'Raportimi u dergua me sukses.');
+    } catch (error: any) {
+      Alert.alert('Gabim', error?.message || 'Raportimi nuk u dergua. Provo perseri.');
+    } finally {
+      setReportLoading(false);
     }
   }
 
@@ -202,6 +226,43 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
             <Star size={18} color="#f59e0b" fill="#f59e0b" strokeWidth={0} />
             <Text style={styles.actionBtnText}>Lër Review në Google</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.reportBtn}
+            activeOpacity={0.85}
+            onPress={() => setReportOpen(open => !open)}
+          >
+            <AlertTriangle size={18} color="#dc2626" strokeWidth={2} />
+            <Text style={styles.reportBtnText}>Raporto Problem me Karten</Text>
+          </TouchableOpacity>
+
+          {reportOpen && (
+            <View style={styles.reportBox}>
+              <Text style={styles.reportHelp}>Pershkruaje shkurt problemin me kete biznes.</Text>
+              <TextInput
+                style={styles.reportInput}
+                value={reportReason}
+                onChangeText={setReportReason}
+                placeholder="Psh: Nuk ma pranuan karten..."
+                placeholderTextColor={Colors.textMuted}
+                multiline
+                maxLength={1000}
+                textAlignVertical="top"
+              />
+              <TouchableOpacity
+                style={[styles.reportSubmitBtn, reportLoading && styles.reportSubmitBtnDisabled]}
+                activeOpacity={0.85}
+                onPress={handleReportSubmit}
+                disabled={reportLoading}
+              >
+                {reportLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.reportSubmitText}>Dergo Ankesen</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
 
         </View>
       </ScrollView>
@@ -327,7 +388,49 @@ const styles = StyleSheet.create({
   },
   reviewBtn: {
     backgroundColor: '#0f172a', borderRadius: Radius.md, paddingVertical: 14,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 10,
+  },
+  reportBtn: {
+    backgroundColor: '#fff1f2', borderRadius: Radius.md, paddingVertical: 13,
+    borderWidth: 1, borderColor: '#fecdd3',
     flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8,
   },
+  reportBtnText: { color: '#dc2626', fontFamily: Typography.fontBold, fontSize: Typography.md },
+  reportBox: {
+    marginTop: 10,
+    backgroundColor: '#fff',
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: '#fecdd3',
+    padding: Spacing.md,
+  },
+  reportHelp: {
+    fontFamily: Typography.fontBold,
+    fontSize: Typography.sm,
+    color: '#dc2626',
+    marginBottom: 8,
+  },
+  reportInput: {
+    minHeight: 86,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.md,
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.md,
+    color: Colors.textPrimary,
+    marginBottom: 10,
+  },
+  reportSubmitBtn: {
+    minHeight: 44,
+    backgroundColor: '#dc2626',
+    borderRadius: Radius.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reportSubmitBtnDisabled: {
+    opacity: 0.7,
+  },
+  reportSubmitText: { color: '#fff', fontFamily: Typography.fontBold, fontSize: Typography.md },
   actionBtnText: { color: '#fff', fontFamily: Typography.fontBold, fontSize: Typography.md },
 });

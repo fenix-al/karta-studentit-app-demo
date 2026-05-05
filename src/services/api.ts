@@ -513,6 +513,13 @@ export async function recommendBusiness(id: string): Promise<{ recommended: bool
   return apiFetch(`/businesses/${id}/recommend`, { method: 'POST' });
 }
 
+export async function reportBusiness(id: string, reason: string): Promise<{ success: boolean; message: string }> {
+  return apiFetch(`/businesses/${id}/report`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
 export async function fetchBusinessCategories(): Promise<Array<{ id: number; slug: string; name: string; count: number }>> {
   return publicFetch('/business-categories');
 }

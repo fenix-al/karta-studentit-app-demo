@@ -46,6 +46,12 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
   const loading = points.loading || loyalty.loading || raffles.loading;
   const error = points.error || loyalty.error || raffles.error;
   const currentLiveSession = liveRaffle.data?.session ?? null;
+  const sliderMaxPoints = useMemo(() => {
+    const raffleCosts = openRaffles.map((raffle) => Number(raffle.points_cost ?? 0));
+    const rewardThresholds = claimable.map(({ reward }) => Number(reward.threshold ?? 0));
+    const highestValue = Math.max(10, currentBalance, ...raffleCosts, ...rewardThresholds);
+    return Math.ceil(highestValue / 10) * 10;
+  }, [claimable, currentBalance, openRaffles]);
   const filteredRaffles = useMemo(
     () => openRaffles.filter((raffle) => Number(raffle.points_cost ?? 0) <= maxPoints),
     [maxPoints, openRaffles],
@@ -58,6 +64,10 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
   const consumeInitialSelection = React.useCallback(() => {
     onConsumeInitialSelection?.();
   }, [onConsumeInitialSelection]);
+
+  React.useEffect(() => {
+    setMaxPoints(current => (current <= 10 || current > sliderMaxPoints ? sliderMaxPoints : current));
+  }, [sliderMaxPoints]);
 
   React.useEffect(() => {
     if (selected || loading) return;
@@ -155,7 +165,7 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
             <View style={s.sliderWrap}>
               <Slider
                 minimumValue={10}
-                maximumValue={500}
+                maximumValue={sliderMaxPoints}
                 step={10}
                 value={maxPoints}
                 onValueChange={setMaxPoints}
@@ -165,7 +175,7 @@ export default function RewardsScreen({ bottomInset, onBack, onOpenLiveRaffle, i
               />
               <View style={s.sliderMarks}>
                 <Text style={s.sliderMarkText}>10 🟡</Text>
-                <Text style={s.sliderMarkText}>500 🟡</Text>
+                <Text style={s.sliderMarkText}>{sliderMaxPoints} 🟡</Text>
               </View>
             </View>
           </View>
