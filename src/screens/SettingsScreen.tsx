@@ -543,7 +543,7 @@ export default function SettingsScreen({
 
         <View style={styles.footer}>
           <Text style={styles.footerTitle}>Karta e Studentit Shkodër</Text>
-          <Text style={styles.footerSub}>Versioni 2.0.1 • Ndërtuar nga Bashkia</Text>
+          <Text style={styles.footerSub}>Versioni 1.0.0 • Ndërtuar nga Bashkia</Text>
         </View>
       </ScrollView>
     </View>
