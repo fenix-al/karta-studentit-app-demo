@@ -31,7 +31,9 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.CAMERA",
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
       ]
     },
@@ -45,7 +47,20 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Lejo aksesin te kamera për të përdorur skanerin e QR."
+          "cameraPermission": "Lejo aksesin te kamera për të përdorur skanerin e QR.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Vendndodhja përdoret vetëm kur kërkoni oferta dhe biznese afër jush."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Fotot përdoren vetëm kur bashkëngjitni një screenshot ose foto në kërkesën për suport."
         }
       ]
     ],

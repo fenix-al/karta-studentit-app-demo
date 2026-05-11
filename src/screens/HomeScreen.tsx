@@ -200,6 +200,31 @@ export default function HomeScreen() {
   const [storyIndex,   setStoryIndex]   = useState(0);
   const [cardVisible, setCardVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>('home');
+
+  // ── Dërgon slide-in aktiv te prezantimi kur ndryshon tab-i (web iframe) ──
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.parent || window.parent === window) return;
+    const TAB_TO_SLIDE: Partial<Record<MainTab, number>> = {
+      home:       0,
+      perfitimet: 2,
+      kurset:     2,
+      mundesit:   4,
+      startupet:  4,
+      act4:       3,
+      kvr:        3,
+      dhurata:    5,
+      shortiLive: 5,
+      profil:     0,
+    };
+    const slide = TAB_TO_SLIDE[activeTab] ?? 0;
+    window.parent.postMessage({ type: 'karta-slide', slide }, '*');
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.parent || window.parent === window) return;
+    if (cardVisible) window.parent.postMessage({ type: 'karta-slide', slide: 1 }, '*');
+  }, [cardVisible]);
+
   const [supportModalRequest, setSupportModalRequest] = useState<{ key: number; tab: 'form' | 'history' } | null>(null);
   const [tabReturnTargets, setTabReturnTargets] = useState<Partial<Record<MainTab, MainTab>>>({});
   const [rewardsInitialRaffleId, setRewardsInitialRaffleId] = useState<number | undefined>(undefined);

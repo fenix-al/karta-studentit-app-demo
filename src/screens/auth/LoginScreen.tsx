@@ -56,6 +56,7 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
   const [passError, setPassError] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [savedLogin, setSavedLogin] = useState<RememberedLogin | null>(null);
+  const [generalError, setGeneralError] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -142,6 +143,7 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
     if (!validate(cleanUsername, nextPassword)) return;
 
     setIsLoading(true);
+    setGeneralError('');
 
     try {
       const loginResponse = await login(cleanUsername, nextPassword);
@@ -159,17 +161,17 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
         onBizSuccess(result.bizProfile);
       } else if (result?.role === 'no_card') {
         await logout();
-        Alert.alert('Nuk disponohet', 'Kjo llogari nuk ka një kartë aktive për momentin.');
+        setGeneralError('Kjo llogari nuk ka një kartë aktive për momentin.');
       } else {
         await logout();
-        Alert.alert('Gabim', 'Kjo llogari nuk ka akses ne aplikacion.');
+        setGeneralError('Kjo llogari nuk ka akses ne aplikacion.');
       }
     } catch (err: any) {
       const msg: string = err?.message ?? 'Ndodhi një gabim. Provo përsëri.';
       if (msg.toLowerCase().includes('fjalëkalim') || msg.toLowerCase().includes('password')) {
         setPassError(msg);
       } else {
-        Alert.alert('Gabim', msg);
+        setGeneralError(msg);
       }
     } finally {
       setIsLoading(false);
@@ -257,6 +259,12 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
             </View>
           )}
 
+          {!!generalError && (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorBoxText}>{generalError}</Text>
+            </View>
+          )}
+
           {!!savedLogin && (
             <View style={styles.savedBox}>
               <View style={styles.savedCopy}>
@@ -302,6 +310,7 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
                 onChangeText={(text) => {
                   setUsername(text);
                   setUserError('');
+                  setGeneralError('');
                 }}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -322,6 +331,7 @@ export default function LoginScreen({ onStudentSuccess, onBizSuccess, notice }: 
                 onChangeText={(text) => {
                   setPassword(text);
                   setPassError('');
+                  setGeneralError('');
                 }}
                 secureTextEntry={!showPass}
                 autoCapitalize="none"
@@ -517,6 +527,21 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontMedium,
     fontSize: Typography.sm,
     color: '#9a3412',
+    lineHeight: 18,
+  },
+  errorBox: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 12,
+    marginBottom: Spacing.lg,
+  },
+  errorBoxText: {
+    fontFamily: Typography.fontMedium,
+    fontSize: Typography.sm,
+    color: '#991b1b',
     lineHeight: 18,
   },
   savedBox: {
