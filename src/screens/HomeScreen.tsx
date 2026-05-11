@@ -51,6 +51,7 @@ import LiveRaffleWebViewScreen from './LiveRaffleWebViewScreen';
 import ProfileScreen from './ProfileScreen';
 import NotificationsScreen from './NotificationsScreen';
 import SettingsScreen from './SettingsScreen';
+import { prezStep, PrezSlideKey } from '../utils/prezantim';
 
 // ── TAB BAR HEIGHT constant (used for ScrollView bottom padding) ──────────────
 const TAB_BAR_HEIGHT = 72;
@@ -164,6 +165,7 @@ export default function HomeScreen() {
     .slice(0, 10);
 
   async function handleInlineVote(biz: Business) {
+    prezStep('recommendation', 'Studenti rekomandon biznesin');
     const current = voteOverrides[biz.id] ?? { votes: biz.votes ?? 0, recommended: biz.has_recommended ?? false };
     const wasRec  = current.recommended;
     // Optimistic update
@@ -200,6 +202,28 @@ export default function HomeScreen() {
   const [storyIndex,   setStoryIndex]   = useState(0);
   const [cardVisible, setCardVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>('home');
+
+  // ── Dërgon slide-in aktiv te prezantimi kur ndryshon tab-i (web iframe) ──
+  useEffect(() => {
+    const TAB_TO_ACTION: Record<MainTab, PrezSlideKey> = {
+      home:       'home',
+      perfitimet: 'offers',
+      kurset:     'courses',
+      mundesit:   'opportunities',
+      startupet:  'startup',
+      act4:       'act4',
+      kvr:        'kvr',
+      dhurata:    'rewards',
+      shortiLive: 'raffle',
+      profil:     'profile',
+    };
+    prezStep(TAB_TO_ACTION[activeTab]);
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (cardVisible) prezStep('digitalCard', 'Karta digjitale me QR u hap');
+  }, [cardVisible]);
+
   const [supportModalRequest, setSupportModalRequest] = useState<{ key: number; tab: 'form' | 'history' } | null>(null);
   const [tabReturnTargets, setTabReturnTargets] = useState<Partial<Record<MainTab, MainTab>>>({});
   const [rewardsInitialRaffleId, setRewardsInitialRaffleId] = useState<number | undefined>(undefined);
@@ -220,6 +244,7 @@ export default function HomeScreen() {
   const [liveRaffleLaunching, setLiveRaffleLaunching] = useState(false);
 
   const handleFindNearMe = async () => {
+    prezStep('nearbyOffers', userCoords ? 'Filtri i afërsisë u çaktivizua' : 'Po kërkohen ofertat pranë studentit');
     if (userCoords) {
       // Already active — tapping again resets to default sort
       setUserCoords(null);
@@ -246,12 +271,14 @@ export default function HomeScreen() {
   };
 
   const openOffers = (list?: string) => {
+    prezStep('offers');
     setOffersInitialList(list);
     setOffersInitialBusiness(undefined);
     setActiveTab('perfitimet');
   };
 
   const openOfferProfile = (business: Business) => {
+    prezStep('businessProfile', 'Hapet profili i biznesit partner');
     setActiveCarousel(null);
     setOffersInitialList(undefined);
     setOffersInitialBusiness(business);
@@ -259,12 +286,14 @@ export default function HomeScreen() {
   };
 
   const openCourses = (list?: string) => {
+    prezStep('courses');
     setCoursesInitialList(list);
     setCoursesInitialCourse(undefined);
     setActiveTab('kurset');
   };
 
   const openCourseProfile = (courseId: string) => {
+    prezStep('courses', 'Hapet detaji i kursit');
     const selectedCourse = courseItems.find((course) => course.id === courseId);
     if (!selectedCourse) {
       openCourses('Të gjitha Kurset');
@@ -277,6 +306,7 @@ export default function HomeScreen() {
   };
 
   const openJobs = (list?: string) => {
+    prezStep('opportunities');
     setJobsInitialList(list);
     setJobsInitialTypeSlug(undefined);
     setJobsInitialJob(undefined);
@@ -284,6 +314,7 @@ export default function HomeScreen() {
   };
 
   const openJobProfile = (jobId: string) => {
+    prezStep('opportunities', 'Hapet mundësia e punës ose praktikës');
     const selectedJob = (((jobsData as any)?.items ?? []) as any[]).map(apiToJobItem).find((job) => job.id === jobId);
     if (!selectedJob) {
       openJobs('Të gjitha Mundësitë');
@@ -297,11 +328,13 @@ export default function HomeScreen() {
   };
 
   const openStartups = (list?: string) => {
+    prezStep('startup');
     setStartupsInitialList(list);
     setStartupsInitialItemId(undefined);
     setActiveTab('startupet');
   };
   const openStartupProfile = (startupId: string) => {
+    prezStep('startup', 'Hapet thirrja ose materiali startup');
     const exists = (((startupsData as any)?.items ?? []) as any[]).some((startup) => String(startup.id) === startupId);
     if (!exists) {
       openStartups();
@@ -314,10 +347,12 @@ export default function HomeScreen() {
   };
 
   const openAct4 = () => {
+    prezStep('act4');
     setAct4InitialActivityId(undefined);
     setActiveTab('act4');
   };
   const openAct4Profile = (activityId: string) => {
+    prezStep('act4', 'Hapet aktiviteti ACT4Shkodra');
     const exists = (((act4Data as any)?.items ?? []) as any[]).some((activity) => String(activity.id) === activityId);
     if (!exists) {
       openAct4();
@@ -328,12 +363,14 @@ export default function HomeScreen() {
     setActiveTab('act4');
   };
   const openKVR = (list?: { title: string; catId: string }) => {
+    prezStep('kvr');
     setKvrInitialList(list);
     setKvrInitialArticleId(undefined);
     setActiveTab('kvr');
   };
 
   const openKvrArticle = (articleId: string) => {
+    prezStep('kvr', 'Hapet njoftimi KVR');
     const exists = (((kvrData as any)?.items ?? []) as any[]).some((article) => String(article.id) === articleId);
     if (!exists) {
       openKVR();
@@ -419,6 +456,7 @@ export default function HomeScreen() {
   };
 
   const handleOpenNotification = (notification: AppNotification) => {
+    prezStep('notifications', 'Njoftimi e çon studentin direkt te veprimi');
     const targetId = notification.postId ? String(notification.postId) : '';
     const returnTab = activeTab;
 
@@ -710,7 +748,10 @@ export default function HomeScreen() {
     return (
       <View style={styles.root}>
         <NotificationsScreen
-          onBack={() => setShowNotifications(false)}
+          onBack={() => {
+            prezStep('home');
+            setShowNotifications(false);
+          }}
           onOpenNotification={handleOpenNotification}
         />
       </View>
@@ -721,7 +762,10 @@ export default function HomeScreen() {
     return (
       <View style={styles.root}>
         <SettingsScreen
-          onBack={() => setShowSettings(false)}
+          onBack={() => {
+            prezStep('profile');
+            setShowSettings(false);
+          }}
           bottomInset={TAB_BAR_HEIGHT + insets.bottom}
           onLogout={onLogout}
           initialScreen={settingsInitialScreen}
@@ -813,14 +857,17 @@ export default function HomeScreen() {
           {!isHomeSearchOpen ? (
             <TouchableOpacity
               style={styles.searchToggleBtn}
-              onPress={() => setIsHomeSearchOpen(true)}
+              onPress={() => {
+                prezStep('home', 'Kërkim i unifikuar në ofertat dhe mundësitë e studentit');
+                setIsHomeSearchOpen(true);
+              }}
               activeOpacity={0.85}
             >
               <Search size={18} color={Colors.textPrimary} strokeWidth={2.2} />
             </TouchableOpacity>
           ) : null}
 
-          <TouchableOpacity style={styles.bellBtn} onPress={() => setShowNotifications(true)}>
+          <TouchableOpacity style={styles.bellBtn} onPress={() => { prezStep('notifications', 'Qendra e njoftimeve hapet'); setShowNotifications(true); }}>
             <Bell size={20} color={Colors.textPrimary} strokeWidth={2} />
             <View style={styles.notifDot} />
           </TouchableOpacity>
@@ -1413,7 +1460,7 @@ export default function HomeScreen() {
         <BlurView intensity={80} tint="light" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
 
         {/* Home */}
-        <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('home')}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => { prezStep('home'); setActiveTab('home'); }}>
           <Home size={24} color={activeTab === 'home' ? Colors.tabActive : Colors.tabInactive} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
           <Text style={[styles.tabLabel, { color: activeTab === 'home' ? Colors.tabActive : Colors.tabInactive, fontFamily: activeTab === 'home' ? Typography.fontBold : Typography.fontMedium }]}>Kreu</Text>
         </TouchableOpacity>
@@ -1422,6 +1469,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.tabItem}
           onPress={() => {
+            prezStep('offers');
             resetOffersRoute();
             setTabReturnTarget('perfitimet');
             setActiveTab('perfitimet');
@@ -1432,7 +1480,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* Center FAB — QR code, breaks out of tab bar */}
-        <TouchableOpacity style={styles.fabWrapper} activeOpacity={0.85} onPress={() => setCardVisible(v => !v)}>
+        <TouchableOpacity style={styles.fabWrapper} activeOpacity={0.85} onPress={() => { prezStep('digitalCard', 'QR-ja e kartës hapet për verifikim'); setCardVisible(v => !v); }}>
           <View style={[styles.fab, { borderColor: Colors.surfaceBg }]}>
             <QrCode size={28} color={Colors.brandGreenDeep} strokeWidth={2.5} />
           </View>
@@ -1442,6 +1490,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.tabItem}
           onPress={() => {
+            prezStep('rewards');
             resetRewardsRoute();
             setTabReturnTarget('dhurata');
             setActiveTab('dhurata');
@@ -1455,6 +1504,7 @@ export default function HomeScreen() {
         <TouchableOpacity
           style={styles.tabItem}
           onPress={() => {
+            prezStep('profile');
             setTabReturnTarget('profil');
             setActiveTab('profil');
           }}
@@ -1505,6 +1555,7 @@ export default function HomeScreen() {
       <DigitalCardModal visible={cardVisible} onClose={() => setCardVisible(false)} />
       <AppPrivacyBottomSheet
         onOpenPolicy={() => {
+          prezStep('settings', 'Privatësia dhe rregullat hapen nga aplikacioni');
           setSettingsInitialScreen('privacy');
           setShowSettings(true);
         }}
@@ -1558,9 +1609,9 @@ export default function HomeScreen() {
               { icon: <Rocket        size={24} color="#10b981" strokeWidth={2} />, bg: '#ecfdf5', label: 'Startup',      onPress: () => { setIsUserMenuOpen(false); openStartups(); } },
               { icon: <HandHeart     size={24} color="#f97316" strokeWidth={2} />, bg: '#fff7ed', label: 'Vullnetar',   onPress: () => { setIsUserMenuOpen(false); openAct4(); } },
               { icon: <Landmark      size={24} color="#475569" strokeWidth={2} />, bg: '#f1f5f9', label: 'KVR',          onPress: () => { setIsUserMenuOpen(false); openKVR(); } },
-              { icon: <Gift          size={24} color="#f59e0b" strokeWidth={2} />, bg: '#fffbeb', label: 'Dhuratat',    onPress: () => { setIsUserMenuOpen(false); setActiveTab('dhurata'); } },
-              { icon: <MessageCircle size={24} color="#0ea5e9" strokeWidth={2} />, bg: '#f0f9ff', label: 'Suporti',     onPress: () => { setIsUserMenuOpen(false); setSupportModalRequest({ key: Date.now(), tab: 'form' }); } },
-              { icon: <User          size={24} color="#334155" strokeWidth={2} />, bg: '#f8fafc', label: 'Profili Im',  onPress: () => { setIsUserMenuOpen(false); setActiveTab('profil'); } },
+              { icon: <Gift          size={24} color="#f59e0b" strokeWidth={2} />, bg: '#fffbeb', label: 'Dhuratat',    onPress: () => { prezStep('rewards'); setIsUserMenuOpen(false); setActiveTab('dhurata'); } },
+              { icon: <MessageCircle size={24} color="#0ea5e9" strokeWidth={2} />, bg: '#f0f9ff', label: 'Suporti',     onPress: () => { prezStep('support', 'Studenti hap ticket ose sugjerim'); setIsUserMenuOpen(false); setSupportModalRequest({ key: Date.now(), tab: 'form' }); } },
+              { icon: <User          size={24} color="#334155" strokeWidth={2} />, bg: '#f8fafc', label: 'Profili Im',  onPress: () => { prezStep('profile'); setIsUserMenuOpen(false); setActiveTab('profil'); } },
               { icon: <LogOut        size={24} color="#ef4444" strokeWidth={2} />, bg: '#fef2f2', label: 'Dil',          onPress: () => setIsUserMenuOpen(false) },
             ].map(({ icon, bg, label, onPress }) => (
               <TouchableOpacity key={label} style={menuStyles.actionItem} onPress={onPress} activeOpacity={0.75}>
@@ -1571,7 +1622,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Promo banner */}
-          <TouchableOpacity activeOpacity={0.9} onPress={() => { setIsUserMenuOpen(false); setCardVisible(true); }}>
+          <TouchableOpacity activeOpacity={0.9} onPress={() => { prezStep('digitalCard', 'Karta hapet nga menuja e studentit'); setIsUserMenuOpen(false); setCardVisible(true); }}>
             <LinearGradient
               colors={['#0ea5e9', '#2563eb']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}

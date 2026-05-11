@@ -14,6 +14,7 @@ import { fetchOffers, fetchBusinessCategories, recommendBusiness, fetchAppPromot
 import { apiBizToBusiness } from '../../services/mappers';
 import ScreenState from '../../components/ScreenState';
 import { allowedAppOriginWhitelist, escapeHtmlAttribute, sanitizeAllowedAppUrl } from '../../utils/urlSecurity';
+import { prezStep } from '../../utils/prezantim';
 
 interface Props {
   onBack:      () => void;
@@ -117,6 +118,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   }, []);
 
   useEffect(() => {
+    prezStep('offers', 'Hapet tregu digjital i përfitimeve studentore');
     load();
   }, [load]);
 
@@ -222,6 +224,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   }, [promotions, promoWidth]);
 
   const handlePromoPress = useCallback(async (promo: AppPromotion) => {
+    prezStep('appPromotions', 'Banner promocional: biznesi merr hapësirë reklame në app');
     const linkedBusiness = promo.linked_business_id
       ? allBiz.find((biz) => Number(biz.id) === Number(promo.linked_business_id))
       : undefined;
@@ -241,6 +244,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
   }, [allBiz, onProfile]);
 
   async function handleToggleRecommend(biz: Business) {
+    prezStep('recommendation', 'Studenti rekomandon një biznes direkt nga lista');
     const current = voteOverrides[biz.id] ?? {
       votes: biz.votes ?? 0,
       recommended: biz.has_recommended ?? false,
@@ -287,6 +291,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           <TouchableOpacity
             style={styles.searchToggleBtn}
             onPress={() => {
+              prezStep('offers', 'Studenti kërkon biznes ose ofertë në katalog');
               if (searchOpen && search.trim()) {
                 setSearch('');
               }
@@ -327,10 +332,10 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillsOuter}>
             <View style={styles.pillsGrid}>
               <View style={styles.pillsRow}>
-                {topRow.map(p => <PillBtn key={p.id} id={p.id} name={p.name} active={activePill === p.id} onPress={() => { setActivePill(p.id); if (p.id !== 'all') onList(p.name, p.slug); }} />)}
+                {topRow.map(p => <PillBtn key={p.id} id={p.id} name={p.name} active={activePill === p.id} onPress={() => { prezStep('offers', 'Kategoritë e bëjnë ofertën të gjetshme menjëherë'); setActivePill(p.id); if (p.id !== 'all') onList(p.name, p.slug); }} />)}
               </View>
               <View style={styles.pillsRow}>
-                {bottomRow.map(p => <PillBtn key={p.id} id={p.id} name={p.name} active={activePill === p.id} onPress={() => { setActivePill(p.id); if (p.id !== 'all') onList(p.name, p.slug); }} />)}
+                {bottomRow.map(p => <PillBtn key={p.id} id={p.id} name={p.name} active={activePill === p.id} onPress={() => { prezStep('offers', 'Studenti filtron përfitimet sipas nevojës'); setActivePill(p.id); if (p.id !== 'all') onList(p.name, p.slug); }} />)}
               </View>
             </View>
           </ScrollView>
@@ -373,7 +378,7 @@ export default function OffersHubScreen({ onBack, onList, onProfile, bottomInset
               </View>
             </>
           ) : (
-          <TouchableOpacity style={styles.bannerFallbackWrap} activeOpacity={0.9} onPress={() => onList('Të gjitha bizneset')}>
+          <TouchableOpacity style={styles.bannerFallbackWrap} activeOpacity={0.9} onPress={() => { prezStep('appPromotions'); onList('Të gjitha bizneset'); }}>
             <LinearGradient
               colors={['#38bdf8', '#2563eb']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}

@@ -1,0 +1,10 @@
+
+> karta-studentit-demo@1.0.0 web
+> expo start --web --port 8084
+
+Starting project at H:\SISTEME DEVELOPMENT\KARTA-E-STUDENTIT-SHKODER\karta-studentit-demo
+Starting Metro Bundler
+
+ ERROR  An unknown error occurred while installing React Native DevTools. Details:
+
+spawn EPERM

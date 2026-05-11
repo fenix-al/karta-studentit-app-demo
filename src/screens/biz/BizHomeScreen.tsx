@@ -56,6 +56,7 @@ import {
   postBizScan,
 } from '../../services/api';
 import { BizCampaign, BizScanResponse, BizTopStudent } from '../../types';
+import { prezStep, PrezSlideKey } from '../../utils/prezantim';
 
 type Tab = 'dashboard' | 'scanner' | 'promo' | 'profile';
 
@@ -228,6 +229,16 @@ export default function BizHomeScreen() {
   const [cooldownRemaining, setCooldownRemaining] = useState<number | null>(null);
   const [scanRequiresReset, setScanRequiresReset] = useState(false);
 
+  useEffect(() => {
+    const map: Record<Tab, PrezSlideKey> = {
+      dashboard: 'bizDashboard',
+      scanner: 'bizScanner',
+      promo: 'bizCampaign',
+      profile: 'bizProfile',
+    };
+    prezStep(map[activeTab]);
+  }, [activeTab]);
+
   // Lazy-load campaigns on first visit to promo tab
   const campaignsLoadedRef = useRef(false);
 
@@ -268,6 +279,7 @@ export default function BizHomeScreen() {
   }, [cooldownRemaining]);
 
   const handleCampaignSubmit = async () => {
+    prezStep('bizCampaign', 'Biznesi dërgon kërkesë për fushatë ose reklamë');
     if (!formTitulli.trim() || !formPërshkrimi.trim()) {
       setFormError('Plotëso titullin dhe përshkrimin.');
       return;
@@ -304,6 +316,7 @@ export default function BizHomeScreen() {
   };
 
   const handleBarcodeScanned = async (result: BarcodeScanningResult) => {
+    prezStep('bizScanner', 'QR-ja u lexua dhe tani bëhet verifikimi i kartës');
     if (scannerCapture || scanPreviewLoading) return;
 
     const rawValue = result.data?.trim() ?? '';
@@ -343,6 +356,7 @@ export default function BizHomeScreen() {
   };
 
   const handleScanSubmit = async () => {
+    prezStep('bizScanSuccess', 'Skanimi regjistrohet dhe aktivizon vlerën për biznesin');
     if (!scannerCapture?.token || scanSubmitting) return;
 
     setScanSubmitting(true);
@@ -376,6 +390,7 @@ export default function BizHomeScreen() {
   };
 
   const openAccountDeletionPage = async () => {
+    prezStep('settings', 'Opsionet ligjore dhe fshirja e llogarisë janë të aksesueshme');
     try {
       await Linking.openURL(ACCOUNT_DELETION_URL);
     } catch {
@@ -966,7 +981,7 @@ export default function BizHomeScreen() {
 
       <TouchableOpacity
         style={styles.profileActionCard}
-        onPress={() => setActiveTab('promo')}
+        onPress={() => { prezStep('bizCampaign'); setActiveTab('promo'); }}
         activeOpacity={0.88}
       >
         <View style={styles.profileActionIcon}>
@@ -1023,7 +1038,7 @@ export default function BizHomeScreen() {
         {/* Kreu */}
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => setActiveTab('dashboard')}
+          onPress={() => { prezStep('bizDashboard'); setActiveTab('dashboard'); }}
           activeOpacity={0.7}
         >
           <Home
@@ -1039,7 +1054,7 @@ export default function BizHomeScreen() {
         {/* Scanner FAB (center, elevated) */}
         <TouchableOpacity
           style={styles.fabWrap}
-          onPress={() => setActiveTab('scanner')}
+          onPress={() => { prezStep('bizScanner'); setActiveTab('scanner'); }}
           activeOpacity={0.85}
         >
           <View style={[
@@ -1053,7 +1068,7 @@ export default function BizHomeScreen() {
         {/* Profili */}
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => setActiveTab('profile')}
+          onPress={() => { prezStep('bizProfile'); setActiveTab('profile'); }}
           activeOpacity={0.7}
         >
           <User

@@ -43,6 +43,7 @@ import {
   uploadSupportAttachment,
 } from '../services/api';
 import { SupportTicketApiItem } from '../types';
+import { prezStep } from '../utils/prezantim';
 
 const categories = [
   { id: 'karta', label: 'Karta ime', Icon: CreditCard },
@@ -162,6 +163,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
   };
 
   const handleAttachmentPress = async () => {
+    prezStep('support', 'Studenti mund të shtojë foto ose screenshot si provë');
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert('Leja mungon', 'Lejo aksesin të fotot për të bashkëngjitur një screenshot.');
@@ -184,6 +186,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
   };
 
   const handleSubmit = async () => {
+    prezStep('support', 'Ticket-i i studentit shkon te administrata');
     const cleanSubject = subject.trim();
     const cleanMessage = message.trim();
     if (!selectedCategory) {
@@ -219,6 +222,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
   };
 
   const handleReply = async (ticketId: number) => {
+    prezStep('support', 'Biseda me administratën vazhdon brenda app-it');
     const draft = (replyDrafts[ticketId] || '').trim();
     if (!draft) return;
     setSubmittingReplyTicketId(ticketId);
@@ -240,10 +244,10 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
       <Animated.View style={[styles.root, { transform: [{ scale }] }]}>
         {isBubbleOpen ? (
           <View style={styles.expandedWrap}>
-            <TouchableOpacity style={styles.closeBtn} onPress={toggleBubble} activeOpacity={0.9}>
+            <TouchableOpacity style={styles.closeBtn} onPress={() => { prezStep('support'); toggleBubble(); }} activeOpacity={0.9}>
               <X size={10} color={Colors.textSecondary} strokeWidth={3} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.pill} onPress={() => setIsModalOpen(true)} activeOpacity={0.92}>
+            <TouchableOpacity style={styles.pill} onPress={() => { prezStep('support', 'Hapet suporti i studentit'); setIsModalOpen(true); }} activeOpacity={0.92}>
               <View style={styles.pillIconWrap}>
                 <MessageCircle size={20} color="#ffffff" strokeWidth={2.2} />
               </View>
@@ -256,7 +260,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity style={styles.minTab} onPress={toggleBubble} activeOpacity={0.9}>
+          <TouchableOpacity style={styles.minTab} onPress={() => { prezStep('support'); toggleBubble(); }} activeOpacity={0.9}>
             <MessageCircle size={18} color="#3b82f6" strokeWidth={2} />
             {totalUnread > 0 ? <View style={styles.minDot} /> : null}
           </TouchableOpacity>
@@ -284,7 +288,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
             <View style={styles.tabs}>
               <TouchableOpacity
                 style={[styles.tab, modalTab === 'form' && styles.tabActive]}
-                onPress={() => setModalTab('form')}
+                onPress={() => { prezStep('support', 'Formular i ri për problem ose sugjerim'); setModalTab('form'); }}
                 activeOpacity={0.9}
               >
                 <Text style={[styles.tabText, modalTab === 'form' && styles.tabTextActive]}>Na shkruaj</Text>
@@ -292,6 +296,7 @@ export default function FloatingChat({ openRequest, onHandledOpenRequest }: Prop
               <TouchableOpacity
                 style={[styles.tab, modalTab === 'history' && styles.tabActive]}
                 onPress={() => {
+                  prezStep('support', 'Historiku i ticket-eve mban gjurmë komunikimi');
                   setModalTab('history');
                   reloadSupportTickets();
                 }}

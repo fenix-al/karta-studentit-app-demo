@@ -9,6 +9,7 @@ import { ChevronLeft, Share2, Heart, Star, Gift, MapPin, Phone, Navigation, Thum
 import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { Business } from '../../types';
 import { recommendBusiness, fetchOffer, reportBusiness } from '../../services/api';
+import { prezStep } from '../../utils/prezantim';
 
 interface Props {
   business:    Business;
@@ -30,6 +31,10 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
   const [reportReason, setReportReason] = useState('');
   const [reportLoading, setReportLoading] = useState(false);
 
+  useEffect(() => {
+    prezStep('businessProfile', 'Profili i biznesit tregon ofertën, kushtet dhe besimin');
+  }, [biz.id]);
+
   // ── Fetch full business details (list endpoint omits map/review/has_recommended/content)
   useEffect(() => {
     fetchOffer(parseInt(biz.id, 10))
@@ -44,6 +49,7 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
   }, [biz.id]);
 
   async function handleRecommend() {
+    prezStep('recommendation', 'Rekomandimi e ngre biznesin me zërin e studentëve');
     if (recLoading) return;
     // Optimistic update
     const wasRecommended = recommended;
@@ -66,6 +72,7 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
   }
 
   async function handleMapPress() {
+    prezStep('mapDirections', 'Studenti hap hartën dhe shkon te biznesi');
     if (!mapUrl) {
       Alert.alert('Nuk disponohet', 'Ky biznes nuk ka ende hartën të konfiguruar.');
       return;
@@ -79,6 +86,7 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
   }
 
   async function handleReviewPress() {
+    prezStep('googleReview', 'Nga app-i studenti shkon te Google Review i biznesit');
     if (!reviewUrl) {
       Alert.alert('Nuk disponohet', 'Ky biznes nuk ka ende lidhjen e reviews të konfiguruar.');
       return;
@@ -92,6 +100,7 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
   }
 
   async function handleReportSubmit() {
+    prezStep('businessReport', 'Ankesa regjistrohet për kontroll nga administrata');
     const reason = reportReason.trim();
     if (!reason) {
       Alert.alert('Kujdes', 'Ju lutem përshkruani problemin para se ta dergoni.');
@@ -230,7 +239,10 @@ export default function BusinessProfileScreen({ business: biz, onBack, bottomIns
           <TouchableOpacity
             style={styles.reportBtn}
             activeOpacity={0.85}
-            onPress={() => setReportOpen(open => !open)}
+            onPress={() => {
+              prezStep('businessReport', 'Studenti mund të raportojë kur oferta nuk respektohet');
+              setReportOpen(open => !open);
+            }}
           >
             <AlertTriangle size={18} color="#dc2626" strokeWidth={2} />
             <Text style={styles.reportBtnText}>Raporto Problem me Kartën</Text>

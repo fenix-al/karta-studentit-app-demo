@@ -12,6 +12,7 @@ import { useFetch } from '../../hooks/useFetch';
 import { fetchOffers, recommendBusiness } from '../../services/api';
 import { apiBizToBusiness } from '../../services/mappers';
 import ListSkeleton from '../../components/ListSkeleton';
+import { prezStep } from '../../utils/prezantim';
 
 interface Props {
   title:       string;
@@ -70,6 +71,7 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
   }, [searchOpen]);
 
   async function handleToggleRecommend(biz: Business) {
+    prezStep('recommendation', 'Rekomandimi i studentit ndikon te renditja e biznesit');
     const current = voteOverrides[biz.id] ?? {
       votes: biz.votes ?? 0,
       recommended: biz.has_recommended ?? false,
@@ -113,6 +115,7 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
             <TouchableOpacity
               style={styles.headerIconBtn}
               onPress={() => {
+                prezStep('offers', 'Kërkim brenda listës së bizneseve');
                 if (searchOpen && search.trim()) {
                   setSearch('');
                 }
@@ -128,7 +131,10 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.headerIconBtn, sortByDiscount && styles.headerIconBtnActive]}
-              onPress={() => setSortByDiscount((prev) => !prev)}
+              onPress={() => {
+                prezStep('offers', 'Renditja ndihmon studentin të gjejë përfitimin më të mirë');
+                setSortByDiscount((prev) => !prev);
+              }}
               activeOpacity={0.85}
             >
               <ArrowDownUp size={18} color={sortByDiscount ? '#0284c7' : Colors.textPrimary} strokeWidth={2} />
@@ -172,7 +178,7 @@ export default function OffersListScreen({ title, catSlug, onBack, onProfile, bo
             </View>
           }
           renderItem={({ item: biz }) => (
-            <TouchableOpacity style={styles.card} onPress={() => onProfile(biz)} activeOpacity={0.92}>
+            <TouchableOpacity style={styles.card} onPress={() => { prezStep('businessProfile'); onProfile(biz); }} activeOpacity={0.92}>
 
               {/* Big image */}
               <View style={styles.imageWrap}>
