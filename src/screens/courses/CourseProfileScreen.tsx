@@ -8,9 +8,64 @@ import { CourseItem } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { enrollCourse, fetchKurs } from '../../services/api';
 import ScreenState from '../../components/ScreenState';
+import { getWpImageUrl } from '../../utils/images';
 
 interface Props { course: CourseItem; onBack: () => void; bottomInset: number; }
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800';
+
+type ContentBlock =
+  | { type: 'text'; value: string }
+  | { type: 'image'; src: string; aspectRatio: number };
+
+function htmlDecode(value: string) {
+  return value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#039;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
+function attrValue(tag: string, name: string) {
+  const match = tag.match(new RegExp(`${name}=["']([^"']+)["']`, 'i'));
+  return match?.[1];
+}
+
+function parseContentBlocks(html?: string): ContentBlock[] {
+  if (!html) return [];
+
+  const blocks: ContentBlock[] = [];
+  const imgRe = /<img\b[^>]*>/gi;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  const pushText = (chunk: string) => {
+    const text = htmlDecode(stripHtml(chunk));
+    if (text) blocks.push({ type: 'text', value: text });
+  };
+
+  while ((match = imgRe.exec(html)) !== null) {
+    pushText(html.slice(lastIndex, match.index));
+
+    const tag = match[0];
+    const src = attrValue(tag, 'src');
+    const width = Number(attrValue(tag, 'width'));
+    const height = Number(attrValue(tag, 'height'));
+    if (src) {
+      blocks.push({
+        type: 'image',
+        src,
+        aspectRatio: width > 0 && height > 0 ? width / height : 4 / 3,
+      });
+    }
+
+    lastIndex = imgRe.lastIndex;
+  }
+
+  pushText(html.slice(lastIndex));
+  return blocks;
+}
 
 export default function CourseProfileScreen({ course, onBack, bottomInset }: Props) {
   const insets = useSafeAreaInsets();
@@ -31,7 +86,7 @@ export default function CourseProfileScreen({ course, onBack, bottomInset }: Pro
       seats: typeof k.free_spots === 'number' && k.total_spots ? `${k.free_spots} / ${k.total_spots} vende` : (k.total_spots ? `${k.total_spots} vende` : course.seats),
       totalSpots: k.total_spots ?? course.totalSpots,
       freeSpots: typeof k.free_spots === 'number' ? k.free_spots : course.freeSpots,
-      img: k.image || course.img || PLACEHOLDER,
+      img: getWpImageUrl(k, course.img || PLACEHOLDER),
       desc: k.description || course.desc,
       content: k.content || course.content,
       isEnrolled: !!k.is_enrolled,
@@ -39,6 +94,7 @@ export default function CourseProfileScreen({ course, onBack, bottomInset }: Pro
       canEnroll: typeof k.can_enroll === 'boolean' ? k.can_enroll : course.canEnroll,
     };
   }, [course, data]);
+  const contentBlocks = useMemo(() => parseContentBlocks(item.content || item.desc), [item.content, item.desc]);
 
   const handleEnroll = async () => {
     setBusy(true);
@@ -116,7 +172,25 @@ export default function CourseProfileScreen({ course, onBack, bottomInset }: Pro
         <View style={styles.descPad}>
           <Text style={styles.descTitle}>Detajet e Kursit</Text>
           <View style={styles.descCard}>
-            <Text style={styles.descText}>{stripHtml(item.content || item.desc || 'Nuk ka përshkrim për momentin.')}</Text>
+            {contentBlocks.length ? (
+              contentBlocks.map((block, index) => (
+                block.type === 'image' ? (
+                  <View key={`${block.src}-${index}`} style={styles.inlineImageWrap}>
+                    <Image
+                      source={{ uri: block.src }}
+                      style={[styles.inlineImage, { aspectRatio: block.aspectRatio }]}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ) : (
+                  <Text key={`${block.value}-${index}`} style={styles.descText}>
+                    {block.value}
+                  </Text>
+                )
+              ))
+            ) : (
+              <Text style={styles.descText}>{stripHtml(item.content || item.desc || 'Nuk ka përshkrim për momentin.')}</Text>
+            )}
           </View>
         </View>
 
@@ -149,6 +223,8 @@ const styles = StyleSheet.create({
   mainInfo: { paddingHorizontal: Spacing.xxl, paddingTop: Spacing.xl, paddingBottom: Spacing.xl, borderBottomWidth: 1, borderBottomColor: Colors.borderLight }, courseTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.h2, color: Colors.textPrimary, lineHeight: 32, marginBottom: Spacing.lg },
   metaBlock: { gap: 12 }, metaRow: { flexDirection: 'row', alignItems: 'center', gap: 12 }, metaIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: Colors.surfaceBg, justifyContent: 'center', alignItems: 'center' }, metaText: { fontFamily: Typography.fontMedium, fontSize: Typography.base, color: Colors.textSecondary }, metaBold: { fontFamily: Typography.fontBold, color: Colors.textPrimary },
   highlightsPad: { padding: Spacing.xxl }, highlightsCard: { backgroundColor: Colors.white, borderRadius: Radius.xxl + 4, borderWidth: 1, borderColor: Colors.borderLight, padding: Spacing.xl }, highlightRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.lg }, highlightIcon: { width: 42, height: 42, borderRadius: 13, justifyContent: 'center', alignItems: 'center' }, highlightLabel: { fontFamily: Typography.fontBold, fontSize: Typography.xs, color: Colors.textMuted, textTransform: 'uppercase', marginBottom: 2 }, highlightValue: { fontFamily: Typography.fontBold, fontSize: Typography.md, color: Colors.textPrimary }, divider: { height: 1, backgroundColor: Colors.borderLight, marginVertical: Spacing.lg },
-  descPad: { paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.xxl }, descTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xl, color: Colors.textPrimary, marginBottom: Spacing.md }, descCard: { backgroundColor: Colors.white, borderRadius: Radius.xxl, borderWidth: 1, borderColor: Colors.borderLight, padding: Spacing.xl }, descText: { fontFamily: Typography.fontMedium, fontSize: Typography.md, color: Colors.textSecondary, lineHeight: 22 },
+  descPad: { paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.xxl }, descTitle: { fontFamily: Typography.fontExtraBold, fontSize: Typography.xl, color: Colors.textPrimary, marginBottom: Spacing.md }, descCard: { backgroundColor: Colors.white, borderRadius: Radius.xxl, borderWidth: 1, borderColor: Colors.borderLight, padding: Spacing.xl }, descText: { fontFamily: Typography.fontMedium, fontSize: Typography.md, color: Colors.textSecondary, lineHeight: 22, marginBottom: Spacing.lg },
+  inlineImageWrap: { width: '100%', borderRadius: Radius.xl, overflow: 'hidden', backgroundColor: Colors.borderLight, marginBottom: Spacing.lg, borderWidth: 1, borderColor: Colors.borderLight },
+  inlineImage: { width: '100%', maxHeight: 420 },
   registerPad: { paddingHorizontal: Spacing.xxl, paddingBottom: Spacing.xxl }, registerBtn: { backgroundColor: '#dc2626', borderRadius: Radius.xxl, paddingVertical: 16, alignItems: 'center' }, registerBtnDisabled: { backgroundColor: '#94a3b8' }, registerBtnText: { fontFamily: Typography.fontExtraBold, fontSize: Typography.lg, color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 }, helperText: { fontFamily: Typography.fontMedium, fontSize: 12, color: Colors.textMuted, textAlign: 'center', marginTop: 10 },
 });

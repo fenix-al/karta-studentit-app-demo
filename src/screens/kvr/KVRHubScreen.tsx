@@ -14,6 +14,7 @@ import { KvrActivity } from '../../types';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchKvr, fetchKvrCategories } from '../../services/api';
 import ScreenState from '../../components/ScreenState';
+import { getWpImageUrl } from '../../utils/images';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=800';
 const NAVY = '#003366';
@@ -33,7 +34,7 @@ function apiToKvrActivity(k: any): KvrActivity {
     category: k.category ?? '',
     catId: k.cat_id ?? '',
     date: k.date ?? '',
-    img: k.image || PLACEHOLDER,
+    img: getWpImageUrl(k, PLACEHOLDER),
     desc: k.excerpt ?? '',
     fullDesc: k.content ?? k.excerpt ?? '',
     location: k.location ?? 'Bashkia Shkodër',

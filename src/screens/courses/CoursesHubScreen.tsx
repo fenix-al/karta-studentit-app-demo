@@ -9,6 +9,7 @@ import { HOW_IT_WORKS } from '../../data/mockData';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchKursCategories, fetchKurset } from '../../services/api';
 import ScreenState from '../../components/ScreenState';
+import { getWpImageUrl } from '../../utils/images';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800';
 
@@ -27,7 +28,7 @@ function apiToCourseItem(k: any): CourseItem {
     seats: typeof k.free_spots === 'number' && k.total_spots ? `${k.free_spots} / ${k.total_spots} vende` : (k.total_spots ? `${k.total_spots} vende` : ''),
     totalSpots: k.total_spots ?? 0,
     freeSpots: typeof k.free_spots === 'number' ? k.free_spots : null,
-    img: k.image || PLACEHOLDER,
+    img: getWpImageUrl(k, PLACEHOLDER),
     desc: k.excerpt ?? '',
     isEnrolled: !!k.is_enrolled,
     enrollStatus: k.enroll_status ?? null,

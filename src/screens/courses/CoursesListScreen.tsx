@@ -10,6 +10,7 @@ import { fetchKursCategories, fetchKurset } from '../../services/api';
 import { CourseCard } from './CoursesHubScreen';
 import ScreenState from '../../components/ScreenState';
 import ListSkeleton from '../../components/ListSkeleton';
+import { getWpImageUrl } from '../../utils/images';
 
 const mapCourse = (k: any): CourseItem => ({
   id: String(k.id),
@@ -25,7 +26,7 @@ const mapCourse = (k: any): CourseItem => ({
   seats: typeof k.free_spots === 'number' && k.total_spots ? `${k.free_spots} / ${k.total_spots} vende` : (k.total_spots ? `${k.total_spots} vende` : ''),
   totalSpots: k.total_spots ?? 0,
   freeSpots: typeof k.free_spots === 'number' ? k.free_spots : null,
-  img: k.image ?? '',
+  img: getWpImageUrl(k, ''),
   desc: k.excerpt ?? '',
   isEnrolled: !!k.is_enrolled,
   enrollStatus: k.enroll_status ?? null,

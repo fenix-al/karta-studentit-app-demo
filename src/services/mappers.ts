@@ -1,4 +1,5 @@
 import { CardItem, Business } from '../types';
+import { getWpImageUrl } from '../utils/images';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=400';
 
@@ -68,7 +69,7 @@ export function kursToCard(k: any): CardItem {
     title:         k.title,
     discount:      k.categories?.[0] ?? 'Kurs',
     badgeColor:    '#0891b2',
-    img:           k.image || PLACEHOLDER,
+    img:           getWpImageUrl(k, PLACEHOLDER),
     meta:          [k.start_date, k.location, k.total_spots ? `${k.total_spots} vende` : ''].filter(Boolean).join(' · '),
     fullDesc:      k.excerpt || '',
     actionText:    k.is_enrolled ? 'Jeni regjistruar tashme' : 'Regjistrohu',
@@ -133,7 +134,7 @@ export function kvrToCard(k: any): CardItem {
     title:         k.title,
     discount:      k.category || 'KVR',
     badgeColor:    '#1d4ed8',
-    img:           k.image || PLACEHOLDER,
+    img:           getWpImageUrl(k, PLACEHOLDER),
     meta:          [k.date, k.location].filter(Boolean).join(' · '),
     fullDesc:      k.excerpt || '',
     actionText:    'Lexo Më Shumë',

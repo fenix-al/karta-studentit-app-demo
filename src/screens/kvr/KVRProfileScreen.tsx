@@ -10,9 +10,14 @@ import { Colors, Typography, Spacing, Radius } from '../../constants/Theme';
 import { useFetch } from '../../hooks/useFetch';
 import { fetchKvrSingle } from '../../services/api';
 import ScreenState from '../../components/ScreenState';
+import { getWpImageUrl } from '../../utils/images';
 
 const NAVY = '#003366';
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=800';
+
+type ArticleBlock =
+  | { type: 'text'; value: string }
+  | { type: 'image'; src: string; aspectRatio: number };
 
 function htmlToText(value: string) {
   return value
@@ -23,6 +28,56 @@ function htmlToText(value: string) {
     .replace(/&amp;/gi, '&')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function htmlDecode(value: string) {
+  return value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#039;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+}
+
+function attrValue(tag: string, name: string) {
+  const match = tag.match(new RegExp(`${name}=["']([^"']+)["']`, 'i'));
+  return match?.[1];
+}
+
+function parseArticleContent(html?: string): ArticleBlock[] {
+  if (!html) return [];
+
+  const blocks: ArticleBlock[] = [];
+  const imgRe = /<img\b[^>]*>/gi;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  const pushText = (chunk: string) => {
+    const text = htmlDecode(htmlToText(chunk));
+    if (text) blocks.push({ type: 'text', value: text });
+  };
+
+  while ((match = imgRe.exec(html)) !== null) {
+    pushText(html.slice(lastIndex, match.index));
+
+    const tag = match[0];
+    const src = attrValue(tag, 'src');
+    const width = Number(attrValue(tag, 'width'));
+    const height = Number(attrValue(tag, 'height'));
+    if (src) {
+      blocks.push({
+        type: 'image',
+        src,
+        aspectRatio: width > 0 && height > 0 ? width / height : 4 / 3,
+      });
+    }
+
+    lastIndex = imgRe.lastIndex;
+  }
+
+  pushText(html.slice(lastIndex));
+  return blocks;
 }
 
 interface Props {
@@ -50,6 +105,8 @@ export default function KVRProfileScreen({ activityId, onBack, bottomInset }: Pr
   };
 
   const articleText = htmlToText(data?.content ?? '');
+  const articleBlocks = parseArticleContent(data?.content);
+  const heroImage = data ? getWpImageUrl(data, PLACEHOLDER) : PLACEHOLDER;
 
   return (
     <View style={styles.root}>
@@ -108,15 +165,33 @@ export default function KVRProfileScreen({ activityId, onBack, bottomInset }: Pr
 
           <View style={styles.heroPad}>
             <View style={styles.heroWrap}>
-              <Image source={{ uri: data?.image || PLACEHOLDER }} style={styles.heroImage} resizeMode="cover" />
+              <Image source={{ uri: heroImage }} style={styles.heroImage} resizeMode="cover" />
             </View>
           </View>
 
           <View style={styles.articlePad}>
             <View style={styles.articleCard}>
-              <Text style={styles.articleText}>
-                {articleText || data?.excerpt || 'Ky artikull nuk ka përshkrim shtesë.'}
-              </Text>
+              {articleBlocks.length ? (
+                articleBlocks.map((block, index) => (
+                  block.type === 'image' ? (
+                    <View key={`${block.src}-${index}`} style={styles.inlineImageWrap}>
+                      <Image
+                        source={{ uri: block.src }}
+                        style={[styles.inlineImage, { aspectRatio: block.aspectRatio }]}
+                        resizeMode="cover"
+                      />
+                    </View>
+                  ) : (
+                    <Text key={`${block.value}-${index}`} style={styles.articleText}>
+                      {block.value}
+                    </Text>
+                  )
+                ))
+              ) : (
+                <Text style={styles.articleText}>
+                  {articleText || data?.excerpt || 'Ky artikull nuk ka përshkrim shtesë.'}
+                </Text>
+              )}
 
               {!!data?.url && (
                 <TouchableOpacity style={styles.shareCta} onPress={handleShare} activeOpacity={0.85}>
@@ -235,6 +310,19 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 24,
     marginBottom: Spacing.xl,
+  },
+  inlineImageWrap: {
+    width: '100%',
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    backgroundColor: Colors.borderLight,
+    marginBottom: Spacing.xl,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  inlineImage: {
+    width: '100%',
+    maxHeight: 420,
   },
   shareCta: {
     alignSelf: 'flex-start',

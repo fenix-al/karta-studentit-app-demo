@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Karta e Studentit — Demo",
-    "slug": "karta-studentit-demo",
+    "name": "Karta e Studentit Shkodër",
+    "slug": "karta-studentit-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

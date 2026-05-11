@@ -13,6 +13,7 @@ import { useFetch } from '../../hooks/useFetch';
 import { fetchKvr, fetchKvrCategories } from '../../services/api';
 import ScreenState from '../../components/ScreenState';
 import ListSkeleton from '../../components/ListSkeleton';
+import { getWpImageUrl } from '../../utils/images';
 
 const NAVY = '#003366';
 const ALL_PILL = { id: 'all', name: 'Të gjitha' };
@@ -25,7 +26,7 @@ function apiToKvrActivity(k: any): KvrActivity {
     category: k.category ?? '',
     catId: k.cat_id ?? '',
     date: k.date ?? '',
-    img: k.image || PLACEHOLDER,
+    img: getWpImageUrl(k, PLACEHOLDER),
     desc: k.excerpt ?? '',
     fullDesc: k.content ?? k.excerpt ?? '',
     location: k.location ?? 'Bashkia Shkodër',
